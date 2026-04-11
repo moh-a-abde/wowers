@@ -1,0 +1,140 @@
+project:
+  name: WOWERS
+  description: Waste Outfall Water Energy Recovery System
+
+# ── Physics ───────────────────────────────────────────────────────────────────
+physics:
+  rho_water_kg_m3: 998.2          # kg/m³ at ~20°C
+  gravity_m_s2: 9.81              # m/s²
+  mgd_to_m3s: 0.043813            # 1 MGD = 0.043813 m³/s
+  hours_per_year: 8766            # average incl. leap years
+  default_efficiency: 0.82
+  default_availability: 0.95
+
+# ── Head assumptions by facility archetype ────────────────────────────────────
+head_assumptions:
+  large_potw:                     # design_flow > 10 MGD
+    default_m: 8.0
+    low_m: 3.0
+    high_m: 15.0
+  medium_potw:                    # 1 ≤ design_flow ≤ 10 MGD
+    default_m: 5.0
+    low_m: 2.0
+    high_m: 10.0
+  small_potw:                     # design_flow < 1 MGD
+    default_m: 3.0
+    low_m: 1.0
+    high_m: 6.0
+
+# ── Cost model ────────────────────────────────────────────────────────────────
+cost_model:
+  capex_A: 9500
+  capex_B: -0.35
+  capex_min_per_kw: 800
+  capex_max_per_kw: 10000
+  opex_pct_of_capex:
+    Kaplan: 0.025
+    Francis: 0.020
+    Pelton: 0.015
+    in_conduit_micro: 0.030
+
+# ── Financials ────────────────────────────────────────────────────────────────
+financials:
+  discount_rate: 0.06
+  project_lifetime_years: 30
+  degradation_rate: 0.002
+  rec_value_per_kwh: 0.01
+
+# ── Phase 1: Ranking weights ──────────────────────────────────────────────────
+ranking:
+  weights:
+    mean_flow: 0.35
+    flow_consistency: 0.20        # 1 - cv_flow
+    utilization: 0.15
+    data_quality: 0.10            # n_years_data proxy
+    p10_flow: 0.20
+  # Flow duration curve exceedance probabilities (20 points)
+  fdc_exceedance_probs:
+    - 0.01
+    - 0.05
+    - 0.10
+    - 0.15
+    - 0.20
+    - 0.25
+    - 0.30
+    - 0.35
+    - 0.40
+    - 0.45
+    - 0.50
+    - 0.55
+    - 0.60
+    - 0.65
+    - 0.70
+    - 0.75
+    - 0.80
+    - 0.85
+    - 0.90
+    - 0.95
+
+# ── Data sources ──────────────────────────────────────────────────────────────
+epa:
+  npdes_downloads_url: "https://echo.epa.gov/files/echodownloads/npdes_downloads.zip"
+  npdes_outfalls_url: "https://echo.epa.gov/files/echodownloads/npdes_outfalls_layer.zip"
+  dmr_url_template: "https://echo.epa.gov/files/echodownloads/npdes_dmrs_fy{year}.zip"
+  dmr_fiscal_years:
+    - 2009
+    - 2010
+    - 2011
+    - 2012
+    - 2013
+    - 2014
+    - 2015
+    - 2016
+    - 2017
+    - 2018
+    - 2019
+    - 2020
+    - 2021
+    - 2022
+    - 2023
+    - 2024
+
+usgs:
+  elevation_url: "https://epqs.nationalmap.gov/v1/json"
+
+# ── Processing ────────────────────────────────────────────────────────────────
+processing:
+  dmr_chunk_size: 500000
+  max_parallel_downloads: 4
+  download_retry_attempts: 3
+  download_retry_backoff_s: 5
+  min_months_for_features: 12      # minimum DMR months to compute full features
+  max_utilization_ratio: 2.0       # flag anything above this
+
+# ── NODI code handling ────────────────────────────────────────────────────────
+nodi_codes:
+  treat_as_zero:
+    - "C"    # Conditionally exempt
+    - "B"    # Below detection
+  treat_as_estimated:
+    - "E"    # Estimated value
+  treat_as_missing:
+    - "Q"    # Quantity not sufficient
+
+# ── POTW filter criteria ──────────────────────────────────────────────────────
+potw_filter:
+  facility_type_indicators:
+    - "POTW"
+    - "POT"
+  exclude_facility_type_codes:
+    - "FDF"    # Federal facilities
+  active_permit_status_codes:
+    - "EFF"    # Effective
+    - "NON"    # Non-major effective
+
+# ── Paths (relative to project root) ─────────────────────────────────────────
+paths:
+  raw_data: "data/raw"
+  processed_data: "data/processed"
+  checkpoints: "data/checkpoints"
+  logs: "logs"
