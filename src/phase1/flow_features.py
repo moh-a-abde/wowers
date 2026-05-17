@@ -172,22 +172,41 @@ def _compute_fdc(flows: np.ndarray) -> list[float]:
 def _select_primary_outfall(timeseries: pl.DataFrame) -> pl.DataFrame:
     """For facilities with multiple outfalls, keep only the primary one.
 
-    Primary = the outfall with the highest mean avg_flow across all records.
-    This ensures we don't double-count flow from multiple discharge points.
+    Primary = outfall with the most non-null monthly avg_flow records
+    (non-storm/CSO outfalls preferred). Mean is used only as tiebreaker.
+
+    This prevents a single corrupted high-value row on a rarely-reported
+    outfall from beating dozens of clean records on the real treatment outfall
+    (the old max-mean rule's failure mode — fixed April 2026).
     """
     if "outfall" not in timeseries.columns:
         return timeseries
 
-    outfall_means = (
+    # CSO/storm outfall codes to deprioritise (push to back of sort)
+    cso_prefixes = ("C", "S", "E")  # CSO, storm, emergency overflow
+
+    outfall_stats = (
         timeseries
         .group_by(["npdes_id", "outfall"])
-        .agg(pl.col("avg_flow_mgd").mean().alias("outfall_mean"))
-        .sort("outfall_mean", descending=True, nulls_last=True)
+        .agg([
+            pl.col("avg_flow_mgd").drop_nulls().len().alias("n_nonnull"),
+            pl.col("avg_flow_mgd").mean().alias("outfall_mean"),
+        ])
+        .with_columns(
+            # Flag probable CSO/storm outfalls so they sort last
+            pl.col("outfall")
+              .str.to_uppercase()
+              .str.starts_with_any(list(cso_prefixes))
+              .cast(pl.Int8)
+              .alias("is_cso")
+        )
+        # Sort: non-CSO first, then by most non-null records, then by mean as tiebreaker
+        .sort(["is_cso", "n_nonnull", "outfall_mean"], descending=[False, True, True])
         .unique(subset=["npdes_id"], keep="first")
         .select(["npdes_id", "outfall"])
     )
 
-    return timeseries.join(outfall_means, on=["npdes_id", "outfall"], how="inner")
+    return timeseries.join(outfall_stats, on=["npdes_id", "outfall"], how="inner")
 
 
 # ── Fallback for missing DMR data ─────────────────────────────────────────────

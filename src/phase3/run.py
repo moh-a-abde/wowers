@@ -1,0 +1,228 @@
+"""Phase 3 orchestrator — Turbine Sizing via USGS 3DEP.
+
+Usage:
+    python -m src.phase3.run                        # full run
+    python -m src.phase3.run --skip-elevation       # reuse cached elevation_data.parquet
+    python -m src.phase3.run --top-n 500            # only process top-N ranked candidates
+    python -m src.phase3.run --phase2-input PATH    # custom Phase 2 output path
+
+Pipeline steps
+--------------
+[1/4]  Load Phase 2 ranked candidates (monte_carlo_results.parquet or
+       ranked_candidates.parquet if Phase 2 is not yet run).
+[2/4]  Query USGS 3DEP elevation for each facility lat/lon; cache results.
+[3/4]  Estimate net head (H_gross × loss factor; validate vs literature bounds).
+[4/4]  Select turbine type and optimise rated power (MW) + annual energy (MWh/yr).
+
+Outputs (data/processed/phase3/)
+---------------------------------
+elevation_data.parquet         — raw 3DEP elevations
+head_estimates.parquet         — facilities with head_net_m, head_source, head_valid
+turbine_sizing.parquet         — final Phase 3 output (one row per facility)
+
+All output files also get a versioned checkpoint via io.checkpoint().
+"""
+
+from __future__ import annotations
+
+import argparse
+import time
+from pathlib import Path
+
+import polars as pl
+
+from src.common import config, io, logging_setup
+from src.phase3 import elevation, head_estimation, turbine_selection
+
+log = logging_setup.get("wowers.phase3")
+
+OUTPUT_DIR: Path = config.processed_dir() / "phase3"
+
+# ── Fallback: where to find Phase 1/2 outputs ─────────────────────────────────
+_PHASE2_CANDIDATES = config.processed_dir() / "phase2" / "monte_carlo_results.parquet"
+_PHASE1_CANDIDATES = config.processed_dir() / "phase1" / "ranked_candidates.parquet"
+
+
+def _find_input_parquet(override: Path | None) -> Path:
+    """Locate the best available Phase 1/2 output."""
+    if override is not None:
+        if not override.exists():
+            raise FileNotFoundError(f"--phase2-input path not found: {override}")
+        return override
+    if _PHASE2_CANDIDATES.exists():
+        log.info(f"  Using Phase 2 output: {_PHASE2_CANDIDATES}")
+        return _PHASE2_CANDIDATES
+    if _PHASE1_CANDIDATES.exists():
+        log.warning(
+            "  Phase 2 output not found; falling back to Phase 1 ranked_candidates.parquet. "
+            "Head values will be literature-based only."
+        )
+        return _PHASE1_CANDIDATES
+    raise FileNotFoundError(
+        "Phase 3 requires Phase 1 or Phase 2 output. "
+        f"Expected at: {_PHASE2_CANDIDATES}  or  {_PHASE1_CANDIDATES}"
+    )
+
+
+def run(
+    phase2_input: Path | None = None,
+    skip_elevation: bool = False,
+    top_n: int | None = None,
+) -> Path:
+    """Run the full Phase 3 pipeline.
+
+    Args:
+        phase2_input:    Path to Phase 1/2 output parquet. Auto-detected if None.
+        skip_elevation:  If True, load elevation_data.parquet from OUTPUT_DIR
+                         instead of querying the USGS API.
+        top_n:           Limit to top-N facilities by rank (useful for testing).
+
+    Returns:
+        Path to turbine_sizing.parquet.
+    """
+    t0 = time.time()
+
+    log.info("=" * 60)
+    log.info("WOWERS Phase 3 — Turbine Sizing via USGS 3DEP")
+    log.info(f"  Output dir: {OUTPUT_DIR}")
+    log.info("=" * 60)
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # ── Step 1: Load candidates ───────────────────────────────────────────────
+    log.info("[1/4] Loading candidate facilities …")
+    input_path = _find_input_parquet(phase2_input)
+    candidates = io.read_parquet(input_path)
+
+    if top_n is not None:
+        sort_col = "rank" if "rank" in candidates.columns else candidates.columns[0]
+        candidates = candidates.sort(sort_col).head(top_n)
+        log.info(f"  Limited to top {top_n} facilities (--top-n)")
+
+    log.info(f"  Loaded {len(candidates):,} facilities from {input_path.name}")
+
+    # Ensure lat/lon columns exist with consistent names
+    candidates = _normalise_coordinates(candidates)
+
+    # ── Step 2: Elevation queries ─────────────────────────────────────────────
+    log.info("[2/4] Querying USGS 3DEP elevations …")
+    elev_out_path = OUTPUT_DIR / "elevation_data.parquet"
+
+    if skip_elevation and elev_out_path.exists():
+        log.info("  --skip-elevation: loading cached elevation_data.parquet")
+        elev_df = pl.read_parquet(elev_out_path)
+        # Merge back if elevation columns not already in candidates
+        if "elevation_m" not in candidates.columns:
+            key_cols = ["npdes_id"]
+            elev_cols = key_cols + ["elevation_m", "elev_source"]
+            candidates = candidates.join(
+                elev_df.select(elev_cols), on="npdes_id", how="left"
+            )
+    else:
+        if skip_elevation and not elev_out_path.exists():
+            log.warning(
+                "  --skip-elevation requested but elevation_data.parquet not found at "
+                f"{elev_out_path}; running USGS 3DEP API queries."
+            )
+        candidates = elevation.fetch_elevations(candidates)
+        io.write_parquet(candidates, elev_out_path)
+        io.checkpoint(candidates, "phase3", "elevation_data")
+
+    # ── Step 3: Head estimation ───────────────────────────────────────────────
+    log.info("[3/4] Estimating net head …")
+    candidates = head_estimation.estimate_head(candidates)
+    io.write_parquet(candidates, OUTPUT_DIR / "head_estimates.parquet")
+    io.checkpoint(candidates, "phase3", "head_estimates")
+
+    # ── Step 4: Turbine selection and sizing ──────────────────────────────────
+    log.info("[4/4] Selecting turbine types and sizing rated power …")
+    candidates = turbine_selection.select_and_size_turbines(candidates)
+
+    out_path = OUTPUT_DIR / "turbine_sizing.parquet"
+    io.write_parquet(candidates, out_path)
+    io.checkpoint(candidates, "phase3", "turbine_sizing")
+
+    elapsed = time.time() - t0
+    _print_summary(candidates, elapsed)
+
+    return out_path
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+def _normalise_coordinates(df: pl.DataFrame) -> pl.DataFrame:
+    """Ensure lat/lon columns are named 'latitude' and 'longitude'."""
+    rename_map: dict[str, str] = {}
+    for src, dst in [
+        ("GEOCODE_LATITUDE",  "latitude"),
+        ("GEOCODE_LONGITUDE", "longitude"),
+        ("lat",               "latitude"),
+        ("lon",               "longitude"),
+        ("lng",               "longitude"),
+    ]:
+        if src in df.columns and dst not in df.columns:
+            rename_map[src] = dst
+    if rename_map:
+        df = df.rename(rename_map)
+    for col in ("latitude", "longitude"):
+        if col not in df.columns:
+            df = df.with_columns(pl.lit(None, dtype=pl.Float64).alias(col))
+    return df
+
+
+def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
+    total = len(df)
+    viable = df.filter(pl.col("turbine_viable")).shape[0] if "turbine_viable" in df.columns else 0
+    head_3dep = (df["head_source"] == "usgs_3dep").sum() if "head_source" in df.columns else 0
+    head_lit  = (df["head_source"] == "phase2_literature").sum() if "head_source" in df.columns else 0
+    total_mwh = (
+        df.filter(pl.col("turbine_viable"))["annual_energy_mwh"].drop_nulls().sum()
+        if "annual_energy_mwh" in df.columns else 0.0
+    )
+    avg_kw = (
+        df.filter(pl.col("turbine_viable"))["p_rated_kw"].drop_nulls().mean()
+        if "p_rated_kw" in df.columns else 0.0
+    )
+
+    log.info("")
+    log.info("=" * 60)
+    log.info("Phase 3 Complete")
+    log.info(f"  Total facilities processed:  {total:,}")
+    log.info(f"  Viable turbine sites:         {viable:,}  ({viable/total*100:.1f}%)")
+    log.info(f"  Head from USGS 3DEP:          {head_3dep:,}")
+    log.info(f"  Head from literature:         {head_lit:,}")
+    log.info(f"  Estimated total energy:       {total_mwh:,.0f} MWh/yr")
+    log.info(f"  Average rated power:          {avg_kw:.0f} kW")
+    log.info(f"  Runtime:                      {elapsed:.1f}s ({elapsed/60:.1f} min)")
+    log.info(f"  Output: {OUTPUT_DIR / 'turbine_sizing.parquet'}")
+    log.info("=" * 60)
+
+
+# ── CLI entry point ───────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="WOWERS Phase 3: Turbine Sizing")
+    parser.add_argument(
+        "--phase2-input",
+        type=Path,
+        default=None,
+        help="Path to Phase 1/2 output parquet (auto-detected if omitted)",
+    )
+    parser.add_argument(
+        "--skip-elevation",
+        action="store_true",
+        help="Skip USGS API queries; reuse elevation_data.parquet from output dir",
+    )
+    parser.add_argument(
+        "--top-n",
+        type=int,
+        default=None,
+        help="Only process top-N ranked facilities (for testing)",
+    )
+    args = parser.parse_args()
+
+    run(
+        phase2_input=args.phase2_input,
+        skip_elevation=args.skip_elevation,
+        top_n=args.top_n,
+    )

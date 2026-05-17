@@ -102,6 +102,52 @@ epa:
 usgs:
   elevation_url: "https://epqs.nationalmap.gov/v1/json"
 
+# ── Phase 3: Turbine Sizing ────────────────────────────────────────────────────
+phase3:
+  # Head estimation
+  head_loss_fraction: 0.15        # 15% losses for pipe friction, valves, fittings
+  min_net_head_m: 1.0             # below this head, site is not viable
+  min_flow_for_sizing_m3s: 0.001  # below this Q, skip sizing
+
+  # USGS 3DEP API throttling
+  max_concurrent_requests: 10
+  request_delay_s: 0.5            # seconds between batches
+  api_timeout_s: 30
+  max_retries: 3
+  retry_backoff_s: 2.0
+
+  # Disk cache for elevation lookups (keyed by rounded lat/lon)
+  elevation_cache_dir: "data/elevation_cache"
+  coord_precision: 5              # decimal places for cache key rounding
+
+  # Turbine database
+  turbine_db_path: "data/turbines/turbine_manufacturers.csv"
+
+  # Sizing optimizer
+  min_capacity_factor: 0.40       # minimum acceptable capacity factor for rating
+  sizing_q_fractions:             # Q fractions of design_flow to evaluate
+    - 0.3
+    - 0.4
+    - 0.5
+    - 0.6
+    - 0.7
+    - 0.8
+    - 0.9
+    - 1.0
+
+  # Flow exceedance probabilities for rated-power optimisation (from Phase 1 FDC)
+  fdc_exceedance_probs:
+    - 0.05
+    - 0.10
+    - 0.20
+    - 0.30
+    - 0.40
+    - 0.50
+    - 0.60
+    - 0.70
+    - 0.80
+    - 0.90
+
 # ── Processing ────────────────────────────────────────────────────────────────
 processing:
   dmr_chunk_size: 500000
@@ -131,6 +177,7 @@ potw_filter:
   active_permit_status_codes:
     - "EFF"    # Effective
     - "NON"    # Non-major effective
+    - "ADC"    # Administratively Continued (still operating under prior permit)
 
 # ── Paths (relative to project root) ─────────────────────────────────────────
 paths:

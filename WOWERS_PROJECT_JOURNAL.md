@@ -228,3 +228,153 @@ Build a structured turbine database so WOWERS can recommend specific commerciall
 5. Download and parse the Emrgy spec sheet PDF for structured turbine data
 
 ---
+
+## Session Log — May 17, 2026 (Cursor Agent)
+
+**Session goal:** Fix two known baseline bugs, then fully implement Phase 3 (Turbine Sizing via USGS 3DEP).
+
+---
+
+### Bug Fixes Applied
+
+**Bug 1 — `config/settings.yaml`: missing ADC permit status code**
+- Added `"ADC"` (Administratively Continued) to `potw_filter.active_permit_status_codes`
+- Previous: `["EFF", "NON"]` — After: `["EFF", "NON", "ADC"]`
+- Impact: recovers ~4,308 POTWs that were being incorrectly excluded
+
+**Bug 2 — `src/phase1/flow_features.py`: `_select_primary_outfall` used max-mean not max-non-null-months**
+- Rewrote `_select_primary_outfall()` to sort by `n_nonnull` (non-null monthly records) descending, then `outfall_mean` as tiebreaker
+- Added CSO/storm outfall deprioritisation (outfalls starting with "C", "S", "E" sorted last)
+- Old logic: max mean avg_flow — could be fooled by a single high outlier on rarely-reported outfall
+- New logic: "most months of actual data wins" — selects consistently-reporting treatment outfall
+
+---
+
+### Phase 3 Implementation — Files Created
+
+**`config/settings.yaml`** — Added `phase3:` block (head_loss_fraction, min_net_head_m, API throttle settings, cache dir, turbine_db_path, optimizer sweep params)
+
+**`data/turbines/turbine_manufacturers.csv`** — 15-row seed database:
+CINK Hydro-Energy, Canyon Hydro, Rentricity (NSF 61/372 certified), LucidEnergy (Portland OR 200 kW), Turbulent, Ossberger GmbH, Gilbert Gilkes & Gordon, Emrgy, Natel Energy, Andritz Hydro
+
+**`src/phase3/elevation.py`** — USGS 3DEP async httpx queries:
+- Semaphore-based concurrency (max 10 concurrent), disk cache (lat/lon rounded to 5 dp, sharded into 1°×1° subdirs), ocean sentinel detection, retry with exponential backoff
+- `fetch_elevations(facilities_df)` → adds `elevation_m`, `elev_source` columns
+
+**`src/phase3/head_estimation.py`** — Net head estimation:
+- `H_net = H_gross × (1 - 0.15)` (configurable loss fraction)
+- Source priority: `usgs_3dep` → `phase2_literature` → `design_fallback`
+- Plausibility gate rejects 3DEP head if |H_3dep - H_lit| / H_lit > 2.0
+- Adds: `head_gross_m`, `head_net_m`, `head_source`, `head_valid`, `head_confidence`
+
+**`src/phase3/turbine_selection.py`** — Turbine type + power sizing:
+- H-Q decision tree: Pelton (H>50m, Q<2m³/s), Francis (H≥10m), Kaplan (H<10m, Q≥0.5m³/s), In-conduit (otherwise)
+- Four empirical part-load efficiency curves η(q) with type-specific cutoffs
+- Optimizer sweeps Q_rated fractions [0.3–1.0], maximises annual MWh/yr with CF ≥ 0.40
+- FDC integration via trapezoidal rule over Phase 1 flow duration curve
+- Manufacturer matching from turbine DB (type + H-Q envelope, prefers WW-certified)
+- Adds: `turbine_type`, `q_rated_m3s`, `p_rated_kw`, `peak_efficiency_pct`, `annual_energy_mwh`, `capacity_factor`, `best_manufacturer`, `turbine_viable`
+
+**`src/phase3/run.py`** — Phase 3 orchestrator:
+- 4 steps: load candidates → elevation → head estimation → turbine sizing
+- CLI: `--phase2-input`, `--skip-elevation`, `--top-n`
+- Auto-detects Phase 2 or Phase 1 output as input
+- Output: `data/processed/phase3/turbine_sizing.parquet`
+
+**`tests/test_phase3/`** — 37 unit tests total:
+- `test_elevation.py` (10): cache key/rounding, read/write/miss/corrupt, column contract, no-coords
+- `test_head_estimation.py` (11): physics arithmetic, fallback chain, rejection logic, source/confidence values
+- `test_turbine_selection.py` (16): H-Q selection, η(q) bounds/cutoffs, optimizer formula, CF range, full pipeline contract
+
+All files syntax-validated. Follow existing project patterns (polars, `src.common.*`, Parquet output, checkpoint versioning).
+
+---
+
+**Phase status after this session:**
+- Phase 1: Complete ✓ | Phase 2: Complete ✓ | Phase 3: Implementation complete ✓ | Phase 4: NOT STARTED | Phase 5: NOT STARTED
+
+**Next steps:**
+1. `pip install -e .` then `python -m pytest tests/test_phase3/ -v`
+2. Run full Phase 1+2 pipeline to generate `monte_carlo_results.parquet`
+3. `python -m src.phase3.run --top-n 100` to test 3DEP API calls on first 100 sites
+4. Review head estimate distribution (usgs_3dep vs phase2_literature breakdown)
+5. Begin Phase 4: financial scorecard using `data/processed/phase3/turbine_sizing.parquet`
+
+---
+
+## Session Log — May 17, 2026 (Cursor Agent — Phase 3 Bug-Fix Pass)
+
+**Trigger:** Post-implementation code review (external reviewer) identified 2 critical bugs, 1 performance issue, several logic/test gaps. All fixed this session. 64/64 tests pass.
+
+---
+
+### Critical Bugs Fixed
+
+**Bug 1 — FDC length mismatch → zero viable sites** (`src/phase3/turbine_selection.py`)
+
+Phase 1 produces a 20-point FDC (config `ranking.fdc_exceedance_probs`). Phase 3 was reading a separate 10-point `fdc_exceedance_probs` key. Inside `_compute_annual_energy`, the guard `if len(fdc_flows_m3s) != len(fdc_exceedances): return 0.0` silently zeroed every facility's annual energy → CF=0 → `turbine_viable=False` for all sites. Pipeline produced zero viable sites with no warning.
+
+Fix: Introduced `_PHASE1_FDC_EXCEEDANCES` constant (reads `ranking.fdc_exceedance_probs`, same grid Phase 1 uses). `select_and_size_turbines` now pairs 20-point FDC flows with the matching 20-point exceedance grid. `_compute_annual_energy` changed from hard-fail on mismatch to truncation: `n = min(len(fdc_flows_m3s), len(fdc_exceedances))`.
+
+**Bug 2 — `_read_cache` TypeError → crash on second pipeline run** (`src/phase3/elevation.py`)
+
+When the USGS 3DEP API fails after all retries, `_write_cache` stores `{"elevation_m": null}`. On next run, `data.get("elevation_m", "nan")` returns Python `None` (key exists, default ignored). `float(None)` raises `TypeError`. The except clause only caught `(json.JSONDecodeError, ValueError, KeyError)` — not `TypeError`. Every facility with a failed elevation query caused the entire second run to crash before making any API calls.
+
+Fix: `raw = data.get("elevation_m"); return None if raw is None else float(raw)`. Added `TypeError` to except tuple as belt-and-suspenders.
+
+---
+
+### Performance Fix
+
+**O(n²) FDC lookup** (`src/phase3/turbine_selection.py`)
+
+Per-row `facilities.filter(pl.col("npdes_id") == row["npdes_id"])["flow_duration_curve"][0]` inside a Python loop = 225M row comparisons for 15k facilities.
+
+Fix: `fdc_lookup = dict(zip(df["npdes_id"], df["flow_duration_curve"]))` built once before the loop.
+
+---
+
+### Logic Fixes
+
+**Viable gate too permissive** (`src/phase3/turbine_selection.py`): `cf >= MIN_CF * 0.5` (effectively CF ≥ 0.20) was mislabeled "allow slight miss". Changed to strict `cf >= MIN_CF` (0.40). Prevents economically marginal sites from entering Phase 4 as viable.
+
+**Negative head handling improved** (`src/phase3/head_estimation.py`): `_compute_head_row` now distinguishes three cases: (1) `candidate_net ≤ 0` → physically impossible, falls through to literature; (2) `0 < candidate_net < MIN_NET_HEAD_M` → valid 3DEP reading of genuinely low-head site, early return `valid=False, source="usgs_3dep"`, no replacement with 5 m design default; (3) `candidate_net ≥ MIN_NET_HEAD_M` → plausibility gate as before.
+
+**`--skip-elevation` silent fallthrough** (`src/phase3/run.py`): Now logs a warning when flag is set but `elevation_data.parquet` is absent, then proceeds with API calls.
+
+---
+
+### Minor Fixes
+
+- Kaplan docstring corrected: "peaks ~0.90" → "peaks ~0.93" (`turbine_selection.py:14`)
+- `data/turbines/turbine_manufacturers.csv` MGD unit corrections: Rentricity 2.38 → 2.05 MGD; LucidEnergy 28.0 → 24.2 MGD (display columns now match m³/s values)
+
+---
+
+### Test Coverage Added (64 total, up from 37)
+
+| Test | Covers |
+|------|--------|
+| `test_20point_fdc_produces_nonzero_energy` | Bug 1 regression |
+| `test_full_pipeline_with_20point_fdc_column` | End-to-end 20-pt FDC path |
+| `test_length_mismatch_is_tolerated` | `_compute_annual_energy` truncation |
+| `test_flat_fdc_matches_p_times_hours` | Direct energy unit check |
+| `test_fewer_than_two_points_returns_zero` / `test_empty_fdc_returns_zero` | Edge cases |
+| `test_fallback_when_no_fraction_meets_cf` | Optimizer fallback path |
+| `test_ocean_sentinel_produces_none_elevation` | `-1,000,000` sentinel → `None` |
+| `test_null_cached_elevation_returns_none_on_read` | Bug 2 regression |
+| `test_api_result_populates_elevation` / `test_api_failure_produces_failed_source` | API mock paths, second-run crash |
+| `test_head_below_minimum_is_invalid` assertion hardened | Non-vacuous check: `assert not valid` |
+
+---
+
+**Phase status after this session:**
+- Phase 1: Complete ✓ | Phase 2: Complete ✓ | Phase 3: Complete + Bug-fixed ✓ | Phase 4: NOT STARTED | Phase 5: NOT STARTED
+
+**Next steps:**
+1. Run full Phase 1+2 pipeline to generate `monte_carlo_results.parquet`
+2. `python -m src.phase3.run --top-n 100` to test 3DEP API calls on first 100 sites
+3. Review head estimate distribution (usgs_3dep vs phase2_literature breakdown)
+4. Begin Phase 4: financial scorecard using `data/processed/phase3/turbine_sizing.parquet`
+
+---
