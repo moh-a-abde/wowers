@@ -28,10 +28,33 @@ head_assumptions:
 
 # ── Cost model ────────────────────────────────────────────────────────────────
 cost_model:
+  # Global fallback (used only for unknown turbine types)
   capex_A: 9500
   capex_B: -0.35
   capex_min_per_kw: 800
   capex_max_per_kw: 10000
+  # Per-type power-law CapEx params (DOE Hydropower Vision / ORNL TM-2014/525)
+  types:
+    Kaplan:
+      A: 9500
+      B: -0.35
+      min_per_kw: 800
+      max_per_kw: 10000
+    Francis:
+      A: 8500
+      B: -0.32
+      min_per_kw: 700
+      max_per_kw: 9000
+    Pelton:
+      A: 7000
+      B: -0.30
+      min_per_kw: 600
+      max_per_kw: 8000
+    in_conduit_micro:
+      A: 12000
+      B: -0.25
+      min_per_kw: 2000
+      max_per_kw: 15000
   opex_pct_of_capex:
     Kaplan: 0.025
     Francis: 0.020
@@ -134,19 +157,6 @@ phase3:
     - 0.8
     - 0.9
     - 1.0
-
-  # Flow exceedance probabilities for rated-power optimisation (from Phase 1 FDC)
-  fdc_exceedance_probs:
-    - 0.05
-    - 0.10
-    - 0.20
-    - 0.30
-    - 0.40
-    - 0.50
-    - 0.60
-    - 0.70
-    - 0.80
-    - 0.90
 
 # ── Processing ────────────────────────────────────────────────────────────────
 processing:
