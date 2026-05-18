@@ -86,8 +86,8 @@ The project shifted from "build a physical turbine prototype" to "build a data-d
 |---|---|---|
 | Phase 1 | Rank candidate plants from EPA ECHO data | ✅ Complete |
 | Phase 2 | Monte Carlo energy yield estimation | ✅ Complete |
-| Phase 3 | Turbine sizing via USGS 3DEP elevation API | 🔲 Not started |
-| Phase 4 | Financial scorecard (NPV, IRR, payback) | 🔲 Not started |
+| Phase 3 | Turbine sizing via USGS 3DEP elevation API | ✅ Complete (awaiting raw data for pipeline run) |
+| Phase 4 | Financial scorecard (NPV, IRR, payback) | ✅ Complete (awaiting raw data for pipeline run) |
 | Phase 5 | ML model trained on DOE/FERC ground truth | 🔲 Not started |
 
 ---
