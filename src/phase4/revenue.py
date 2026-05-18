@@ -1,6 +1,6 @@
 """Phase 4 — Revenue computation and state electricity rate lookup.
 
-Electricity rates are loaded from ``data/electricity_rates/state_rates.yaml``.
+Electricity rates are loaded from ``config/electricity_rates/state_rates.yaml``.
 REC (Renewable Energy Certificate) value is stored in ``config/settings.yaml``
 under ``financials.rec_value_per_kwh``.
 """

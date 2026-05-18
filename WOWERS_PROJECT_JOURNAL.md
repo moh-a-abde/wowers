@@ -544,3 +544,33 @@ Two rounds of agent code review were conducted on the Phase 2 and Phase 4 code i
 6. Begin Phase 5 (ML ranking model)
 
 ---
+
+### Session: 2026-05-18
+
+**What was done:**
+- Read full journal to establish prior session state
+- Investigated critical blocker from prior external review: `.gitignore` `data/` rule excluding `data/electricity_rates/state_rates.yaml` from version control
+- Confirmed blocker was already resolved between sessions: `revenue.py` `_RATES_FILE` already pointed to `config/electricity_rates/state_rates.yaml`, and that file already existed and was tracked in git
+- Confirmed 204/204 tests passing before making any changes
+- Sent the fix to external agent reviewer for verification; reviewer ran 7 checks — all passed; identified two low-severity follow-up findings (F1 stale docstring, F2 stale duplicate file on disk)
+- Applied F1: corrected stale module docstring in `src/phase4/revenue.py` line 3 — changed `data/electricity_rates/state_rates.yaml` → `config/electricity_rates/state_rates.yaml`
+- Applied F2: deleted `data/electricity_rates/state_rates.yaml` from disk (2207 bytes, gitignored, superseded, divergent values vs tracked copy)
+- Confirmed 204/204 tests still passing after both fixes
+- Sent follow-up to external reviewer; all checks passed — no new findings
+
+**Files modified / created:**
+- `src/phase4/revenue.py` — line 3: docstring path corrected (`data/` → `config/`)
+- `data/electricity_rates/state_rates.yaml` — deleted (gitignored stale duplicate)
+
+**Resources used:**
+- External agent code reviewer (two rounds)
+- Prior session journal entries
+
+**Next steps after this session:**
+1. Obtain EPA ECHO / ICIS-NPDES raw data (~10 GB); run `python -m src.phase1.run`
+2. Smoke test: `python -m src.phase3.run --top-n 5`; inspect parquet columns; confirm `p_rated_kw` vs `rated_power_kw` column name (open item S2)
+3. Full pipeline: Phase 1 → Phase 2 → Phase 3 (`--top-n 100`) → Phase 4
+4. Review head source breakdown (3DEP vs literature fallback ratio)
+5. Begin Phase 5 (ML ranking model trained on DOE/FERC ground truth)
+
+---
