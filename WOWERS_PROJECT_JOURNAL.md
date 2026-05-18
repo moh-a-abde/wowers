@@ -574,3 +574,36 @@ Two rounds of agent code review were conducted on the Phase 2 and Phase 4 code i
 5. Begin Phase 5 (ML ranking model trained on DOE/FERC ground truth)
 
 ---
+
+### Session: 2026-05-18 — Local Data Setup (Tom's machine only)
+
+**What was done:**
+- Reviewed full project state: 204/204 tests passing, Phases 1–4 implemented and reviewed, no raw data locally
+- Identified EPA ECHO raw data (~10 GB) was on Tom's external hard drive (`/Volumes/256Drive/`)
+- Confirmed drive contains all DMR fiscal year ZIPs (FY2009–FY2026) flat in `/Volumes/256Drive/DMR Datasets/`
+- Downloaded `npdes_downloads.zip` from `https://echo.epa.gov/files/echodownloads/npdes_downloads.zip` and extracted to `/Volumes/256Drive/npdes_downloads/`; confirmed `ICIS_FACILITIES.csv` and `ICIS_PERMITS.csv` present
+- Identified structural mismatch: pipeline `_locate_existing_dmr_zips` looks under `{raw_dir}/dmr/`; drive has ZIPs flat with no `dmr/` subfolder — solved via symlink
+- Created `data/raw/` directory in project root
+- Created local symlink: `data/raw/dmr` → `/Volumes/256Drive/DMR Datasets` (gitignored via `data/` rule)
+- Created local symlink: `data/raw/npdes_downloads` → `/Volumes/256Drive/npdes_downloads` (gitignored)
+- Verified both symlinks resolve correctly; ICIS CSVs visible through symlink path
+
+**NOTE — Tom's machine only:** The symlinks above (`data/raw/dmr`, `data/raw/npdes_downloads`) are local filesystem entries inside `data/`, which is gitignored. They are NOT committed and will NOT appear on other team members' machines. Other team members must set up their own local data symlinks or directory structure pointing to wherever they store the EPA raw data. The pipeline supports `--raw-dir /path/to/data` CLI flag as an alternative to symlinks.
+
+**Files modified / created:**
+- `WOWERS_PROJECT_JOURNAL.md` — appended this session entry
+- `data/raw/dmr` — local symlink to `/Volumes/256Drive/DMR Datasets` (gitignored, Tom's machine only)
+- `data/raw/npdes_downloads` — local symlink to `/Volumes/256Drive/npdes_downloads` (gitignored, Tom's machine only)
+
+**Resources used:**
+- EPA ECHO bulk downloads: `https://echo.epa.gov/files/echodownloads/npdes_downloads.zip`
+
+**Next steps after this session:**
+1. Run Phase 1: `python -m src.phase1.run --skip-download` (from project root with drive connected)
+2. Run Phase 2: `python -m src.phase2.run`
+3. Smoke test Phase 3: `python -m src.phase3.run --top-n 5`; confirm `p_rated_kw` vs `rated_power_kw` column name (open item S2)
+4. Run Phase 3 full: `python -m src.phase3.run --top-n 100`; review 3DEP vs literature head breakdown
+5. Run Phase 4: `python -m src.phase4.run`
+6. Begin Phase 5 (ML ranking model)
+
+---
