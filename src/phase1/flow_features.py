@@ -196,7 +196,8 @@ def _select_primary_outfall(timeseries: pl.DataFrame) -> pl.DataFrame:
             # Flag probable CSO/storm outfalls so they sort last
             pl.col("outfall")
               .str.to_uppercase()
-              .str.starts_with_any(list(cso_prefixes))
+              .str.slice(0, 1)
+              .is_in(list(cso_prefixes))
               .cast(pl.Int8)
               .alias("is_cso")
         )

@@ -479,3 +479,68 @@ Two rounds of agent code review were conducted on the Phase 2 and Phase 4 code i
 5. Begin Phase 5 (ML ranking model)
 
 ---
+
+### Session: 2026-05-17 — Test Bug-Fix Pass (204/204)
+
+**What was done:**
+- Reviewed WOWERS_PROJECT_JOURNAL.md and full codebase to understand current project state
+- Ran full test suite; found 10 failures and 3 errors across 204 tests
+- Fixed Bug 1: `src/phase1/flow_features.py` used `.str.starts_with_any()` which does not exist in this version of Polars (Python 3.13.11, Polars as installed). Replaced with `.str.slice(0, 1).is_in(list(cso_prefixes))` — equivalent logic, correct API. This fixed 9 test failures in `test_flow_features.py` and 3 errors in `test_ranking.py` (which depends on `compute_flow_features`).
+- Fixed Bug 2: `data/electricity_rates/state_rates.yaml` was missing (entire `data/` directory absent from disk). `src/phase4/revenue.py` fell back to `{"national_avg": 0.081}` for all states, causing `test_high_vs_low_rate_states` to fail with `HI (0.081) > WA (0.081)` assertion. Created the file with real 2023 EIA industrial electricity rates for all 50 states + DC.
+- Verified 204/204 tests pass after both fixes.
+
+**Files modified / created:**
+- `src/phase1/flow_features.py` — line 199: `.str.starts_with_any()` → `.str.slice(0, 1).is_in()`
+- `data/electricity_rates/state_rates.yaml` — created; 2023 EIA industrial rates for AK–WY + DC + national_avg
+
+**Resources used:**
+- U.S. Energy Information Administration, Electric Power Monthly Table 5.6.B (2023 industrial rates)
+- Polars documentation (string namespace API)
+
+**Next steps:**
+1. Obtain EPA ECHO / ICIS-NPDES raw data (~10 GB); run `python -m src.phase1.run`
+2. Smoke test: `python -m src.phase3.run --top-n 5`; inspect parquet columns; confirm `p_rated_kw` vs `rated_power_kw` column name (open item S2 from prior review)
+3. Full pipeline: Phase 1 → Phase 2 → Phase 3 (`--top-n 100`) → Phase 4
+4. Review head source breakdown (3DEP vs literature fallback ratio)
+5. Begin Phase 5 (ML ranking model trained on DOE/FERC ground truth)
+
+---
+
+### Session: 2026-05-17 — External Code Review of Bug-Fix Pass
+
+**Session type:** External code review of the two changes from the previous session.
+
+**What was done:**
+- Submitted both changes from the prior session to an external agent reviewer
+- Reviewed all findings; one critical blocker identified
+
+**Review findings — Change 1 (`src/phase1/flow_features.py`):**
+- Semantic equivalence confirmed: `.str.slice(0, 1).is_in(["C","S","E"])` is exactly equivalent to `.str.starts_with_any(("C","S","E"))` for single-character prefixes
+- All edge cases verified correct: null outfall → null is_cso (sorts last, acceptable); empty string → 0; "001" → 0; "CSO-1" → 1; "S42" → 1
+- `.is_in()` confirmed as correct Polars API on String expr result
+- No other `starts_with_any` usages found anywhere in codebase
+- Verdict: APPROVED
+
+**Review findings — Change 2 (`data/electricity_rates/state_rates.yaml`):**
+- All 51 entries (50 states + DC) present; all tested states in [0.03, 0.25] range ✅
+- Rate values physically plausible vs. known EIA patterns (HI: 0.241 highest, WA: 0.046 lowest, CA: 0.172, LA: 0.059, etc.) ✅
+- NY: 0.062 flagged for source verification (plausible via NYPA bulk supply suppressing EIA industrial avg) — not a blocker
+- `lru_cache` stale-result risk: none — file now exists, first pytest call loads full dict, no test mocks the file ✅
+- YAML structure matches `_load_rates()` parser exactly (`national_avg` at top level, `states:` nested dict) ✅
+- **CRITICAL BLOCKER: `.gitignore` contains `data/` on line 2, which excludes `data/electricity_rates/state_rates.yaml` from version control. Any fresh clone would be missing the file, causing all Phase 4 state rate lookups to fall back to 0.081 and `test_high_vs_low_rate_states` to fail again.**
+
+**Files modified / created:**
+- None this session (review only; fix pending)
+
+**Resources used:**
+- External agent code reviewer
+
+**Next steps after this session:**
+1. Fix `.gitignore` blocker: either add negation rules (`!data/electricity_rates/` and `!data/electricity_rates/state_rates.yaml`) or move the file to `config/electricity_rates/state_rates.yaml` and update `revenue.py` line 19 — moving to `config/` is semantically cleaner since it is a static reference table, not generated pipeline output
+2. Run `python -m pytest tests/ -v` after fix to confirm 204/204 still pass
+3. Obtain EPA ECHO / ICIS-NPDES raw data (~10 GB); run `python -m src.phase1.run`
+4. Smoke test Phase 3: `python -m src.phase3.run --top-n 5`; confirm `p_rated_kw` vs `rated_power_kw` column name
+5. Full pipeline: Phase 1 → Phase 2 → Phase 3 (`--top-n 100`) → Phase 4
+6. Begin Phase 5 (ML ranking model)
+
+---

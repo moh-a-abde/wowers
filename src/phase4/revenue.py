@@ -16,7 +16,7 @@ from src.common import config, logging_setup
 
 log = logging_setup.get("wowers.phase4.revenue")
 
-_RATES_FILE: Path = config.project_root() / "data" / "electricity_rates" / "state_rates.yaml"
+_RATES_FILE: Path = config.project_root() / "config" / "electricity_rates" / "state_rates.yaml"
 _REC_PER_KWH: float = float(config.get("financials.rec_value_per_kwh", 0.01))
 
 
