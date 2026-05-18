@@ -607,3 +607,39 @@ Two rounds of agent code review were conducted on the Phase 2 and Phase 4 code i
 6. Begin Phase 5 (ML ranking model)
 
 ---
+
+## 2026-05-18 — Timestamped Run Logs (all machines)
+
+**What was done:**
+- Added `setup_run_log(phase_name)` function to `src/common/logging_setup.py`
+- Each time a phase is run, it automatically creates `logs/runs/<phase>_YYYY-MM-DD_HH-MM-SS.log`
+- The file captures every log line from every module in that run (all `wowers.*` child loggers propagate to the root handler)
+- Called `logging_setup.setup_run_log("phaseN")` at module load time in all four phase run scripts
+- The `logs/` directory is already gitignored, so run log files are never committed
+
+**Why:** Scrolling through a terminal to review 16-year DMR parse output is impractical. Each run now saves a permanent, searchable, shareable log file stamped with the exact time it was executed.
+
+**How to use after a run:**
+```bash
+# Open the logs folder in Finder
+open logs/runs/
+
+# Print last 50 lines of most recent phase1 run
+cat logs/runs/phase1_*.log | tail -50
+```
+
+**Files modified:**
+- `src/common/logging_setup.py` — added `setup_run_log()` function
+- `src/phase1/run.py` — added `logging_setup.setup_run_log("phase1")` call
+- `src/phase2/run.py` — added `logging_setup.setup_run_log("phase2")` call
+- `src/phase3/run.py` — added `logging_setup.setup_run_log("phase3")` call
+- `src/phase4/run.py` — added `logging_setup.setup_run_log("phase4")` call
+- `WOWERS_PROJECT_JOURNAL.md` — appended this session entry
+
+**Next steps:**
+1. Wait for Phase 1 run to finish (currently running against external drive data)
+2. Review output in `logs/runs/phase1_*.log`
+3. Run Phases 2–4 in sequence
+4. Begin Phase 5 (ML ranking model)
+
+---

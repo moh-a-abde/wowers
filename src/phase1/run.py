@@ -21,6 +21,7 @@ from src.phase1 import (
     ranking,
 )
 
+logging_setup.setup_run_log("phase1")
 log = logging_setup.get("wowers.phase1")
 
 OUTPUT_DIR = config.processed_dir() / "phase1"

@@ -34,6 +34,7 @@ import polars as pl
 from src.common import config, io, logging_setup
 from src.phase3 import elevation, head_estimation, turbine_selection
 
+logging_setup.setup_run_log("phase3")
 log = logging_setup.get("wowers.phase3")
 
 OUTPUT_DIR: Path = config.processed_dir() / "phase3"

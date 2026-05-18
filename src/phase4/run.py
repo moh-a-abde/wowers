@@ -31,6 +31,7 @@ from src.phase4.financials import (
 from src.phase4.revenue import annual_revenue, electricity_rate
 from src.phase4.sensitivity import run_tornado
 
+logging_setup.setup_run_log("phase4")
 log = logging_setup.get("wowers.phase4")
 
 OUTPUT_DIR: Path = config.processed_dir() / "phase4"

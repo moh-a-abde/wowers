@@ -27,6 +27,7 @@ import polars as pl
 from src.common import config, io, logging_setup
 from src.phase2.monte_carlo import estimate_all_facilities
 
+logging_setup.setup_run_log("phase2")
 log = logging_setup.get("wowers.phase2")
 
 OUTPUT_DIR: Path = config.processed_dir() / "phase2"
