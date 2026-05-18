@@ -117,7 +117,8 @@ def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
         national_gwh = valid_energy.sum() / 1e6  # kWh → GWh
         median_kwh   = valid_energy.median()
         top10_gwh    = (
-            df.sort("energy_p50_kwh_yr", descending=True)
+            df.filter(pl.col("energy_p50_kwh_yr").is_not_null())
+            .sort("energy_p50_kwh_yr", descending=True)
             .head(10)["energy_p50_kwh_yr"]
             .sum() / 1e6
         )

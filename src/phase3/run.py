@@ -39,29 +39,27 @@ log = logging_setup.get("wowers.phase3")
 
 OUTPUT_DIR: Path = config.processed_dir() / "phase3"
 
-# ── Fallback: where to find Phase 1/2 outputs ─────────────────────────────────
-_PHASE2_CANDIDATES = config.processed_dir() / "phase2" / "monte_carlo_results.parquet"
+# ── Input paths ───────────────────────────────────────────────────────────────
+# Phase 3 always uses Phase 1 ranked_candidates as its primary input because
+# Phase 1 contains the columns Phase 3 needs: lat/lon, mean_flow_mgd,
+# design_flow_mgd, flow_duration_curve.  Phase 2 energy_yield_estimates is
+# used only to pre-filter Phase 2-excluded facilities (no usable flow data).
 _PHASE1_CANDIDATES = config.processed_dir() / "phase1" / "ranked_candidates.parquet"
+_PHASE2_ENERGY     = config.processed_dir() / "phase2" / "energy_yield_estimates.parquet"
 
 
 def _find_input_parquet(override: Path | None) -> Path:
-    """Locate the best available Phase 1/2 output."""
+    """Locate Phase 1 ranked_candidates.parquet (or a CLI override)."""
     if override is not None:
         if not override.exists():
             raise FileNotFoundError(f"--phase2-input path not found: {override}")
         return override
-    if _PHASE2_CANDIDATES.exists():
-        log.info(f"  Using Phase 2 output: {_PHASE2_CANDIDATES}")
-        return _PHASE2_CANDIDATES
     if _PHASE1_CANDIDATES.exists():
-        log.warning(
-            "  Phase 2 output not found; falling back to Phase 1 ranked_candidates.parquet. "
-            "Head values will be literature-based only."
-        )
         return _PHASE1_CANDIDATES
     raise FileNotFoundError(
-        "Phase 3 requires Phase 1 or Phase 2 output. "
-        f"Expected at: {_PHASE2_CANDIDATES}  or  {_PHASE1_CANDIDATES}"
+        "Phase 3 requires Phase 1 output. "
+        f"Expected at: {_PHASE1_CANDIDATES}\n"
+        "Run Phase 1 first: python -m src.phase1.run"
     )
 
 
@@ -101,6 +99,27 @@ def run(
         log.info(f"  Limited to top {top_n} facilities (--top-n)")
 
     log.info(f"  Loaded {len(candidates):,} facilities from {input_path.name}")
+
+    # Pre-filter: remove facilities that Phase 2 excluded (no usable flow data).
+    # Phase 2's exclusion criterion is mean_flow_mgd = None or ≤ 0.  Loading the
+    # exclusion list from Phase 2 output avoids duplicating that logic here and
+    # keeps the two phases in sync.
+    if _PHASE2_ENERGY.exists():
+        p2_excluded = (
+            io.read_parquet(_PHASE2_ENERGY)
+            .filter(pl.col("excluded"))
+            .select("npdes_id")
+        )
+        before = len(candidates)
+        candidates = candidates.join(p2_excluded, on="npdes_id", how="anti")
+        removed = before - len(candidates)
+        if removed:
+            log.info(f"  Pre-filtered {removed:,} Phase 2-excluded facilities (no usable flow)")
+    else:
+        log.warning(
+            "  Phase 2 output not found — cannot pre-filter excluded facilities. "
+            f"Expected at: {_PHASE2_ENERGY}"
+        )
 
     # Ensure lat/lon columns exist with consistent names
     candidates = _normalise_coordinates(candidates)

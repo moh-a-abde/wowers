@@ -643,3 +643,127 @@ cat logs/runs/phase1_*.log | tail -50
 4. Begin Phase 5 (ML ranking model)
 
 ---
+
+### Session: 2026-05-18 — Phase 2 Top-10 Summary Logger Bug Fix
+
+**What was done:**
+- Reviewed full journal to establish project state
+- Confirmed Phases 1–4 had been run end-to-end
+- Investigated Phase 2 summary display bug: "Top-10 facilities: 0.00 GWh/yr" at log line 43
+- Root cause: `_print_summary()` in `src/phase2/run.py` called `df.sort("energy_p50_kwh_yr", descending=True).head(10)` on the full dataframe including 1,438 excluded facilities whose `energy_p50_kwh_yr = None`. In Polars, `sort(descending=True)` places nulls first by default — so `.head(10)` returned 10 null rows and `.sum()` returned 0.
+- Fix: added `.filter(pl.col("energy_p50_kwh_yr").is_not_null())` before the sort, consistent with the pattern already used for the `national_gwh` and `median_kwh` calculations in the same function
+- Re-ran Phase 2 to verify: Top-10 now correctly shows **13,696.05 GWh/yr**
+- No change to `energy_yield_estimates.parquet` data contents — bug was display-only as expected
+
+**Files modified / created:**
+- `src/phase2/run.py` — `_print_summary()` line 119: added null filter before top-10 sort
+
+**Resources used:**
+- `logs/runs/phase2_2026-05-18_10-06-21.log` — confirmed bug at line 43
+- Polars documentation (null sort placement behavior)
+
+**Observations worth following up:**
+- `national_gwh = 14,450 GWh/yr` is above the DOE expected range of 500–5,000 GWh/yr. The parquet data is intact. The inflation is likely from head assumptions being applied to the full 17k-facility corpus including very large plants; worth auditing the head distribution parameters in `config/settings.yaml` or the archetype classification thresholds.
+
+**Next steps after this session:**
+1. Audit `national_gwh = 14,450 GWh/yr` vs. DOE 500–5,000 GWh/yr expected range — check head assumption distributions for large-archetype facilities
+2. Review Phase 3 output in `data/processed/phase3/turbine_sizing.parquet`
+3. Review Phase 4 output in `data/processed/phase4/financial_scorecards.parquet`
+4. Begin Phase 5 (ML ranking model trained on DOE/FERC ground truth)
+
+---
+
+### Session: 2026-05-18 — Multi-Phase Bug Fix & Data Quality Hardening
+
+**Background:**
+After investigating the Phase 2 Top-10 display bug (fixed in prior session), a deeper audit revealed three additional issues: (1) grossly inflated national energy estimate (14,450 GWh/yr vs. DOE expected 500–5,000 GWh/yr), (2) 3,690 Phase 3 "unknown" turbine types, and (3) the Phase 3 pre-filter using a non-existent file path.
+
+---
+
+**Fix 1 — Phase 1: Flow Sanity Cap for ICIS Unit Errors**
+
+*Root cause:* EPA ECHO ICIS permit data contains unit errors where `design_flow_mgd` and `actual_avg_flow_mgd` are filed in GPD or MLD instead of MGD. Example: `NC0020354` had `design_flow_mgd = 750,000` (should be 0.75 MGD), yielding `mean_flow_mgd = 562,500 MGD` — roughly 470× the largest US POTW (MWRDGC Stickney at 1,200 MGD). This single facility inflated the national P50 from ~850 GWh/yr to 14,450 GWh/yr.
+
+*Fix in `config/settings.yaml`:*
+```yaml
+processing:
+  max_flow_mgd_sanity: 2000   # hard cap; anything above is almost certainly a unit error
+                               # largest known US POTW (Stickney) ~1,200 MGD
+```
+
+*Fix in `src/phase1/filter_potw.py` (`_load_permits`):*
+- After casting flow columns, loop over `design_flow_mgd` and `actual_avg_flow_mgd`
+- Any value > `max_flow_mgd_sanity` is replaced with `null` (not clamped — these are data errors, not extreme-but-real values)
+- Logs a warning with count and max observed value
+- **449 rows** nulled for `design_flow_mgd` (max was 64,000,000 MGD); **95 rows** for `actual_avg_flow_mgd`
+
+*Fix in `src/phase1/flow_features.py` (`_compute_for_facility`):*
+- Secondary defense: `np.clip(flows, 0.0, MAX_FLOW_MGD)` applied to DMR time-series before computing statistics
+- Catches any unit errors that slip through raw DMR records (complementary to the ICIS fix)
+
+*Verification:* After re-running Phase 1, max national `mean_flow_mgd` = **1,200.0 MGD** (MWRDGC Stickney WRP — correctly the largest US POTW). `NC0020354` now has `mean_flow_mgd = 0.5625 MGD`.
+
+---
+
+**Fix 2 — Phase 3: Corrected Input Path and Phase 2 Exclusion Pre-filter**
+
+*Root cause:* `src/phase3/run.py` was looking for Phase 2 output at `monte_carlo_results.parquet` (does not exist). It fell back to raw Phase 1 data which included facilities that Phase 2 would have excluded (no usable flow data). This caused Phase 3 to attempt turbine sizing on 17,158 facilities rather than the 15,719 non-excluded ones, inflating the "unknown" turbine count.
+
+*Fix in `src/phase3/run.py`:*
+- Renamed `_PHASE2_CANDIDATES` → `_PHASE2_ENERGY`, pointed to correct `energy_yield_estimates.parquet`
+- `_find_input_parquet()` now always returns Phase 1 `ranked_candidates.parquet` as primary input (Phase 1 has the spatial + flow columns Phase 3 needs; Phase 2 has energy estimates only)
+- Added pre-filter step: loads `energy_yield_estimates.parquet`, anti-joins on `excluded=True` facilities, removes them before turbine sizing
+- Pre-filter log line: `Pre-filtered 1,439 Phase 2-excluded facilities (no usable flow)`
+
+---
+
+**Full Pipeline Re-run Results (2026-05-18):**
+
+| Phase | Metric | Before | After |
+|-------|--------|--------|-------|
+| P1 | Max national `mean_flow_mgd` | 562,500 MGD | 1,200 MGD (Stickney) |
+| P1 | Unit-error rows nulled | — | 449 (`design_flow_mgd`) + 95 (`actual_avg_flow_mgd`) |
+| P2 | National P50 energy | 14,450 GWh/yr | **847.5 GWh/yr** ✓ (DOE range: 500–5,000) |
+| P2 | Top-10 facilities | 0.00 GWh/yr (display bug) | **115.05 GWh/yr** |
+| P2 | Excluded facilities | 1,438 | 1,439 |
+| P3 | Pre-filter removed | 0 | 1,439 (Phase 2 excluded) |
+| P3 | Viable turbine sites | 4,418/17,158 (inflated base) | 4,418/15,719 |
+| P3 | "unknown" turbine types | 3,690 (spurious) | 2,275 (legitimate: q ≤ 0.001 m³/s) |
+| P3 | Head from 3DEP | 0 | 0 (pending investigation) |
+| P4 | Project-viable sites (NPV>0, payback≤20yr) | — | **774 (17.5%)** |
+| P4 | Median payback (viable) | — | **6.2 yr** |
+| P4 | Portfolio CapEx | — | **$194.8M** |
+| P4 | Portfolio revenue | — | **$35.5M/yr** |
+
+Top-5 viable sites by annual energy:
+
+| NPDES ID | Annual Energy (MWh/yr) | NPV | Payback |
+|----------|----------------------|-----|---------|
+| IL0028053 (MWRDGC Stickney) | 13,019 | $12.4M | 1.6 yr |
+| GA0021725 (Athens-Clarke Co.) | 10,838 | $9.4M | 1.7 yr |
+| TN0056545 (Summertown HS) | 5,629 | $5.2M | 1.9 yr |
+| WA0029181 | 5,248 | $3.0M | 2.7 yr |
+| DC0021199 (Blue Plains) | 4,056 | $4.8M | 1.4 yr |
+
+---
+
+**Files modified:**
+- `config/settings.yaml` — added `max_flow_mgd_sanity: 2000` under `processing:`
+- `src/phase1/filter_potw.py` — `_load_permits()`: nullify ICIS flow values > sanity cap
+- `src/phase1/flow_features.py` — `_compute_for_facility()`: `np.clip` on DMR flows as secondary defense
+- `src/phase2/run.py` — `_print_summary()`: null filter before top-10 sort (from prior session, re-verified)
+- `src/phase3/run.py` — corrected Phase 2 input path; added Phase 2-exclusion pre-filter; always use Phase 1 as primary input
+
+---
+
+**Known pending issues (not fixed this session):**
+1. **Phase 3: 100% `design_fallback` head** — `head_m_p50` column expected by `head_estimation.py` does not exist in Phase 2 output. All 15,719 facilities use default 5m gross head → 4.25m net head. USGS 3DEP API calls are never made because the 3DEP branch requires pre-computed `head_m_p50` as a seed. This significantly underestimates head for high-head facilities and needs a proper fix before Phase 5.
+2. **TN0056545 "SUMMERTOWN HIGH SCHOOL" 585 MGD** — still present; 585 MGD is below the 2,000 MGD sanity cap and wasn't caught. Likely a unit error (GPD instead of MGD would be 0.585 MGD = reasonable for a high school). Needs manual verification.
+3. **Phase 5 ML model** — not yet started.
+
+**Next steps after this session:**
+1. Investigate Phase 3 `head_m_p50` missing from Phase 2 output — add head percentile columns to `energy_yield_estimates.parquet` or implement independent elevation fetch in Phase 3
+2. Verify TN0056545 flow data in EPA ECHO; lower sanity cap if appropriate
+3. Begin Phase 5 ML ranking model
+
+---

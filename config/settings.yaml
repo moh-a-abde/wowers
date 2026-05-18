@@ -166,6 +166,9 @@ processing:
   download_retry_backoff_s: 5
   min_months_for_features: 12      # minimum DMR months to compute full features
   max_utilization_ratio: 2.0       # flag anything above this
+  max_flow_mgd_sanity: 2000        # hard cap on individual DMR flow readings (MGD)
+                                   # largest known US POTW (MWRDGC Stickney) ~1,200 MGD
+                                   # anything above 2,000 is almost certainly a unit error
 
 # ── NODI code handling ────────────────────────────────────────────────────────
 nodi_codes:

@@ -10,6 +10,10 @@ from src.common import config, logging_setup
 
 log = logging_setup.get("wowers.phase1.filter_potw")
 
+# Hard upper bound on permit flow fields.  Values above this are almost
+# certainly unit errors in EPA ECHO (e.g. GPD filed as MGD).
+_MAX_FLOW_MGD: float = config.get("processing.max_flow_mgd_sanity", 2000.0)
+
 # Output schema — enforced after join
 POTW_SCHEMA = {
     "npdes_id": pl.Utf8,
@@ -111,11 +115,30 @@ def _load_permits(path: Path) -> pl.DataFrame:
     rename_map = {k: v for k, v in keep.items() if k in df.columns}
     df = df.select(list(rename_map.keys())).rename(rename_map)
 
-    return df.with_columns([
+    df = df.with_columns([
         pl.col("npdes_id").cast(pl.Utf8).str.strip_chars(),
         pl.col("design_flow_mgd").cast(pl.Float64, strict=False),
         pl.col("actual_avg_flow_mgd").cast(pl.Float64, strict=False),
     ])
+
+    # Null out any flow values that exceed the sanity cap.
+    # Values this large (e.g. 750,000 "MGD") are unit errors in EPA ECHO —
+    # the field was likely populated in GPD or MLD instead of MGD.
+    for col in ("design_flow_mgd", "actual_avg_flow_mgd"):
+        if col in df.columns:
+            n_bad = int((df[col] > _MAX_FLOW_MGD).sum())
+            if n_bad:
+                log.warning(
+                    f"  Nulling {n_bad} permit row(s) where {col} > {_MAX_FLOW_MGD} MGD "
+                    f"(max was {float(df[col].max()):,.0f} MGD) — probable unit error in EPA ECHO"
+                )
+                df = df.with_columns(
+                    pl.when(pl.col(col) > _MAX_FLOW_MGD)
+                    .then(pl.lit(None, dtype=pl.Float64))
+                    .otherwise(pl.col(col))
+                    .alias(col)
+                )
+    return df
 
 
 # ── Filtering ─────────────────────────────────────────────────────────────────

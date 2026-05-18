@@ -17,6 +17,7 @@ FDC_PROBS: list[float] = config.get("ranking.fdc_exceedance_probs") or [
 ]
 
 MIN_MONTHS = config.get("processing.min_months_for_features", 12)
+MAX_FLOW_MGD = config.get("processing.max_flow_mgd_sanity", 2000.0)
 
 
 def compute_flow_features(
@@ -74,6 +75,16 @@ def _compute_for_facility(
     flows: np.ndarray,
     group: pl.DataFrame,
 ) -> dict:
+    # Sanity cap: DMR records sometimes contain unit errors (e.g. GPD filed as MGD).
+    # Largest known US POTW (MWRDGC Stickney) is ~1,200 MGD; cap at MAX_FLOW_MGD.
+    n_capped = int(np.sum(flows > MAX_FLOW_MGD))
+    if n_capped:
+        log.warning(
+            f"  {npdes_id}: capping {n_capped} flow reading(s) above {MAX_FLOW_MGD} MGD "
+            f"(max was {float(flows.max()):,.0f} MGD) — likely unit error in DMR data"
+        )
+        flows = np.clip(flows, 0.0, MAX_FLOW_MGD)
+
     n = len(flows)
     mean_f = float(np.mean(flows))
     std_f = float(np.std(flows, ddof=1)) if n > 1 else 0.0
