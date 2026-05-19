@@ -116,8 +116,21 @@ class TestRunMonteCarlo:
             "energy_p10_kwh_yr", "energy_p50_kwh_yr", "energy_p90_kwh_yr",
             "energy_mean_kwh_yr", "energy_std_kwh_yr",
             "power_p50_kw", "capacity_factor_p50",
+            "head_m_p10", "head_m_p50", "head_m_p90",
         }
         assert required == set(result.keys())
+
+    def test_head_percentile_ordering(self):
+        r = self._run()
+        assert r["head_m_p10"] <= r["head_m_p50"] <= r["head_m_p90"]
+
+    def test_head_within_distribution_bounds(self):
+        # Distribution: Triangular(2.0, 5.0, 12.0)
+        # P10 must be ≥ low bound; P90 must be ≤ high bound
+        r = self._run()
+        assert r["head_m_p10"] >= 2.0
+        assert r["head_m_p90"] <= 12.0
+        assert 2.0 <= r["head_m_p50"] <= 12.0
 
     def test_percentile_ordering(self):
         r = self._run()

@@ -163,7 +163,9 @@ def run_monte_carlo(
 
     # Median power at rated conditions (P50 head, P50 efficiency, mean flow)
     mean_flow_m3s = float(np.mean(fdc_arr)) * MGD_TO_M3S
+    h_p10   = float(np.percentile(h_samples,   10))
     h_p50   = float(np.percentile(h_samples,   50))
+    h_p90   = float(np.percentile(h_samples,   90))
     eta_p50 = float(np.percentile(eta_samples,  50))
     power_p50_kw = power_kw(eta_p50, mean_flow_m3s, h_p50)
 
@@ -180,4 +182,7 @@ def run_monte_carlo(
         "energy_std_kwh_yr":   float(np.std(energies)),
         "power_p50_kw":        power_p50_kw,
         "capacity_factor_p50": cf_p50,
+        "head_m_p10":          h_p10,
+        "head_m_p50":          h_p50,
+        "head_m_p90":          h_p90,
     }

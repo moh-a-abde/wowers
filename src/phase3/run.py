@@ -101,20 +101,32 @@ def run(
     log.info(f"  Loaded {len(candidates):,} facilities from {input_path.name}")
 
     # Pre-filter: remove facilities that Phase 2 excluded (no usable flow data).
-    # Phase 2's exclusion criterion is mean_flow_mgd = None or ≤ 0.  Loading the
-    # exclusion list from Phase 2 output avoids duplicating that logic here and
-    # keeps the two phases in sync.
+    # Also join head_m_p50 from Phase 2 so head_estimation.py can use literature
+    # head as a plausibility bound for the USGS 3DEP-derived head.
     if _PHASE2_ENERGY.exists():
-        p2_excluded = (
-            io.read_parquet(_PHASE2_ENERGY)
-            .filter(pl.col("excluded"))
-            .select("npdes_id")
-        )
+        p2_df = io.read_parquet(_PHASE2_ENERGY)
+        p2_excluded = p2_df.filter(pl.col("excluded")).select("npdes_id")
         before = len(candidates)
         candidates = candidates.join(p2_excluded, on="npdes_id", how="anti")
         removed = before - len(candidates)
         if removed:
             log.info(f"  Pre-filtered {removed:,} Phase 2-excluded facilities (no usable flow)")
+
+        # Join Phase 2 head percentile columns onto Phase 1 candidates so that
+        # head_estimation.estimate_head() can use head_m_p50 as a validation bound
+        # for 3DEP-derived head (instead of falling back to design_fallback for all).
+        head_cols = [c for c in ("head_m_p10", "head_m_p50", "head_m_p90")
+                     if c in p2_df.columns]
+        if head_cols:
+            p2_head = p2_df.select(["npdes_id"] + head_cols)
+            candidates = candidates.join(p2_head, on="npdes_id", how="left")
+            n_with_head = candidates["head_m_p50"].drop_nulls().len()
+            log.info(f"  Joined Phase 2 head estimates: {n_with_head:,} facilities have head_m_p50")
+        else:
+            log.warning(
+                "  Phase 2 output lacks head_m_p50 column — head estimation will use "
+                "design_fallback (5 m) for all sites. Re-run Phase 2 to fix."
+            )
     else:
         log.warning(
             "  Phase 2 output not found — cannot pre-filter excluded facilities. "

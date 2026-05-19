@@ -767,3 +767,47 @@ Top-5 viable sites by annual energy:
 3. Begin Phase 5 ML ranking model
 
 ---
+
+### Session: 2026-05-19 — Phase 2 Head Columns + Full Pipeline Re-run
+
+**What was done:**
+- Diagnosed Issue 1 from prior session: Phase 3 head estimation was 100% `design_fallback` (hardcoded 5m gross → 4.25m net) because `energy_yield_estimates.parquet` had no `head_m_p50` column for Phase 3 to use as a literature-bound seed
+- Chose Option A fix: add `head_m_p10`, `head_m_p50`, `head_m_p90` columns to Phase 2 Monte Carlo output (architecturally correct — Phase 2 already samples head from triangular distribution per archetype)
+- Modified `src/phase2/energy_physics.py`: `run_monte_carlo()` now computes and returns `head_m_p10`, `head_m_p50`, `head_m_p90` from the `h_samples` array already present in the function
+- Modified `src/phase2/monte_carlo.py`: excluded-facility return dict now includes `head_m_p10: None`, `head_m_p50: None`, `head_m_p90: None` for schema consistency
+- Modified `src/phase3/run.py`: after the Phase 2 pre-filter step, now also joins `head_m_p10/p50/p90` from `energy_yield_estimates.parquet` onto Phase 1 candidates before calling `head_estimation.estimate_head()` — with graceful warning if columns absent
+- Updated `tests/test_phase2/test_energy_physics.py`: updated `test_returns_required_keys` to include the 3 new head columns; added `test_head_percentile_ordering` and `test_head_within_distribution_bounds`
+- Ran full test suite: **206/206 pass** (up from 204 — 2 new tests added)
+- Re-ran full pipeline without `--top-n`:
+  - Phase 2: 17,158 facilities, 15,719 estimated, 1,439 excluded, national P50 847.5 GWh/yr (stable)
+  - Phase 3: 15,719 facilities, joined `head_m_p50` for all 15,719, **0 design_fallback** (was 100%), 15,719 literature, 4,294 viable sites (27.3%), 11 API failures (bad coords: Guam, Puerto Rico, garbled MS/TX lat/lon)
+  - Phase 4: 4,294 scored, **867 viable (20.2%)**, median payback 17.0yr, portfolio CapEx $239.8M, portfolio revenue $55.0M/yr
+- Investigated why median payback increased from 6.2yr (prior run) to 17yr: **confirmed correct behavior, not a bug**
+  - Prior 5m fallback = medium_potw assumption applied to all 15,719 facilities
+  - Archetype breakdown: 10,850 small_potw (69%), 3,907 medium_potw (25%), 962 large_potw (6%)
+  - small_potw head mode = 3m gross → 2.77m net (vs old 4.25m) — 69% of corpus got lower head → worse payback
+  - large_potw head mode = 8m gross → 7.24m net (vs old 4.25m) — 6% of corpus got higher head → better economics
+  - Viable count increased (774→867) and revenue increased ($35.5M→$55M/yr) because large POTWs now correctly have higher head
+
+**Files modified / created:**
+- `src/phase2/energy_physics.py` — `run_monte_carlo()` returns `head_m_p10`, `head_m_p50`, `head_m_p90`
+- `src/phase2/monte_carlo.py` — excluded branch emits `head_m_p10/p50/p90: None`
+- `src/phase3/run.py` — joins Phase 2 head columns onto Phase 1 candidates before head estimation step
+- `tests/test_phase2/test_energy_physics.py` — updated key test + 2 new head percentile tests
+
+**Resources used:**
+- `logs/runs/phase2_2026-05-19_05-24-21.log`
+- `logs/runs/phase3_2026-05-19_05-28-19.log`
+- `logs/runs/phase4_2026-05-19_05-29-04.log`
+- Polars parquet inspection of `head_estimates.parquet` and `energy_yield_estimates.parquet`
+
+**Known open items (not fixed this session):**
+- **3DEP head still 0**: Phase 3 `_compute_head_row` requires both facility elevation AND outfall elevation to compute a head difference. We only have facility elevation from USGS 3DEP. Getting real 3DEP head requires outfall coordinates from the NPDES Outfalls Layer (EPA GeoPlatform) — not yet sourced.
+- **TN0056545 "SUMMERTOWN HIGH SCHOOL" 585 MGD**: still in corpus; below 2,000 MGD sanity cap; likely GPD unit error. Needs manual EPA ECHO verification.
+
+**Next steps after this session:**
+1. Begin Phase 5 ML ranking model trained on DOE/FERC ground truth
+2. Verify TN0056545 flow data in EPA ECHO; consider lowering sanity cap or adding a secondary cap for implausibly large small-facility flows
+3. Source NPDES Outfalls Layer coordinates (EPA GeoPlatform) to enable real 3DEP elevation-difference head calculation in Phase 3
+
+---
