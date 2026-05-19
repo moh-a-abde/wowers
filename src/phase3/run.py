@@ -32,7 +32,7 @@ from pathlib import Path
 import polars as pl
 
 from src.common import config, io, logging_setup
-from src.phase3 import elevation, head_estimation, turbine_selection
+from src.phase3 import elevation, head_estimation, outfall_coords, turbine_selection
 
 logging_setup.setup_run_log("phase3")
 log = logging_setup.get("wowers.phase3")
@@ -133,22 +133,45 @@ def run(
             f"Expected at: {_PHASE2_ENERGY}"
         )
 
-    # Ensure lat/lon columns exist with consistent names
+    # ── Step 1b: Load outfall coordinates from NPDES_PERM_FEATURE_COORDS.csv ──
+    log.info("[1b/4] Loading NPDES outfall coordinates …")
+    outfall_df = outfall_coords.load_primary_outfall_coords(
+        candidates["npdes_id"].to_list()
+    )
+    if len(outfall_df) > 0:
+        candidates = candidates.join(outfall_df, on="npdes_id", how="left")
+        n_with_outfall = candidates["lat_outfall"].drop_nulls().len()
+        log.info(
+            f"  Outfall coords: {n_with_outfall:,}/{len(candidates):,} facilities "
+            "have outfall lat/lon (enables real 3DEP head calculation)"
+        )
+    else:
+        log.warning(
+            "  No outfall coordinates loaded — Phase 3 will use literature-based "
+            "head for all sites.  Place NPDES_PERM_FEATURE_COORDS.csv at "
+            f"{outfall_coords.OUTFALL_COORDS_PATH} to enable 3DEP head."
+        )
+        for col in ("lat_outfall", "lon_outfall"):
+            if col not in candidates.columns:
+                candidates = candidates.with_columns(
+                    pl.lit(None, dtype=pl.Float64).alias(col)
+                )
+
+    # Ensure facility lat/lon columns exist with consistent names
     candidates = _normalise_coordinates(candidates)
 
     # ── Step 2: Elevation queries ─────────────────────────────────────────────
     log.info("[2/4] Querying USGS 3DEP elevations …")
-    elev_out_path = OUTPUT_DIR / "elevation_data.parquet"
+    elev_out_path        = OUTPUT_DIR / "elevation_data.parquet"
+    outfall_elev_path    = OUTPUT_DIR / "outfall_elevation_data.parquet"
 
     if skip_elevation and elev_out_path.exists():
         log.info("  --skip-elevation: loading cached elevation_data.parquet")
         elev_df = pl.read_parquet(elev_out_path)
-        # Merge back if elevation columns not already in candidates
         if "elevation_m" not in candidates.columns:
-            key_cols = ["npdes_id"]
-            elev_cols = key_cols + ["elevation_m", "elev_source"]
             candidates = candidates.join(
-                elev_df.select(elev_cols), on="npdes_id", how="left"
+                elev_df.select(["npdes_id", "elevation_m", "elev_source"]),
+                on="npdes_id", how="left",
             )
     else:
         if skip_elevation and not elev_out_path.exists():
@@ -159,6 +182,54 @@ def run(
         candidates = elevation.fetch_elevations(candidates)
         io.write_parquet(candidates, elev_out_path)
         io.checkpoint(candidates, "phase3", "elevation_data")
+
+    # Outfall elevations — separate API batch for discharge-point coordinates
+    if skip_elevation and outfall_elev_path.exists():
+        log.info("  --skip-elevation: loading cached outfall_elevation_data.parquet")
+        outfall_elev_df = pl.read_parquet(outfall_elev_path)
+        if "elev_outfall_m" not in candidates.columns:
+            candidates = candidates.join(
+                outfall_elev_df.select(["npdes_id", "elev_outfall_m"]),
+                on="npdes_id", how="left",
+            )
+    else:
+        outfall_points = (
+            candidates
+            .filter(
+                pl.col("lat_outfall").is_not_null()
+                & pl.col("lon_outfall").is_not_null()
+            )
+            .select(["npdes_id", "lat_outfall", "lon_outfall"])
+            .rename({"lat_outfall": "latitude", "lon_outfall": "longitude"})
+        )
+        if len(outfall_points) > 0:
+            log.info(
+                f"  Querying outfall elevations for {len(outfall_points):,} sites "
+                "(this unlocks real 3DEP head calculations) …"
+            )
+            outfall_elev_raw = elevation.fetch_elevations(outfall_points)
+            outfall_elev_df = (
+                outfall_elev_raw
+                .select(["npdes_id", "elevation_m"])
+                .rename({"elevation_m": "elev_outfall_m"})
+            )
+            io.write_parquet(outfall_elev_df, outfall_elev_path)
+        else:
+            log.info("  No outfall coordinates available — skipping outfall elevation queries")
+            outfall_elev_df = pl.DataFrame({
+                "npdes_id":      pl.Series([], dtype=pl.Utf8),
+                "elev_outfall_m": pl.Series([], dtype=pl.Float64),
+            })
+
+        if len(outfall_elev_df) > 0 and "elev_outfall_m" not in candidates.columns:
+            candidates = candidates.join(
+                outfall_elev_df, on="npdes_id", how="left"
+            )
+            n_outfall_elev = candidates["elev_outfall_m"].drop_nulls().len()
+            log.info(
+                f"  Outfall elevations obtained for {n_outfall_elev:,} sites → "
+                "3DEP head calculation now active for those sites"
+            )
 
     # ── Step 3: Head estimation ───────────────────────────────────────────────
     log.info("[3/4] Estimating net head …")

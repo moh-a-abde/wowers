@@ -808,6 +808,70 @@ Top-5 viable sites by annual energy:
 **Next steps after this session:**
 1. Begin Phase 5 ML ranking model trained on DOE/FERC ground truth
 2. Verify TN0056545 flow data in EPA ECHO; consider lowering sanity cap or adding a secondary cap for implausibly large small-facility flows
-3. Source NPDES Outfalls Layer coordinates (EPA GeoPlatform) to enable real 3DEP elevation-difference head calculation in Phase 3
+3. ~~Source NPDES Outfalls Layer coordinates~~ — **DONE next session**
+
+---
+
+## 2026-05-19 — NPDES Outfall Coords + Real 3DEP Head (Issue 1 Resolved)
+
+**Goal:** Wire `NPDES_PERM_FEATURE_COORDS.csv` into Phase 3 to enable real USGS 3DEP elevation-difference head calculation. Previously `head_source = usgs_3dep` was 0 for all 15,719 sites.
+
+**Context:** User had already downloaded `npdes_outfalls_layer.zip` from **https://echo.epa.gov/files/echodownloads/npdes_outfalls_layer.zip** (free EPA ECHO weekly-updated file) to external drive (`/Volumes/256Drive/npdes_downloads/`), with symlink at `data/raw/npdes_downloads`. Discovered `NPDES_PERM_FEATURE_COORDS.csv` (626k rows, cleaner schema) is better than `npdes_outfalls_layer.csv` (815k rows, LATLONG_TYPE mixed "Facility"/"Permitted Feature"). Key columns: `EXTERNAL_PERMIT_NMBR`, `PERM_FEATURE_NMBR`, `LATITUDE_MEASURE`, `LONGITUDE_MEASURE`.
+
+**What was built:**
+- New `src/phase3/outfall_coords.py`:
+  - Reads `NPDES_PERM_FEATURE_COORDS.csv` filtered to requested NPDES IDs
+  - Selects one outfall per permit: priority `001` → lowest numeric → first available
+  - Drops null/implausible coords (lat/lon bounds check: 10–72°N, 60–180°W)
+  - Returns `npdes_id`, `lat_outfall`, `lon_outfall`
+- Modified `src/phase3/run.py`:
+  - New Step 1b: loads outfall coords, joins onto candidates
+  - Expanded Step 2: after facility elevations, fires second `elevation.fetch_elevations()` batch against outfall coords; saves `outfall_elevation_data.parquet`; joins back as `elev_outfall_m`
+  - `--skip-elevation` flag now skips both facility and outfall elevation queries
+- `config/settings.yaml`: added `phase3.outfall_coords_path`
+- New `tests/test_phase3/test_outfall_coords.py`: 12 tests (priority logic, coord validation, filtering, fallback behavior)
+
+**Pipeline re-run results (Phase 3 + 4):**
+
+Phase 3 head sources:
+| Source | Sites |
+|---|---|
+| `usgs_3dep` | 9,044 (57.5%) ← was 0 |
+| `phase2_literature` | 6,675 (42.5%) |
+
+3DEP head stats (net): mean 3.59m, std 3.18m, median 2.82m, max 25.2m
+
+Phase 4 financial impact:
+| Metric | Before (all literature) | After (57% 3DEP) |
+|---|---|---|
+| Median payback | 17.0 yrs | **6.3 yrs** |
+| Viable sites | 867 | **952** |
+| Portfolio NPV | — | **$418M** |
+| Portfolio annual revenue | $55.0M/yr | **$42.5M/yr** |
+
+Viable sites by head source: 694 `usgs_3dep` (73%, high confidence), 258 `phase2_literature` (27%). Median net head for viable 3DEP sites = 7.57m — real topographic relief significantly exceeds archetype literature assumption of 2.78m for small POTWs.
+
+**Test suite:** 218/218 pass (up from 206 — 12 new tests)
+
+**Files modified / created:**
+- `src/phase3/outfall_coords.py` — new module (outfall coord loader)
+- `src/phase3/run.py` — Step 1b + expanded Step 2 for outfall elevations
+- `config/settings.yaml` — `phase3.outfall_coords_path` added
+- `tests/test_phase3/test_outfall_coords.py` — new test file
+
+**Resources used:**
+- `data/raw/npdes_downloads/NPDES_PERM_FEATURE_COORDS.csv` (626k rows, symlinked from `/Volumes/256Drive/npdes_downloads/`)
+  - Source: https://echo.epa.gov/files/echodownloads/npdes_outfalls_layer.zip (free, weekly-updated EPA ECHO download)
+- `logs/runs/phase3_2026-05-19_05-52-12.log`
+- Phase 3 + Phase 4 parquet inspection
+
+**Known open items:**
+- 6,675 sites (42.5%) still using `phase2_literature` head — these had no coord match in `NPDES_PERM_FEATURE_COORDS.csv` or failed 3DEP plausibility check. May improve as EPA updates the file weekly.
+- **TN0056545 "SUMMERTOWN HIGH SCHOOL" 585 MGD**: still in corpus; needs manual EPA ECHO verification.
+
+**Next steps:**
+1. Begin Phase 5 ML ranking model trained on DOE/FERC ground truth
+2. Verify TN0056545 flow data in EPA ECHO
+3. Investigate why 6,675 sites have no outfall coord match — are NPDES IDs mismatched? Could recover some via `npdes_outfalls_layer.csv` "Permitted Feature" rows
 
 ---

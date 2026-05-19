@@ -139,6 +139,9 @@ phase3:
   max_retries: 3
   retry_backoff_s: 2.0
 
+  # NPDES outfall coordinates (enables real 3DEP head; see data/raw/npdes_downloads/)
+  outfall_coords_path: "data/raw/npdes_downloads/NPDES_PERM_FEATURE_COORDS.csv"
+
   # Disk cache for elevation lookups (keyed by rounded lat/lon)
   elevation_cache_dir: "data/elevation_cache"
   coord_precision: 5              # decimal places for cache key rounding
