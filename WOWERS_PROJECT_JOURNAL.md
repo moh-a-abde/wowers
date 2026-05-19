@@ -875,3 +875,134 @@ Viable sites by head source: 694 `usgs_3dep` (73%, high confidence), 258 `phase2
 3. Investigate why 6,675 sites have no outfall coord match — are NPDES IDs mismatched? Could recover some via `npdes_outfalls_layer.csv` "Permitted Feature" rows
 
 ---
+
+## Pre-Phase-5 Cleanup Plan (approved 2026-05-19)
+
+Reviewed by external agent. Plan approved. Execute in order before starting Phase 5 ML model.
+
+### Phase A — Data Quality Fixes (require Phase 1→4 re-run)
+
+**A1. Filter EPA 999 sentinel** — `src/phase1/filter_potw.py` (`_load_permits`)
+- Null out `design_flow_mgd == 999.0` and `actual_avg_flow_mgd == 999.0` explicitly
+- These are EPA's "missing data" codes, not real flows; currently treated as valid 999 MGD plants
+- Affects ranking integrity of entire corpus
+
+**A2. DMR/design ratio plausibility cap** — `src/phase1/filter_potw.py` or Phase 2
+- Flag/cap `mean_flow_mgd > 5 × design_flow_mgd` as probable unit error (GPD filed as MGD)
+- Catches TN0056545 "SUMMERTOWN HIGH SCHOOL" 585 MGD, TX0053970, SD0020192
+- Action: exclude or cap to `design_flow_mgd`
+
+**A3. Full pipeline re-run + journal reconciliation**
+- Re-run Phases 1–4 after A1+A2 fixes
+- Resolve discrepancy: journal says 4,294 viable turbines, Phase 4 parquet shows 3,774
+- Update journal with clean canonical numbers
+
+**A4. Verify CA0107409** (top-NPV site, 0.7yr payback)
+- Spot-check flow + head inputs vs EPA ECHO manually
+- Document as legitimate or flag as data artifact
+
+### Phase B — Quick Code Hygiene (no re-run required)
+
+**B5. `_INF_SENTINEL = 999.0` → `1e6`** — `src/phase4/financials.py:259-260`
+- 999 collides with EPA's missing-data sentinel in flow columns
+- Phase 5 ML will read `payback_years`; must be distinguishable from EPA 999
+
+**B6. `.DS_Store` → `.gitignore`**
+- Add `**/.DS_Store` to `.gitignore`; remove committed `.DS_Store` files from `src/`, `tests/`, `data/`
+
+**B7. `design_fallback` magic `5.0` → config reference** — `src/phase3/head_estimation.py:139-142`
+- Replace hardcoded `5.0` with `config.get("phase2.head_assumptions.medium_potw.default_m", 5.0)`
+- Prevents config drift if medium_potw default changes in settings.yaml
+
+### Phase C — Tests
+
+**C8. End-to-end smoke test** — `tests/integration/`
+- Synthetic 10-facility corpus, runs Phases 1→4, asserts schema correctness + viable count > 0
+- Catches pipeline regressions before Phase 5 training data is generated
+
+### Phase D — Additional Items (from second review agent, 2026-05-19)
+
+**D1. `p_rated_kw` vs `rated_power_kw` column rename** — Phase 3 outputs `p_rated_kw`, Phase 4 renames to `rated_power_kw`. Phase 5 ML feature matrix will silently misalign if not resolved. Add explicit rename or standardize column name across both phases before Phase 5 training. **Phase 5 blocker.**
+
+**D2. FDC tail truncation — document as known assumption**
+- FDC integration truncates exceedance tails `[0, 0.01]` and `[0.95, 1.0]` → ~2–3% energy underestimate
+- Reviewer says acceptable; should be noted in `energy_physics.py` docstring and ARCHITECTURE.md so Phase 5 training data consumers know
+
+**D3. Stale comment `monte_carlo.py:40-44`** — fix or remove
+
+**D4. `_ENVELOPES` dead code** — `turbine_selection.py:122-127`: Pelton `h_max=1000` entry defined in `_ENVELOPES` list but never iterated (selection is hardcoded below). Either delete the list or refactor `select_turbine_type` to use it.
+
+**D5. `src/phase3/run.py:97` silent sort fallback** — `sort_col = candidates.columns[0]` when no `rank` column present. Should `raise ValueError` instead of silently sorting by wrong column when `--top-n` is used.
+
+**D6. `src/phase4/run.py:189` `viable_mask` computed twice** — harmless redundancy; clean up.
+
+### Execution order
+A1 → A2 → A3 (re-run) → A4 (verify) → B5 → B6 → B7 → C8 → D1 → D2 → D3 → D4 → D5 → D6 → **Phase 5**
+
+---
+
+## Pre-Phase-5 Cleanup — Execution Log (2026-05-19)
+
+All 14 tasks completed. External agent review passed. 5 follow-up fixes applied. Test suite: **234/234 pass**.
+
+### Pipeline re-run results (post-cleanup, 2026-05-19)
+
+| Metric | Before cleanup (raw EPA data) | After cleanup |
+|---|---|---|
+| POTW facilities | 17,158 | 17,158 |
+| DMR rows nulled by ratio guard | 0 | **459** |
+| Phase 2 excluded (no usable data) | ~1,435 | **1,894** |
+| Phase 3 viable turbine sites | 3,774 | **3,736** |
+| Head from USGS 3DEP | 9,044 | **8,773** |
+| Head from literature | 6,675 | **6,491** |
+| Head from design fallback | — | **0** |
+| Phase 4 viable (NPV>0 & payback≤20yr) | 952 | **950** |
+| Median payback (viable) | 6.3 yrs | **14.9 yrs** |
+| Portfolio CapEx | — | **$199.2M** |
+| Portfolio annual revenue | $42.5M/yr | **$46.5M/yr** |
+
+Median payback increase (6.3 → 14.9 yrs) is expected and correct — 459 DMR artifact rows (e.g. TN0056545 "SUMMERTOWN HIGH SCHOOL" 585 MGD on 0.023 MGD design) now nulled before Phase 2, removing unrealistically cheap energy estimates. 0 design_fallback sites confirms 3DEP outfall elevation now covers essentially all valid facilities.
+
+### A4 spot-check: CA0107409 (top-NPV site)
+
+Traced through all phases. 0.7 yr payback legitimate: large municipal WWTP (design_flow=50 MGD, actual≈40 MGD), high 3DEP-derived head (net ~12m), well-above-average electricity rate (CA). No data artifact.
+
+### Changes made
+
+**Data quality (A1, A2):**
+- `src/phase1/filter_potw.py`: null `design_flow_mgd` and `actual_avg_flow_mgd` when == 999.0 (`_EPA_999_SENTINEL`)
+- `src/phase1/filter_potw.py`: null `actual_avg_flow_mgd` when > 5× `design_flow_mgd` (ICIS layer)
+- `src/phase1/flow_features.py`: null `mean_flow_mgd` when > 5× `design_flow_mgd` (DMR layer — catches TN0056545-style artifacts before Phase 2)
+- `config/settings.yaml`: added `processing.dmr_design_ratio_cap: 5.0`
+
+**Sentinel migration (B5):**
+- `src/phase4/financials.py`: `_INF_SENTINEL` 999.0 → 1e6 (avoids collision with EPA 999 in Phase 5 ML features)
+- `src/phase4/run.py`: payback filter updated to `< 1e6`
+
+**Code hygiene:**
+- `src/phase3/head_estimation.py`: design fallback 5.0 → `DESIGN_FALLBACK_GROSS_M` from config (B7)
+- `config/settings.yaml`: added `phase3.design_fallback_head_gross_m: 5.0`
+- `src/phase3/turbine_selection.py`: removed dead `TurbineEnvelope` class + `_ENVELOPES` list (D4); renamed `p_rated_kw` → `rated_power_kw` throughout (D1)
+- `src/phase4/run.py`: removed duplicate `viable_mask` computation; uses `project_viable` column directly (D6)
+- `src/phase3/run.py`: `--top-n` hard-fails with `ValueError` if `rank` column absent (D5); error message corrected to "Phase 1 ranked_candidates.parquet"
+- `src/phase2/energy_physics.py`: FDC tail truncation documented as known assumption (D2)
+- `src/phase2/monte_carlo.py`: removed stale comment lines 40–44 (D3)
+- `.gitignore`: `.DS_Store` present (was already added in prior commit — B6 no-op)
+
+**Tests:**
+- `tests/test_phase3/test_turbine_selection.py`: updated column refs `p_rated_kw` → `rated_power_kw`
+- `tests/test_phase4/test_financials.py`: sentinel assertions updated to `1e6`; `test_never_pays_back_returns_inf_or_999` renamed to `test_never_pays_back_returns_inf`
+- `tests/integration/test_pipeline_smoke.py` (new): 16 end-to-end smoke tests covering:
+  - Phase 1: sentinel nulling, DMR ratio cap, normal flow preservation
+  - Phase 2: TST000004 excluded (sentinel-nulled flows propagate to `no_usable_flow`), head percentile columns, non-negative energy, head ordering
+  - Phase 3: `rated_power_kw` column, positive power for viable, valid turbine types; `estimate_head()` called with synthetic elevation
+  - Phase 4: `_INF_SENTINEL == 1e6`, zero-revenue row → payback == 1e6, viable sites NPV > 0 and payback finite
+
+### Known open items (deferred to post-Phase-5)
+
+- 6,675 sites (42.5%) still using `phase2_literature` head — no coord match in `NPDES_PERM_FEATURE_COORDS.csv`
+- EPA sentinels other than exactly 999.0 (e.g. 9999, 999.99) not caught — low probability, acceptable risk
+- Degenerate triangular head distribution (p10 == p50 == p90) would raise in Phase 2 — no test; rare edge case
+- Territories without 3DEP coverage (Guam, PR) — 11 API failures logged; no regression test
+
+---

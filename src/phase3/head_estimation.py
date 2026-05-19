@@ -55,6 +55,9 @@ def _cfg(key: str, default=None):
 
 HEAD_LOSS_FRACTION: float = _cfg("head_loss_fraction", 0.15)
 MIN_NET_HEAD_M: float = _cfg("min_net_head_m", 1.0)
+# Gross head assumed when neither 3DEP elevation nor literature head is
+# available.  Represents the median gravity-fed POTW in the US literature.
+DESIGN_FALLBACK_GROSS_M: float = _cfg("design_fallback_head_gross_m", 5.0)
 
 # Sanity: reject 3DEP-derived head if it differs from Phase-2 literature head
 # by more than this multiplier (catches cases where API returned wrong point)
@@ -137,8 +140,8 @@ def _compute_head_row(
     # ── Path 4: Design-flow-based static default ───────────────────────────
     # Only reached when we have NO elevation data and NO literature estimate.
     if net is None:
-        net = 5.0 * (1.0 - HEAD_LOSS_FRACTION)   # median POTW assumption
-        gross = 5.0
+        net = DESIGN_FALLBACK_GROSS_M * (1.0 - HEAD_LOSS_FRACTION)
+        gross = DESIGN_FALLBACK_GROSS_M
         source = "design_fallback"
 
     valid = net is not None and net >= MIN_NET_HEAD_M

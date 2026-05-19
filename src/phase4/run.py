@@ -50,7 +50,7 @@ def run(
     Args:
         phase3_input:    Path to turbine_sizing.parquet.  Auto-detects if None.
         phase1_input:    Path to ranked_candidates.parquet.  Auto-detects if None.
-        top_n:           Limit to top-N viable turbine sites (by rated_power_kw).
+        top_n:           Limit to top-N viable turbine sites (by rated_power_kw from Phase 3).
         run_sensitivity: Whether to compute tornado sensitivity columns.
 
     Returns:
@@ -92,7 +92,7 @@ def run(
         viable = turbines
 
     if top_n is not None:
-        sort_col = "p_rated_kw" if "p_rated_kw" in viable.columns else viable.columns[0]
+        sort_col = "rated_power_kw" if "rated_power_kw" in viable.columns else viable.columns[0]
         viable = viable.sort(sort_col, descending=True).head(top_n)
         log.info(f"  Limited to top {top_n} by rated power (--top-n)")
 
@@ -107,7 +107,7 @@ def run(
     for row in rows:
         npdes_id    = row["npdes_id"]
         t_type      = row.get("turbine_type", "Kaplan")
-        rated_kw    = float(row.get("p_rated_kw") or 0.0)
+        rated_kw    = float(row.get("rated_power_kw") or 0.0)
         energy_kwh  = float(row.get("annual_energy_mwh") or 0.0) * 1_000  # MWh → kWh
         state_code  = row.get("state_code")
 
@@ -186,8 +186,11 @@ def run(
 def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
     total = len(df)
 
-    viable_mask = (pl.col("npv_usd") > 0) & (pl.col("payback_years") <= 20)
-    n_viable = df.filter(viable_mask).shape[0] if "npv_usd" in df.columns else 0
+    n_viable = (
+        df.filter(pl.col("project_viable") == True).shape[0]  # noqa: E712
+        if "project_viable" in df.columns
+        else 0
+    )
 
     log.info("")
     log.info("=" * 60)
@@ -196,7 +199,7 @@ def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
     log.info(f"  Project viable (NPV>0 & payback≤20yr): {n_viable:,} ({n_viable/max(total,1)*100:.1f}%)")
 
     if "payback_years" in df.columns:
-        valid_payback = df.filter(pl.col("payback_years") < 999)["payback_years"]
+        valid_payback = df.filter(pl.col("payback_years") < 1e6)["payback_years"]
         if len(valid_payback) > 0:
             log.info(f"  Median payback (viable): {valid_payback.median():.1f} yr")
 

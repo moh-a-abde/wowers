@@ -152,7 +152,7 @@ class TestSelectAndSizeTurbines:
     def test_output_columns_present(self):
         df = select_and_size_turbines(self._make_candidates())
         for col in (
-            "turbine_type", "q_rated_m3s", "p_rated_kw",
+            "turbine_type", "q_rated_m3s", "rated_power_kw",
             "annual_energy_mwh", "capacity_factor", "turbine_viable",
         ):
             assert col in df.columns, f"Column '{col}' missing"
@@ -188,8 +188,8 @@ class TestSelectAndSizeTurbines:
     def test_rated_power_positive_for_viable_sites(self):
         df = select_and_size_turbines(self._make_candidates())
         viable = df.filter(pl.col("turbine_viable"))
-        null_power = viable["p_rated_kw"].is_null().sum()
-        neg_power  = (viable["p_rated_kw"].drop_nulls() <= 0).sum()
+        null_power = viable["rated_power_kw"].is_null().sum()
+        neg_power  = (viable["rated_power_kw"].drop_nulls() <= 0).sum()
         assert null_power == 0, "Viable sites should have non-null rated power"
         assert neg_power == 0,  "Viable sites should have positive rated power"
 
@@ -263,13 +263,13 @@ class TestComputeAnnualEnergy:
         h = 5.0
         t_type = "Kaplan"
         eta = peak_efficiency(t_type)
-        p_rated_kw = eta * 998.2 * 9.81 * q * h / 1000
+        rated_power_kw = eta * 998.2 * 9.81 * q * h / 1000
 
         flows = [q] * 10
         exceedances = [i / 9 for i in range(10)]  # 0.0 … 1.0
 
         energy = _compute_annual_energy(t_type, q, h, flows, exceedances)
-        expected = p_rated_kw * 8766 / 1000  # MWh if CF=1
+        expected = rated_power_kw * 8766 / 1000  # MWh if CF=1
 
         assert energy == pytest.approx(expected, rel=0.05), (
             f"Flat FDC energy={energy:.1f} MWh, expected≈{expected:.1f} MWh"

@@ -206,8 +206,9 @@ def compute_lcoe(
 
 
 # Sentinel value stored in parquet for "never" payback / infinite LCOE.
-# Phase 5 must treat this as a missing/invalid value, not a real 999-year figure.
-_INF_SENTINEL: float = 999.0
+# Using 1e6 avoids collision with EPA ECHO's 999 sentinel (which appears in
+# upstream flow data and could be misread as a financial value by Phase 5).
+_INF_SENTINEL: float = 1e6
 
 
 def compute_scorecard(

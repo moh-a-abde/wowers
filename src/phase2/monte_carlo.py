@@ -37,11 +37,6 @@ def _exclude(row: dict) -> str | None:
     mean_flow = row.get("mean_flow_mgd")
     if mean_flow is None or mean_flow <= 0:
         return "no_usable_flow"
-    # NOTE: "data_quality" is not in the current Phase 1 ranked_candidates.parquet
-    # schema (ARCHITECTURE.md §1.6), so row.get() always returns the default "dmr"
-    # and this branch is currently unreachable.  If Phase 1 is updated to emit
-    # data_quality="dmr_limited" for sparse-DMR facilities, this filter will
-    # activate automatically.
     dq = row.get("data_quality", "dmr")
     n_months = row.get("n_months_data", 99)
     if dq == "dmr_limited" and (n_months is None or n_months < 3):

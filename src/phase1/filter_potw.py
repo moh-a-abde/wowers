@@ -14,6 +14,16 @@ log = logging_setup.get("wowers.phase1.filter_potw")
 # certainly unit errors in EPA ECHO (e.g. GPD filed as MGD).
 _MAX_FLOW_MGD: float = config.get("processing.max_flow_mgd_sanity", 2000.0)
 
+# EPA ECHO uses 999 (or 999.0) as a sentinel for "no data" in numeric flow
+# fields (TOTAL_DESIGN_FLOW_NMBR, ACTUAL_AVERAGE_FLOW_NMBR).  These must be
+# treated as null rather than as real flow values.
+_EPA_999_SENTINEL: float = 999.0
+
+# If actual_avg_flow_mgd > N × design_flow_mgd it is almost certainly a
+# units mismatch (e.g. DMR flow reported in GPD while design flow is MGD).
+# Cap at configurable ratio; default 5×.
+_DMR_DESIGN_RATIO_CAP: float = config.get("processing.dmr_design_ratio_cap", 5.0)
+
 # Output schema — enforced after join
 POTW_SCHEMA = {
     "npdes_id": pl.Utf8,
@@ -121,6 +131,23 @@ def _load_permits(path: Path) -> pl.DataFrame:
         pl.col("actual_avg_flow_mgd").cast(pl.Float64, strict=False),
     ])
 
+    # Null out EPA 999 sentinel values first.  EPA ECHO stores "no data"
+    # as exactly 999.0 in numeric flow columns — these are NOT real flows.
+    for col in ("design_flow_mgd", "actual_avg_flow_mgd"):
+        if col in df.columns:
+            n_sentinel = int((df[col] == _EPA_999_SENTINEL).sum())
+            if n_sentinel:
+                log.warning(
+                    f"  Nulling {n_sentinel} permit row(s) where {col} == {_EPA_999_SENTINEL} "
+                    f"(EPA ECHO sentinel for missing data)"
+                )
+                df = df.with_columns(
+                    pl.when(pl.col(col) == _EPA_999_SENTINEL)
+                    .then(pl.lit(None, dtype=pl.Float64))
+                    .otherwise(pl.col(col))
+                    .alias(col)
+                )
+
     # Null out any flow values that exceed the sanity cap.
     # Values this large (e.g. 750,000 "MGD") are unit errors in EPA ECHO —
     # the field was likely populated in GPD or MLD instead of MGD.
@@ -138,6 +165,33 @@ def _load_permits(path: Path) -> pl.DataFrame:
                     .otherwise(pl.col(col))
                     .alias(col)
                 )
+
+    # Null out actual_avg_flow_mgd when it exceeds N × design_flow_mgd.
+    # A ratio this extreme almost always means the two fields used different
+    # units (e.g. DMR in GPD, design flow in MGD).  We null the suspicious
+    # value rather than the design flow because design flow is more reliable.
+    if "actual_avg_flow_mgd" in df.columns and "design_flow_mgd" in df.columns:
+        cap_expr = pl.col("design_flow_mgd") * _DMR_DESIGN_RATIO_CAP
+        suspicious = (
+            pl.col("actual_avg_flow_mgd").is_not_null()
+            & pl.col("design_flow_mgd").is_not_null()
+            & (pl.col("design_flow_mgd") > 0)
+            & (pl.col("actual_avg_flow_mgd") > cap_expr)
+        )
+        n_ratio_bad = int(df.filter(suspicious).shape[0])
+        if n_ratio_bad:
+            log.warning(
+                f"  Nulling {n_ratio_bad} row(s) where actual_avg_flow_mgd > "
+                f"{_DMR_DESIGN_RATIO_CAP}× design_flow_mgd "
+                f"(probable units mismatch in DMR/ICIS data)"
+            )
+            df = df.with_columns(
+                pl.when(suspicious)
+                .then(pl.lit(None, dtype=pl.Float64))
+                .otherwise(pl.col("actual_avg_flow_mgd"))
+                .alias("actual_avg_flow_mgd")
+            )
+
     return df
 
 

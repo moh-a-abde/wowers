@@ -18,6 +18,7 @@ FDC_PROBS: list[float] = config.get("ranking.fdc_exceedance_probs") or [
 
 MIN_MONTHS = config.get("processing.min_months_for_features", 12)
 MAX_FLOW_MGD = config.get("processing.max_flow_mgd_sanity", 2000.0)
+_DMR_DESIGN_RATIO_CAP: float = config.get("processing.dmr_design_ratio_cap", 5.0)
 
 
 def compute_flow_features(
@@ -260,6 +261,29 @@ def _fill_missing_with_design_flow(df: pl.DataFrame) -> pl.DataFrame:
           .otherwise(pl.lit(1.0))
           .alias("pct_missing"),
     ])
+
+    # Null out mean_flow_mgd if it implausibly exceeds design_flow_mgd by ratio cap.
+    # Catches DMR-derived flows like TN0056545 (585 MGD on 0.023 MGD design plant).
+    suspicious_dmr = (
+        pl.col("mean_flow_mgd").is_not_null()
+        & pl.col("design_flow_mgd").is_not_null()
+        & (pl.col("design_flow_mgd") > 0)
+        & (pl.col("mean_flow_mgd") > pl.col("design_flow_mgd") * _DMR_DESIGN_RATIO_CAP)
+    )
+    n_suspicious = df.filter(suspicious_dmr).height
+    if n_suspicious > 0:
+        log.warning(
+            "Nulling mean_flow_mgd for %d rows where mean_flow > %.0f× design_flow "
+            "(DMR reporting artifact)",
+            n_suspicious,
+            _DMR_DESIGN_RATIO_CAP,
+        )
+    df = df.with_columns(
+        pl.when(suspicious_dmr)
+        .then(pl.lit(None))
+        .otherwise(pl.col("mean_flow_mgd"))
+        .alias("mean_flow_mgd")
+    )
 
     # Compute utilization ratio where possible
     df = df.with_columns([

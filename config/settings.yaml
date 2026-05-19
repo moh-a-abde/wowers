@@ -131,6 +131,7 @@ phase3:
   head_loss_fraction: 0.15        # 15% losses for pipe friction, valves, fittings
   min_net_head_m: 1.0             # below this head, site is not viable
   min_flow_for_sizing_m3s: 0.001  # below this Q, skip sizing
+  design_fallback_head_gross_m: 5.0  # gross head when no elevation/literature data available
 
   # USGS 3DEP API throttling
   max_concurrent_requests: 10
@@ -170,6 +171,7 @@ processing:
   min_months_for_features: 12      # minimum DMR months to compute full features
   max_utilization_ratio: 2.0       # flag anything above this
   max_flow_mgd_sanity: 2000        # hard cap on individual DMR flow readings (MGD)
+  dmr_design_ratio_cap: 5.0       # null mean_flow_mgd when > N× design_flow (DMR units artifact)
                                    # largest known US POTW (MWRDGC Stickney) ~1,200 MGD
                                    # anything above 2,000 is almost certainly a unit error
 

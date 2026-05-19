@@ -99,7 +99,7 @@ class TestComputePayback:
         pb = compute_payback(_ENERGY, _RATE, _OPEX, _CAPEX)
         assert 0 < pb < 30, f"Payback={pb:.1f} outside expected range"
 
-    def test_never_pays_back_returns_inf_or_999(self):
+    def test_never_pays_back_returns_inf(self):
         pb = compute_payback(10.0, 0.001, 100_000.0, 10_000_000.0)
         assert math.isinf(pb) or pb > 30
 
@@ -190,19 +190,19 @@ class TestComputeScorecard:
         assert sc["project_viable"] is False
 
     def test_payback_sentinel_in_scorecard(self):
-        # Project that can never pay back → payback_years == 999.0
+        # Project that can never pay back → payback_years == 1e6 (_INF_SENTINEL)
         sc = self._scorecard(
             annual_energy_kwh=100.0,
             annual_revenue_usd=8.5,
             total_capex_usd=5_000_000.0,
             annual_opex_usd=100_000.0,
         )
-        assert sc["payback_years"] == 999.0
+        assert sc["payback_years"] == 1e6
 
     def test_lcoe_sentinel_in_scorecard(self):
-        # Zero energy → LCOE = inf → sentinel 999.0
+        # Zero energy → LCOE = inf → sentinel 1e6 (_INF_SENTINEL)
         sc = self._scorecard(annual_energy_kwh=0.0, annual_revenue_usd=0.0)
-        assert sc["lcoe_per_kwh"] == 999.0
+        assert sc["lcoe_per_kwh"] == 1e6
 
     def test_degradation_effect(self):
         # Higher degradation → lower NPV

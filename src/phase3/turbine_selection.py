@@ -37,7 +37,7 @@ Output columns appended to the input DataFrame
 ----------------------------------------------
 turbine_type        str     Kaplan | Francis | Pelton | in_conduit_micro
 q_rated_m3s         float   design flow rate for the turbine (m³/s)
-p_rated_kw          float   nameplate power (kW)
+rated_power_kw      float   nameplate power (kW)
 peak_efficiency_pct float   η at rated conditions (%)
 annual_energy_mwh   float   estimated annual generation (MWh/yr)
 capacity_factor     float   CF = actual / theoretical max
@@ -49,7 +49,7 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
-from typing import NamedTuple, Optional
+from typing import Optional
 
 import polars as pl
 
@@ -85,28 +85,6 @@ _PHASE1_FDC_EXCEEDANCES: list[float] = config.get(
     [0.01, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45,
      0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95],
 )
-
-
-# ── Turbine H-Q envelopes ─────────────────────────────────────────────────────
-
-class TurbineEnvelope(NamedTuple):
-    name: str
-    h_min_m: float
-    h_max_m: float
-    q_min_m3s: float
-    q_max_m3s: float
-
-
-_ENVELOPES: list[TurbineEnvelope] = [
-    # Pelton: high-head / low-flow
-    TurbineEnvelope("Pelton",         50.0, 1_000.0, 0.0,  2.0),
-    # Francis: medium head — also catches high-head high-flow
-    TurbineEnvelope("Francis",        10.0,  300.0,  0.05, 100.0),
-    # Kaplan: low-head / high-flow
-    TurbineEnvelope("Kaplan",          1.0,   30.0,  0.5,  500.0),
-    # In-conduit / micro: very low head or tiny flow
-    TurbineEnvelope("in_conduit_micro", 0.3,  30.0,  0.001,  0.5),
-]
 
 
 def select_turbine_type(h_net_m: float, q_m3s: float) -> str:
@@ -217,7 +195,7 @@ def optimize_rated_power(
 ) -> tuple[float, float, float, float]:
     """Find Q_rated that maximises annual energy with CF ≥ MIN_CF.
 
-    Returns (q_rated_m3s, p_rated_kw, annual_energy_mwh, capacity_factor).
+    Returns (q_rated_m3s, rated_power_kw, annual_energy_mwh, capacity_factor).
     """
     best_energy = -1.0
     best_q = q_design_m3s  # fallback
@@ -347,7 +325,7 @@ def _size_one(
     null_result = {
         "turbine_type":        "unknown",
         "q_rated_m3s":         None,
-        "p_rated_kw":          None,
+        "rated_power_kw":      None,
         "peak_efficiency_pct": None,
         "annual_energy_mwh":   None,
         "capacity_factor":     None,
@@ -380,7 +358,7 @@ def _size_one(
     return {
         "turbine_type":        t_type,
         "q_rated_m3s":         q_rated,
-        "p_rated_kw":          round(p_rated, 2),
+        "rated_power_kw":      round(p_rated, 2),
         "peak_efficiency_pct": round(eta_pct, 1),
         "annual_energy_mwh":   round(energy_mwh, 1),
         "capacity_factor":     round(cf, 3),
@@ -458,7 +436,7 @@ def select_and_size_turbines(facilities: pl.DataFrame) -> pl.DataFrame:
     sizing_df = pl.DataFrame({
         "turbine_type":        [r["turbine_type"]        for r in results],
         "q_rated_m3s":         [r["q_rated_m3s"]         for r in results],
-        "p_rated_kw":          [r["p_rated_kw"]          for r in results],
+        "rated_power_kw":      [r["rated_power_kw"]      for r in results],
         "peak_efficiency_pct": [r["peak_efficiency_pct"] for r in results],
         "annual_energy_mwh":   [r["annual_energy_mwh"]   for r in results],
         "capacity_factor":     [r["capacity_factor"]     for r in results],
@@ -477,7 +455,7 @@ def select_and_size_turbines(facilities: pl.DataFrame) -> pl.DataFrame:
             .sort("n", descending=True)
         )
         total_mwh = viable["annual_energy_mwh"].drop_nulls().sum()
-        avg_kw    = viable["p_rated_kw"].drop_nulls().mean()
+        avg_kw    = viable["rated_power_kw"].drop_nulls().mean()
         log.info(
             f"Turbine sizing: {len(viable):,}/{len(result):,} viable sites | "
             f"total {total_mwh:,.0f} MWh/yr | avg {avg_kw:.0f} kW"

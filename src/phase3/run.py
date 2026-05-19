@@ -94,8 +94,12 @@ def run(
     candidates = io.read_parquet(input_path)
 
     if top_n is not None:
-        sort_col = "rank" if "rank" in candidates.columns else candidates.columns[0]
-        candidates = candidates.sort(sort_col).head(top_n)
+        if "rank" not in candidates.columns:
+            raise ValueError(
+                f"--top-n requires a 'rank' column in Phase 1 ranked_candidates.parquet; "
+                f"available columns: {candidates.columns}"
+            )
+        candidates = candidates.sort("rank").head(top_n)
         log.info(f"  Limited to top {top_n} facilities (--top-n)")
 
     log.info(f"  Loaded {len(candidates):,} facilities from {input_path.name}")
@@ -283,8 +287,8 @@ def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
         if "annual_energy_mwh" in df.columns else 0.0
     )
     avg_kw = (
-        df.filter(pl.col("turbine_viable"))["p_rated_kw"].drop_nulls().mean()
-        if "p_rated_kw" in df.columns else 0.0
+        df.filter(pl.col("turbine_viable"))["rated_power_kw"].drop_nulls().mean()
+        if "rated_power_kw" in df.columns else 0.0
     )
 
     log.info("")
