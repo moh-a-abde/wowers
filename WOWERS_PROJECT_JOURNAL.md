@@ -1000,9 +1000,129 @@ Traced through all phases. 0.7 yr payback legitimate: large municipal WWTP (desi
 
 ### Known open items (deferred to post-Phase-5)
 
-- 6,675 sites (42.5%) still using `phase2_literature` head — no coord match in `NPDES_PERM_FEATURE_COORDS.csv`
+- 6,491 sites (42.5%) still using `phase2_literature` head — root causes investigated (see below)
 - EPA sentinels other than exactly 999.0 (e.g. 9999, 999.99) not caught — low probability, acceptable risk
 - Degenerate triangular head distribution (p10 == p50 == p90) would raise in Phase 2 — no test; rare edge case
 - Territories without 3DEP coverage (Guam, PR) — 11 API failures logged; no regression test
+
+---
+
+## Investigation: 6,491 Literature-Head Sites & Summertown HS Verification
+
+*Date: 2026-05-19*
+
+### Background
+
+Phase 3 reports 8,773 sites using USGS 3DEP elevation and 6,491 using `phase2_literature` head
+(Monte Carlo archetype, median ≈ 3.27 m gross).  Literature head is a national-median fallback —
+it does not capture site-specific geography and likely under- or over-estimates head for a large
+fraction of those 6,491 sites.
+
+### Root-cause breakdown
+
+| Failure mode | Count | % of lit. sites | Root cause |
+|---|---|---|---|
+| Negative head (outfall elev ≥ facility elev) | 4,101 | 63% | Wrong coord type in `NPDES_PERM_FEATURE_COORDS` |
+| Divergence ratio rejection (3DEP >> literature) | 1,431 | 22% | `_MAX_DIVERGENCE_RATIO = 2.0` too tight for hilly terrain |
+| No outfall coords at all | 946 | 15% | NPDES ID absent from `NPDES_PERM_FEATURE_COORDS.csv` |
+| Has both elevations, boundary edge | 5 | <1% | Diff right at 11.54 m threshold (ratio ≈ 2.01) |
+| Outfall coords present, 3DEP returned null | 1 | <1% | API failure / no DEM coverage |
+| **Total** | **6,491** | | |
+
+#### Mode 1 — Negative head (4,101 sites)
+
+`NPDES_PERM_FEATURE_COORDS.csv` provides permit-feature coordinates, but does not label whether
+a row is an actual **discharge outfall** vs. the facility centroid.  The code picks the lowest
+`PERM_FEATURE_NMBR` (priority: 001 → 002 → …), which is typically the facility registration
+point, not the actual pipe at the riverbank.
+
+- Median elevation inversion: −0.30 m (DEM pixel noise flips sign when same point queried twice)
+- 50% of these sites: outfall coord within 50 m of facility lat/lon (essentially identical point)
+- 69%: within 1 km (still facility campus, not stream bank)
+- Worst cases: −1,387 m inversion — clearly the outfall coord is on a hilltop, not the stream
+
+States most affected: PA (479), IL (403), MO (302), WV (213), TX (208), LA (182).
+
+**Fix (F1):** `npdes_outfalls_layer.csv` is already on disk
+(`data/raw/npdes_downloads/npdes_outfalls_layer.csv`, 815K rows, downloaded but unused).
+It contains 295,829 rows with `LATLONG_TYPE = "Permitted Feature"` and
+`SUB_TYPE_DESC = "External Outfall"` — actual discharge-pipe coordinates.
+5,334 of 6,491 literature sites have an External Outfall record in this file.
+Switching `outfall_coords.py` to prefer this source as primary (NPDES_PERM_FEATURE_COORDS
+as fallback) is expected to recover 2,000–3,000 sites to 3DEP head.
+
+#### Mode 2 — Divergence ratio rejection (1,431 sites)
+
+`head_estimation.py` rejects a 3DEP reading when:
+
+```
+|candidate_net − literature_p50| / literature_p50 > _MAX_DIVERGENCE_RATIO (= 2.0)
+```
+
+For a site where literature says 3.27 m and 3DEP says > 11.5 m, ratio > 2.0 → falls back to
+literature.  But high-head sites in Appalachian / Rocky Mountain terrain (PA, WV, TN, CO)
+legitimately have 10–20 m of head.  The national-median literature value of 3.27 m is the wrong
+reference for those regions, so legitimate 3DEP readings get rejected.
+
+**Fix (F2):** Raise `_MAX_DIVERGENCE_RATIO` from 2.0 → 4.0 (recovers ~1,200 sites).
+Alternative: remove the divergence gate entirely and rely only on the `candidate_net > 0`
+plausibility check (recovers all 1,431).  Evaluate after F1 to see residual distribution.
+
+#### Mode 3 — No outfall coords (946 sites)
+
+These NPDES IDs are absent from `NPDES_PERM_FEATURE_COORDS.csv` entirely.  Most (≈ 800)
+do have External Outfall records in `npdes_outfalls_layer.csv`, so F1 alone resolves the
+majority of this group as a side-effect.
+
+#### Future option — NHD flowline snap (F3, deferred)
+
+For remaining negative-head sites after F1 where the best available coord is still within
+50 m of the facility (DEM noise), snap to the nearest NHDPlus reach centerline.  The reach
+endpoint is always on the stream → elevation is always below the treatment plant.
+
+**Dataset:** NHDPlus V2 National Seamless — free, ~7 GB zipped, available at
+[epa.gov/waterdata/nhdplus-national-data](https://www.epa.gov/waterdata/nhdplus-national-data).
+High-Resolution version (~40 GB, by HUC4 region) available at USGS The National Map.
+Defer until F1+F2 residual is measured.
+
+---
+
+### Summertown High School (TN0056545) — Verification
+
+TN0056545 was the motivating case for the DMR ratio guard added in R1.  Post-cleanup state:
+
+| Field | Value | Status |
+|---|---|---|
+| `design_flow_mgd` | 0.023 MGD | Correct (tiny school STP) |
+| `actual_avg_flow_mgd` | 0.0082 MGD | Plausible (< design) — ICIS record |
+| `mean_flow_mgd` | 0.0 (nulled) | ✓ Ratio guard fired correctly |
+| `median_flow_mgd` | 807 MGD | ⚠ Still contaminated in Phase 1 parquet |
+| `p10_flow_mgd` | 168.84 MGD | ⚠ Still contaminated |
+| `max_flow_mgd` | 939 MGD | ⚠ Still contaminated |
+| `flow_duration_curve` | [939, 939, …, 9.3] | ⚠ Wrong units (gal/day reported as MGD) |
+| Phase 2 `excluded` | `True` | ✓ Correctly excluded |
+
+**Assessment:** The guard works — the site is excluded in Phase 2 and never reaches Phase 3/4.
+However, the Phase 1 parquet retains the contaminated FDC and percentile columns.  These are
+not consumed downstream for excluded sites, but they make the parquet misleading for any future
+direct inspection or ML feature extraction.
+
+**Fix (F4):** When the DMR ratio guard fires in `flow_features.py`, also null `median_flow_mgd`,
+`std_flow_mgd`, `cv_flow`, `p10–p90_flow_mgd`, `min_flow_mgd`, `max_flow_mgd`, and
+`flow_duration_curve` for affected rows.  Low urgency (no downstream impact), but cleans
+the Phase 1 artifact record.
+
+---
+
+### Prioritised fix plan
+
+| Fix | File(s) | Data needed | Estimated sites recovered |
+|---|---|---|---|
+| **F4** — Scrub FDC/percentiles when ratio guard fires | `src/phase1/flow_features.py` | None | 0 (quality) |
+| **F1** — Use `npdes_outfalls_layer.csv` as primary outfall coord source | `src/phase3/outfall_coords.py` | On disk already | ~2,000–3,000 |
+| **F2** — Raise `_MAX_DIVERGENCE_RATIO` 2.0 → 4.0 | `src/phase3/head_estimation.py` | None | ~1,200–1,431 |
+| **F3** — NHD flowline snap for residual sites | New `src/phase3/stream_snap.py` | NHDPlus V2 (~7 GB) | Residual |
+
+Recommended execution order: F4 → F1 → F2 → re-run pipeline → measure residual → decide on F3.
 
 ---
