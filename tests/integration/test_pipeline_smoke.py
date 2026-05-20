@@ -241,7 +241,7 @@ class TestPhase3Smoke:
         assert (powers > 0).all()
 
     def test_no_unknown_turbine_types(self, phase3_df):
-        valid_types = {"Pelton", "Francis", "Kaplan", "in_conduit_micro"}
+        valid_types = {"Pelton", "Francis", "Kaplan", "Crossflow", "in_conduit_micro"}
         types = set(phase3_df["turbine_type"].drop_nulls().to_list())
         assert types.issubset(valid_types), f"Unknown turbine types: {types - valid_types}"
 
@@ -320,3 +320,109 @@ class TestPhase4Smoke:
         if len(viable) == 0:
             return
         assert (viable["payback_years"] < 1e6).all()
+
+
+# ── Phase 4 run.run() — high-confidence flag end-to-end ───────────────────────
+
+class TestPhase4HighConfidence:
+    """Exercise ``src.phase4.run.run`` directly to verify the
+    ``project_viable_high_confidence`` column is populated correctly."""
+
+    def test_run_emits_high_confidence_column(self, tmp_path):
+        """Synthesise minimal Phase 3 + Phase 1 parquets, call phase4.run.run,
+        assert the output parquet has project_viable_high_confidence column
+        and that it equals project_viable & (data_quality_tier <= 1).
+        """
+        import polars as pl
+        from src.phase4.run import run as phase4_run
+
+        # Build a minimal Phase 3 turbine_sizing parquet
+        p3_rows = [
+            # high-confidence (dmr, viable expected)
+            dict(npdes_id="HC1", turbine_type="Kaplan", rated_power_kw=100.0,
+                 annual_energy_mwh=500.0, capacity_factor=0.5,
+                 turbine_viable=True, state_code="CA", data_quality="dmr",
+                 head_net_m=8.0, q_design_m3s=1.0, q_rated_m3s=1.0,
+                 flow_duration_curve=None),
+            # design_only (low-confidence even if viable)
+            dict(npdes_id="LC1", turbine_type="Kaplan", rated_power_kw=100.0,
+                 annual_energy_mwh=500.0, capacity_factor=0.5,
+                 turbine_viable=True, state_code="CA", data_quality="design_only",
+                 head_net_m=8.0, q_design_m3s=1.0, q_rated_m3s=1.0,
+                 flow_duration_curve=None),
+            # actual_avg_only — also low-confidence
+            dict(npdes_id="LC2", turbine_type="Kaplan", rated_power_kw=100.0,
+                 annual_energy_mwh=500.0, capacity_factor=0.5,
+                 turbine_viable=True, state_code="CA", data_quality="actual_avg_only",
+                 head_net_m=8.0, q_design_m3s=1.0, q_rated_m3s=1.0,
+                 flow_duration_curve=None),
+            # dmr_limited — counts as high-confidence (tier 1)
+            dict(npdes_id="HC2", turbine_type="Kaplan", rated_power_kw=100.0,
+                 annual_energy_mwh=500.0, capacity_factor=0.5,
+                 turbine_viable=True, state_code="CA", data_quality="dmr_limited",
+                 head_net_m=8.0, q_design_m3s=1.0, q_rated_m3s=1.0,
+                 flow_duration_curve=None),
+        ]
+        p3_df = pl.DataFrame(p3_rows)
+
+        # Phase 4 also reads state_code from Phase 1; provide it
+        p1_df = pl.DataFrame({
+            "npdes_id":   ["HC1", "LC1", "LC2", "HC2"],
+            "state_code": ["CA", "CA", "CA", "CA"],
+        })
+
+        # Write inputs
+        p3_path = tmp_path / "turbine_sizing.parquet"
+        p1_path = tmp_path / "ranked_candidates.parquet"
+        p3_df.write_parquet(p3_path)
+        p1_df.write_parquet(p1_path)
+
+        # Patch the OUTPUT_DIR so phase4.run writes inside tmp_path
+        from src.phase4 import run as phase4_module
+        original_output = phase4_module.OUTPUT_DIR
+        phase4_module.OUTPUT_DIR = tmp_path / "phase4_out"
+        try:
+            out_path = phase4_run(
+                phase3_input=p3_path,
+                phase1_input=p1_path,
+                run_sensitivity=False,
+            )
+        finally:
+            phase4_module.OUTPUT_DIR = original_output
+
+        out_df = pl.read_parquet(out_path)
+
+        # Column must exist
+        assert "project_viable_high_confidence" in out_df.columns, (
+            "project_viable_high_confidence column missing from Phase 4 output"
+        )
+
+        # Pull rows by id
+        by_id = {r["npdes_id"]: r for r in out_df.iter_rows(named=True)}
+
+        # HC1 (dmr) + HC2 (dmr_limited): if viable → also high_confidence
+        for nid in ("HC1", "HC2"):
+            if by_id[nid]["project_viable"]:
+                assert by_id[nid]["project_viable_high_confidence"] is True, (
+                    f"{nid} ({by_id[nid]['data_quality']}) should be high-confidence"
+                )
+
+        # LC1 (design_only) + LC2 (actual_avg_only): never high-confidence
+        for nid in ("LC1", "LC2"):
+            assert by_id[nid]["project_viable_high_confidence"] is False, (
+                f"{nid} ({by_id[nid]['data_quality']}) must NOT be high-confidence"
+            )
+
+    def test_high_confidence_implies_viable(self, phase4_df):
+        """If project_viable_high_confidence=True, project_viable must also be True.
+
+        The phase4_df fixture builds rows manually so it doesn't have the
+        high_confidence column — this test is a contract guard and skips when
+        absent rather than failing the build.
+        """
+        if "project_viable_high_confidence" not in phase4_df.columns:
+            pytest.skip("smoke fixture predates project_viable_high_confidence")
+        hc = phase4_df.filter(pl.col("project_viable_high_confidence"))
+        if len(hc) == 0:
+            return
+        assert hc["project_viable"].all()

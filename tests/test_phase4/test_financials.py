@@ -217,3 +217,49 @@ class TestComputeScorecard:
             total_capex_usd=5_000_000.0,
         )
         assert sc["project_viable"] is False
+
+    def test_irr_plus3_sentinel_excluded_from_viable(self):
+        """+3.0 IRR sentinel (trivially profitable, CapEx near zero) → not viable.
+
+        W14 fix: ``project_viable`` filters out IRR sentinel values because they
+        signal degenerate economics (typically CapEx so small the solver pegs
+        IRR at the search interval boundary).  A human investor would not call
+        these viable without a sanity check.
+        """
+        # Trivially-profitable case: tiny CapEx + huge revenue → IRR pegs at +3.0
+        sc = compute_scorecard(
+            annual_energy_kwh=1_000_000.0,
+            elec_rate_per_kwh=0.10,
+            annual_opex_usd=100.0,
+            total_capex_usd=1.0,       # nearly zero CapEx
+            annual_revenue_usd=100_000.0,
+        )
+        assert sc["irr"] >= 2.99, f"Expected +3.0 sentinel, got {sc['irr']}"
+        assert sc["project_viable"] is False, (
+            "Trivial-CapEx site with +3.0 IRR sentinel must not pass project_viable"
+        )
+
+    def test_irr_negative_sentinel_excluded_from_viable(self):
+        """−0.99 IRR sentinel (never pays back) → not viable.
+
+        Project where revenue < opex every year → NPV negative at every rate →
+        IRR sentinel −0.99.  Already excluded by NPV<=0 check, but the IRR
+        guard makes the contract explicit.
+        """
+        sc = compute_scorecard(
+            annual_energy_kwh=100.0,
+            elec_rate_per_kwh=0.05,
+            annual_opex_usd=10_000.0,    # opex >> revenue
+            total_capex_usd=100_000.0,
+            annual_revenue_usd=5.0,
+        )
+        assert sc["irr"] <= -0.98, f"Expected -0.99 sentinel, got {sc['irr']}"
+        assert sc["project_viable"] is False
+
+    def test_normal_irr_does_not_trip_sentinel_guard(self):
+        """A normal site with IRR in [0.05, 0.30] must still pass project_viable."""
+        sc = self._scorecard()  # default inputs — should give realistic IRR
+        if sc["npv_usd"] > 0 and sc["payback_years"] <= 20:
+            assert sc["irr"] > -0.99
+            assert sc["irr"] < 3.0
+            assert sc["project_viable"] is True

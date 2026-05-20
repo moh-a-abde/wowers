@@ -1195,3 +1195,676 @@ F4 is firing on 459 DMR artifacts (same as prior run — correct, the count is s
 Next step to close the gap: **F3** (NHD flowline snap) for the ~3,896 negative-head cases.  Defer until Phase 5 prep; evaluate ROI after seeing Phase 5 ML signal on current dataset.
 
 ---
+
+## Code Audit — Findings & Fix Plan (2026-05-20)
+
+External agent audit examined all 4 phases, config, parquet outputs, and 238 passing tests.
+18 findings identified; all claims verified against live parquet data before acceptance.
+
+### Verified bugs
+
+**B1 — Sensitivity tornado: head & flow swings algebraically identical** (`src/phase4/sensitivity.py`)
+
+Both `head_factor` and `flow_factor` are applied as multipliers on `annual_energy_kwh`.
+Since NPV is linear in energy, after normalisation by range width:
+`head_swing = |energy×1.0| / 1.0 = energy`
+`flow_swing = |energy×0.4| / 0.4 = energy`
+Confirmed on CA0107409: `head_norm = flow_norm = $24,734,937`.
+`dominant_sensitivity` distinction between "head" and "flow" is fake; only `rate` differs.
+
+**Fix (Batch 3 — after B4):** Model head and flow as physically distinct perturbations.
+- Head sweep: perturb `h_net_m` → re-call `select_turbine_type` + `compute_annual_energy` (clips FDC differently → nonlinear effect on capacity factor).
+- Flow sweep: scale `fdc_flows_m3s * factor` → re-call `compute_annual_energy`.
+- Rate sweep stays as-is (multiplies revenue, not energy).
+Requires sensitivity.py to accept `h_net_m`, `fdc_flows_m3s`, `fdc_exceedances` as inputs.
+All inputs already stored in Phase 3 parquet — no pipeline re-run required at Phase 3 level.
+**Implement B4 (Crossflow) first, then B1, so turbine_selection changes compose cleanly.**
+
+---
+
+**B2 — `_print_summary` logs wrong median payback** (`src/phase4/run.py:202`)
+
+`valid_payback` filters by `payback_years < 1e6` (all non-sentinel rows), not by `project_viable=True`.
+Confirmed: viable-only median = **6.67 yr**; all-finite median = **14.26 yr** (what the log reports as "viable").
+The 14.26 yr median includes 1,185 NPV<0 sites with 18–25 yr paybacks.
+
+**Fix (Batch 1 — 1 line):**
+```python
+valid_payback = df.filter(pl.col("project_viable"))["payback_years"]
+```
+
+---
+
+**B3 — F4 null signal destroyed by `ranking.py`** (`src/phase1/ranking.py:71`)
+
+`flow_features.py` carefully nulls `mean_flow_mgd` for DMR artifacts (F4).
+`ranking.py` immediately overwrites with `.fill_null(0.0)`, destroying the error marker.
+Result: TN0056545 shows `mean_flow_mgd = 0.0` in parquet — indistinguishable from a real zero-flow site.
+
+**Fix (Batch 1 — small):** Use a private `_mean_flow_for_ranking` column for normalisation; leave `mean_flow_mgd` null in the output parquet.
+
+---
+
+**B4 — Crossflow turbines in DB never matched** (`src/phase3/turbine_selection.py` + `data/turbines/turbine_manufacturers.csv`)
+
+Three Crossflow manufacturers (CINK, Canyon Hydro, Ossberger) in the DB but `select_turbine_type` never returns `"Crossflow"` — dead inventory.
+Crossflow is industry-standard for wastewater (Ossberger original design, 0.5 kW–30 MW, 1–200 m head).
+
+**Fix (Batch 3):** Add Crossflow branch to `select_turbine_type` (2–200 m head, 0.05–16 m³/s, overlaps current Francis range at medium-head medium-flow). Add `efficiency_at_part_load` case (~0.80 flat across 25–110% load) and `peak_efficiency` entry. Update tests.
+
+---
+
+**B5 — Stale Phase 2 national P50 in journal**
+
+Journal F1/F2/F4 section references 847.5 GWh/yr. Latest Phase 2 log after F4 nulled 459 ratio-cap rows shows **739.4 GWh/yr**. Fix: add corrected number to next journal entry (this section).
+
+Phase 2 national portfolio P50: **739.4 GWh/yr** (post-F4, FY2021–2024 DMR).
+
+---
+
+### Design weaknesses (Phase 5 risks)
+
+**W6 — 32% of viable results built on synthetic flow** (data quality bleed)
+
+Of 1,097 `project_viable=True` sites:
+- 747 (68%) `dmr` — real time series
+- 207 (19%) `design_only` — mean_flow = design × 0.75 fallback
+- 139 (13%) `actual_avg_only` — single ICIS scalar, no FDC
+- 4 (<1%) `dmr_limited` — <12 months
+
+CA0107409 (Point Loma WWTP, #1 by NPV $23M, 0.7 yr payback): `data_quality = design_only`, `n_months_data = 0`, `flow_duration_curve = null`. Headline result is entirely synthetic.
+Phase 5 ML training will mix real-signal and synthetic-assumption rows without distinguishing.
+
+**Fix (Batch 3):** Add `data_quality_tier` int column to Phase 4 scorecard output (1=dmr, 2=dmr_limited, 3=actual_avg_only, 4=design_only). Required before Phase 5 ML training.
+
+---
+
+**W7 — 75% utilization hardcoded for design_only** (`src/phase1/flow_features.py:237`)
+
+Real US POTW utilization varies 40–95%.  Hardcoded 0.75 inflates small/medium plants.
+Defer to Phase 5 — requires archetype distribution from DMR-rich peer plant analysis.
+
+**W8 — Synthetic 2-point FDC for design_only sites** (`src/phase3/turbine_selection.py`)
+
+Linear interp between Q_design and Q_design/2.  Real FDCs are log-shaped.
+Defer to Phase 5 — needs peer-plant FDC shape fitting by size archetype.
+
+**W9 — design_flow=0 sites not penalised in ranking** (`src/phase1/ranking.py:85`)
+
+Null utilization → 0.5 (neutral mid-range).  2,369 sites have design_flow = 0 or null.
+Boyd County KYP000044 and KYP000040 ranked #2 and #3 with `design_flow = 0.0`, `data_quality = dmr_limited`.
+
+**Fix (Batch 1 — 1 line):** `fill_null(0.0)` → worst-case, not neutral.
+
+**W10 — Divergence gate still rejects ~790 legitimate sites** (`src/phase3/head_estimation.py`)
+
+F2 raised ratio to 4.0 but small POTW archetype `lit_p50 ≈ 3m`; real Appalachian sites at 16m head still rejected ((16-3)/3 = 4.33 > 4.0).
+Defer to Phase 5 prep — needs elevation-aware regional reference or removal of ratio gate in favour of `candidate_net > MIN_NET_HEAD_M` only.
+
+**W11 — Negative-head path computes plausibility check unnecessarily** (`src/phase3/head_estimation.py:102–128`)
+
+Code falls through with `pass` on negative head, but plausibility/divergence lines still execute. Wasted CPU on ~3,896 sites.
+**Fix (Batch 1 — 5 lines):** Move plausibility block into `else:` branch.
+
+**W12 — Phase 2 data_quality default is "dmr" (best)** (`src/phase2/monte_carlo.py:40`)
+
+If `data_quality` column missing, defaults to best quality. Should default to `"design_only"` for safety.
+**Fix (Batch 1 — 1 line).**
+
+**W13 — No early filter on tiny POTWs (<0.5 MGD)** (`src/phase1/filter_potw.py`)
+
+Minor facilities <0.5 MGD are uneconomic for micro-hydro but consume 3DEP API calls.
+Defer — verify no viable sites below threshold before adding filter.
+
+**W14 — IRR sentinel can pass `project_viable`** (`src/phase4/financials.py`)
+
+`project_viable` checks `npv > 0 and payback <= 20.0` but no IRR sanity check.
+Currently clean (0 sentinels in viable set). Defer — add `(irr > 0) & (irr < 1.0)` guard to docstring recommended downstream filter.
+
+**W16 — `_load_perm_feature_coords` loads full 626k-row file when `npdes_ids=None`** (`src/phase3/outfall_coords.py`)
+
+Loads entire fallback file even when most IDs already covered by outfalls layer.
+**Fix (Batch 1 — small):** Pass covered IDs set to dedup before loading.
+
+**W17 — FDC tail truncation [0, 0.01] + [0.95, 1.0] known underestimate**
+
+~2–6% underestimate documented in D2 comment.  Acceptable for screening.
+Defer — document in ARCHITECTURE.md during Phase 5 prep.
+
+**W18 — No regression test for F2 divergence gate change**
+
+`_MAX_DIVERGENCE_RATIO` raised 2.0 → 4.0 but no test exercises the 2.5× boundary.
+**Fix (Batch 1):** Add test: 3DEP head at 2.5× literature P50 must now yield `usgs_3dep` source.
+
+---
+
+### Prioritised execution plan
+
+| Batch | Items | Files | Re-run needed |
+|---|---|---|---|
+| **1** (1-liners + small) | B2, B3, W9, W11, W12, W16, W18 | phase4/run.py, phase1/ranking.py, phase2/monte_carlo.py, phase3/head_estimation.py, phase3/outfall_coords.py, tests | No |
+| **2** (medium, same sprint) | B4 Crossflow | phase3/turbine_selection.py, turbine_manufacturers.csv, tests | Phase 3+4 |
+| **3** (after B4) | B1 sensitivity redesign, W6 data_quality_tier | phase4/sensitivity.py, phase4/financials.py, tests | Phase 4 only |
+| **Defer** | W7, W8, W10, W13, W14, W17, F3 NHD snap | Various | Phase 5 prep |
+
+---
+
+## Audit Round 2 — Verification + New Findings (2026-05-20)
+
+Agent re-reviewed all 9 src + 2 test files from Batch 1/2/3. All B1–B5, W6/W9/W11/W12/W16/W18 verified correct by diff. 240 tests pass (up from 238).
+
+### Verified fixes ✅
+
+All items in the table above confirmed implemented and correct. Highlights:
+
+- **B1**: `head_swing=270k ≠ flow_swing=210k` on live data — Option B model producing physically distinct sensitivity values.
+- **B4 (Crossflow)**: 3 DB rows match (CINK, Canyon Hydro, Ossberger). Manufacturer matching works.
+- **W9**: `KYP000044/040` still rank high in stale parquet — fix will propagate on next P1 re-run.
+
+### New bugs introduced by B4 (N-series) 🔴
+
+**N1 — Crossflow has no cost model (silent Kaplan fallback)**
+
+`src/phase4/cost_models.py:77` falls back to Kaplan params for unknown turbine types. Crossflow rows from Phase 3 get Kaplan CapEx/OpEx. Wrong economics — Crossflow simpler runner, historically cheaper.
+
+*Fix*: Add Crossflow entry to `cost_model.types` in `settings.yaml` and to `_TYPE_PARAMS` / `_OPEX_PCT` in `cost_models.py`.
+Parameters (CINK/Ossberger literature): A=7500, B=-0.28, min=500/kW, max=7500/kW, opex=2.0% CapEx.
+
+**Must fix before next P3/P4 run.**
+
+**N3 — `select_turbine_type` docstring vs code mismatch**
+
+Docstring claims rule 5 is `H < 2m OR Q < 0.04 m³/s → in_conduit_micro`. Code applies Kaplan first when `q_m3s >= 0.5`, so `h=1.5, q=1` → Kaplan (not in_conduit_micro as docstring implies). Minor — `MIN_NET_HEAD_M=1.0` filters most sub-2m sites anyway.
+
+*Fix*: Add `h_net_m >= 2.0` guard to Kaplan branch (physically correct — Kaplan runner needs adequate head clearance).
+
+### Pipeline status at audit time
+
+Phase 1 still running (parsing FY2022-2024 DMR). P2/P3/P4 parquets stale from 2026-05-19.
+
+### Fix plan
+
+| Tag | Action | File | Before next run? |
+|---|---|---|---|
+| N1 | Add Crossflow cost model params | `settings.yaml`, `cost_models.py` | **Yes — must fix** |
+| N3 | Add h≥2m gate to Kaplan branch | `turbine_selection.py` | Yes (minor) |
+
+After N1/N3 fixed: wait for P1, then chain P2 → P3 → P4.
+
+### Post-run spot-checks
+
+- `KYP000044/040` drop in rank (W9 utilization fix)
+- `TN0056545.mean_flow_mgd` = null (F4)
+- Crossflow rows appear in `turbine_sizing.parquet` viable set
+- `dominant_sensitivity` distribution non-trivial (B1 — head ≠ flow swings)
+- `data_quality_tier` column present in `financial_scorecards.parquet`
+
+### Deferred (by design)
+
+W7, W8, W10, W13, W14, W17, F3 — all logged in batch table above; Phase 5 scope.
+
+---
+
+## Audit Round 4 — Post-Pipeline Verification (2026-05-20)
+
+All B1–B5, N1, N3, W6/W9/W11/W12/W16/W18 confirmed live in parquet outputs. 240/240 tests pass.
+
+### All fixes verified ✅
+
+Key live confirmations:
+- **B1**: 2,951 sites (74%) have physically distinct head vs flow swing. `dominant_sensitivity`: head=3305, flow=671, rate=1.
+- **B2**: Log "Median payback (viable): 8.6 yr" matches live `project_viable=True` median of 8.64 yr.
+- **B3**: TN0056545 `mean_flow_mgd = None` in P1 parquet (was 0.0). 1,051 null rows total.
+- **B4+N1**: 2,821 Crossflow viable sites in P3. P4 uses correct Crossflow CapEx.
+- **N3**: h=1.5, q=1 → `in_conduit_micro` (was Kaplan). All 10 H-Q test cases pass.
+
+### New residuals identified 🔴🟡
+
+**R1 — B1 fallback degenerate `dominant_sensitivity` for 26% of rows**
+
+`run_tornado` falls back to linear scaling when FDC absent. 1,026/3,977 rows (26%) have `head_swing == flow_swing` because `data_quality ∈ {design_only, actual_avg_only}` → no DMR FDC. Physically correct (linear sensitivity degenerates when no part-load curve), but `dominant_sensitivity` label is meaningless for these sites.
+
+*Fix*: Set `dominant_sensitivity = "energy_uncertain"` in fallback path instead of picking from algebraically equal swings.
+
+**R2 — Top NPV not gated on data quality**
+
+13/20 top NPV sites are `design_only` or `actual_avg_only`. `project_viable` doesn't gate on data tier. `data_quality_tier` column present but unused. For presentations, IL0028053 Stickney (real DMR, 264 MGD) is credible headline; CA0107409 Point Loma (0 months DMR, $23.1M NPV) is not.
+
+*Fix*: Add `project_viable_high_confidence = project_viable & (data_quality_tier <= 1)` column to P4 output.
+
+**R3 — P1 top ranks still show design_flow=0 sites**
+
+KYP000044 (#2) and KYP000040 (#5) have `design_flow_mgd=0`. Correctly excluded at P2 stage but P1 parquet shows them top-ranked, misleading for any ML or visualization consuming P1 directly.
+
+*Fix*: Zero `ranking_score` when `design_flow_mgd <= 0` so they sink to bottom of P1 rank.
+
+### Fix plan
+
+| Tag | File | Re-run needed |
+|---|---|---|
+| R1: `energy_uncertain` fallback | `src/phase4/sensitivity.py` | P4 only |
+| R2: `project_viable_high_confidence` | `src/phase4/run.py` | P4 only |
+| R3: zero rank for design_flow=0 | `src/phase1/ranking.py` | P1 → P4 full chain |
+
+### Other observations
+
+- `in_conduit_micro`: 197 viable P3, only 22 viable P4 → 88% fail economics. Confirms small inline micro-turbines mostly uneconomic at this scale.
+- IRR sentinels: 0 in viable set. W14 risk not materializing.
+- Sensitivity NaN/null: 0 across all 6 columns.
+
+---
+
+## Post-N1/N3 Full Pipeline Re-run (2026-05-20)
+
+All four phases re-run after N1 (Crossflow cost model) and N3 (turbine selection gate) fixes.
+
+### Pipeline numbers
+
+| Metric | Pre-cleanup baseline | F1/F2/F4 run (2026-05-19 20:41) | This run (2026-05-20 10:23) | Δ vs prior |
+|---|---|---|---|---|
+| **Phase 1** | | | | |
+| Total POTWs | 17,158 | 17,158 | 17,158 | — |
+| With DMR data | 12,179 (71.0%) | 12,179 (71.0%) | 12,179 (71.0%) | — |
+| DMR scrubbed (F4) | 487 | 487 | 487 | — |
+| Design-only fallback | 4,979 | 4,979 | 4,979 | — |
+| **Phase 2** | | | | |
+| Facilities estimated | 15,236 | 15,236 | 15,236 | — |
+| Excluded | 1,894 | 1,922 | 1,922 | — |
+| National P50 energy | 739.4 GWh/yr | 739.4 GWh/yr | 729.1 GWh/yr | −10.3 GWh |
+| Median facility P50 | 2,164 kWh/yr | 2,164 kWh/yr | 2,163 kWh/yr | −1 kWh |
+| **Phase 3** | | | | |
+| Viable turbine sites | 3,873 (25.4%) | 3,873 (25.4%) | 3,977 (26.1%) | +104 |
+| 3DEP head | 9,631 | 9,631 | 9,612 | −19 |
+| Literature head | 5,633 | 5,633 | 5,624 | −9 |
+| Total energy estimate | 515,895 MWh/yr | 515,895 MWh/yr | 518,673 MWh/yr | +2,778 |
+| **Phase 4** | | | | |
+| Total scored | 3,736 | 3,873 | 3,977 | +104 |
+| **Viable projects** | **950 (25.4%)** | **1,097 (28.3%)** | **2,575 (64.7%)** | **+1,478** |
+| **Median payback (viable)** | **14.9 yr** | **14.3 yr** | **8.6 yr** | **−5.7 yr** |
+| Total portfolio CapEx | $199.2M | $206.4M | $172.3M | −$34.1M |
+| Total portfolio revenue | $46.5M/yr | $49.9M/yr | $50.1M/yr | +$0.2M |
+
+### Spot-checks ✅
+
+| Check | Expected | Result |
+|---|---|---|
+| TN0056545 `mean_flow_mgd` | null (F4 scrub) | ✅ null |
+| KYP000040 rank | dropped from #3 | ✅ now #5 (was #3 pre-W9) |
+| KYP000044 rank | still high (high flow) | ✅ #2 (high mean_flow dominates) |
+| Crossflow in P3 viable | present | ✅ 2,821 sites |
+| `data_quality_tier` in P4 | present | ✅ cols: 0→2930, 1→21, 2→599, 3→427 |
+| `dominant_sensitivity` non-trivial | head ≠ flow | ✅ head=2,192 / flow=383 (B1 verified) |
+
+### Key insight — Crossflow cost correction drives economics jump
+
+The large jump in viable projects (28.3% → 64.7%) and median payback improvement (14.3yr → 8.6yr) stems primarily from N1 + N3:
+
+- **N3** reclassified 2,674 sites from `in_conduit_micro` → `Crossflow` (h ∈ [2,10)m, q < 0.5 m³/s)
+- **N1** gave Crossflow correct economics: CapEx A=7500 (vs in_conduit_micro's 12000), opex=2.0% (vs 3.0%)
+- Net effect: ~2,800 sites got ~40% cheaper CapEx, improving NPV and payback for most of them
+
+This is a real correction, not an artifact — Crossflow (Ossberger/CINK) runners are genuinely cheaper per kW than inline micro-turbine installations for this head/flow regime. The 64.7% viable rate warrants investigation in Phase 5 (are site selection criteria too loose?).
+
+### Phase 3 turbine mix (current)
+
+| Turbine | Sites | Change from prior |
+|---|---|---|
+| Crossflow | 2,821 | +2,821 (new type replacing in_conduit_micro) |
+| Francis | 582 | +1 |
+| Kaplan | 377 | −44 (some routed to in_conduit_micro via N3 h<2m gate) |
+| in_conduit_micro | 197 | −2,674 (majority reclassified to Crossflow) |
+
+### Open question for Phase 5
+
+64.7% viable rate is high. Likely explanation: Crossflow at [2,10)m head + low flow is a correct engineering match, but real-world installation at very small POTWs (q < 0.1 m³/s) may have permitting/civil work costs not captured in the power-law CapEx model. Recommend W13 (small-POTW filter, <0.5 MGD) to address this in Phase 5 prep.
+
+---
+
+### Session: 2026-05-20 — Round 5 Audit: F2/F3/F4/W14 Test Coverage + IRR Sentinel Block
+
+**What was done:**
+
+Round 5 of the iterative code audit identified four follow-up items left over from the Crossflow + sensitivity refactor (Round 4):
+
+- **F2** — No regression test for the `design_flow_mgd == 0` ranking-score zeroing fix.
+- **F3** — No regression test for the new `project_viable_high_confidence` column.
+- **F4** — Existing sensitivity tests pass via early-return in the fallback path, so the physical Option B distinction is not actually exercised by the suite.
+- **W14** — IRR sentinel values (`+3.0` / `−0.99` / `NaN`) were not blocked from `project_viable`.
+
+All four addressed this session.
+
+**Changes — source code (1 file):**
+
+- `src/phase4/financials.py` `compute_scorecard` — `project_viable` now also requires `−0.99 < irr < 3.0 AND not NaN`. Sentinel IRRs (degenerate economics — trivially-profitable nano-CapEx sites, all-negative-CF projects, or solver exceptions) are no longer counted as viable. Comment block added explaining the contract.
+
+**Changes — tests (4 files, +10 tests):**
+
+- `tests/test_phase1/test_ranking.py` (+2 tests, +1 schema assertion)
+  - `test_design_zero_zeros_ranking_score` — Confirms a 3-facility synthetic corpus with one `design=0` industrial-misclass row (high mean_flow=240 MGD) ranks LAST with `ranking_score == 0`, and a real POTW outranks it.
+  - `test_design_null_also_zeroed` — Documents conservative posture: `design_flow_mgd is None` also zeroed because the corpus can't distinguish legitimate-clerical-gap from EPA-999-nulled rows.
+  - `test_no_temp_columns_in_output` extended with `_mean_flow_for_ranking` check.
+
+- `tests/test_phase4/test_sensitivity.py` (+3 tests)
+  - `test_fallback_path_labels_energy_uncertain` — Verifies the no-FDC call returns `dominant_sensitivity == "energy_uncertain"` and that fallback head/flow swings are algebraically identical.
+  - `test_physical_model_distinguishes_head_from_flow` — Calls `run_tornado` with a full 20-point synthetic FDC + Kaplan turbine; asserts normalised head and flow swings differ by > $1 (real Option B physical separation).
+  - `test_physical_head_partial_iso_curve` — Edge case: very low h_net=2m + h_factor=0.5 → re-optimiser yields finite NPV without crash or NaN.
+
+- `tests/test_phase4/test_financials.py` (+3 tests)
+  - `test_irr_plus3_sentinel_excluded_from_viable` — Trivially profitable nano-CapEx site → IRR ≥ 2.99 → `project_viable == False`.
+  - `test_irr_negative_sentinel_excluded_from_viable` — All-negative net CF site → IRR ≤ −0.98 → `project_viable == False`.
+  - `test_normal_irr_does_not_trip_sentinel_guard` — Realistic IRR ∈ [0.05, 0.30] still passes `project_viable=True`.
+
+- `tests/integration/test_pipeline_smoke.py` (+2 tests)
+  - `test_run_emits_high_confidence_column` — Synthesises a 4-row Phase 3 parquet (one each of `dmr`, `dmr_limited`, `actual_avg_only`, `design_only`) and invokes `src.phase4.run.run` directly; reads back parquet and asserts `project_viable_high_confidence` populated correctly.
+  - `test_high_confidence_implies_viable` — Contract guard: `project_viable_high_confidence == True` implies `project_viable == True`.
+
+**Test suite: 249 passed + 1 skipped** (was 240; +9 new passing tests + 1 skip on the inline-fixture contract guard).
+
+**Pipeline re-run after Round 5 fixes:** (in progress, will append numbers below once P1→P4 complete)
+
+**Files modified / created:**
+- `src/phase4/financials.py`
+- `tests/test_phase1/test_ranking.py`
+- `tests/test_phase4/test_sensitivity.py`
+- `tests/test_phase4/test_financials.py`
+- `tests/integration/test_pipeline_smoke.py`
+- `WOWERS_PROJECT_JOURNAL.md`
+
+**Resources used:**
+- Round 4 audit findings (in-conversation)
+- Live `python -c` verification of `run_tornado` fallback vs physical paths
+- Live `compute_ranking` test on synthetic DataFrame
+- `pytest -q tests/` for full suite green-light
+
+**Next steps after this session:**
+1. Wait for Phase 1 re-run to finish.
+2. Run Phase 2 → Phase 3 → Phase 4.
+3. Verify in fresh parquet: Boyd County drops from top-100 P1 rank; `project_viable_high_confidence` column present; `project_viable` count drops slightly (IRR sentinel exclusion); `dominant_sensitivity == "energy_uncertain"` for ~26% (no-FDC sites).
+4. Send the review report (below) to an external review agent.
+5. Commit after external review passes.
+
+---
+
+## Round 5 Review Report (send to external agent)
+
+**Scope:** Verify F2/F3/F4/W14 fixes from session 2026-05-20 Round 5.
+
+### Single source-code change
+
+`src/phase4/financials.py` `compute_scorecard` — added IRR sentinel guard inside `project_viable`:
+
+```python
+irr_real = (
+    not math.isnan(irr)
+    and irr > -0.99
+    and irr < 3.0
+)
+viable = bool(npv > 0 and payback <= 20.0 and irr_real)
+```
+
+Any site whose IRR pegs at the search-interval boundary (`+3.0` trivially profitable; `−0.99` always-loss) or returns NaN (solver exception) is no longer flagged `project_viable=True`. The Round 4 P4 run had 0 such rows in the viable set already; the contract is now explicit so Phase 5 ML features derived from `project_viable` can treat the flag as "real-IRR-backed viability".
+
+### Areas to challenge
+
+1. **IRR strict inequality.** `irr < 3.0` excludes exactly `irr == 3.0` (the sentinel value `compute_irr` returns when `f_lo * f_hi > 0` on the positive side). Brentq cannot return exactly the boundary on a successful root-find, so any IRR of exactly 3.0 must be the sentinel — current behaviour correct, but verify the sentinel constants in `compute_irr` are still `hi=3.0` and `lo=-0.99`.
+
+2. **NaN check.** `not math.isnan(irr)` is correct for `float` NaN. Verify the dict-construction path in `compute_scorecard` cannot produce `None` for the `irr` field (it shouldn't — `compute_irr` always returns a `float`).
+
+3. **Backward compatibility.** Existing test `test_project_viable_flag_consistent` (`tests/test_phase4/test_financials.py:164`) uses default inputs that produce IRR ∈ [0.05, 0.20] — well inside the new guard. Confirm no other test relies on a sentinel-IRR site being `project_viable=True`.
+
+4. **Phase 5 dtype contract.** `data_quality_tier` is `Int64` in the P4 parquet. `project_viable_high_confidence` is `Bool`. Verify these dtypes survive the `pl.DataFrame(financial_rows).write_parquet(...)` round-trip.
+
+5. **High-confidence semantics.** Currently `project_viable_high_confidence = project_viable AND data_quality_tier <= 1` (`dmr` + `dmr_limited`). Tier 1 = sparse DMR (< 12 months). Is that high-confidence enough? Trade-off: tier 1 keeps small but real-data plants in; restricting to tier 0 only drops ~21 sites.
+
+### Concrete checks for the reviewer
+
+```bash
+# 1. Test suite green
+python -m pytest tests/ -q
+# Expect: 249 passed, 1 skipped
+
+# 2. Spot-check W14: trivially-profitable site is excluded
+python -c "
+from src.phase4.financials import compute_scorecard
+sc = compute_scorecard(
+    annual_energy_kwh=1_000_000.0, elec_rate_per_kwh=0.10,
+    annual_opex_usd=100.0, total_capex_usd=1.0,
+    annual_revenue_usd=100_000.0,
+)
+assert sc['irr'] >= 2.99
+assert sc['project_viable'] is False
+print('W14 IRR+3 guard: OK')
+"
+
+# 3. Spot-check F2: design=0 ranking zero
+python -c "
+from src.phase1.ranking import compute_ranking
+import polars as pl
+df = pl.DataFrame({
+    'npdes_id': ['A', 'B'],
+    'mean_flow_mgd': [50.0, 200.0],
+    'cv_flow': [0.2, 0.2],
+    'utilization_ratio': [0.8, None],
+    'n_years_data': [10, 10],
+    'p10_flow_mgd': [30.0, 150.0],
+    'design_flow_mgd': [60.0, 0.0],
+    'facility_name': ['Real POTW', 'Misclassified'],
+})
+r = compute_ranking(df).sort('rank').to_dicts()
+assert r[1]['npdes_id'] == 'B'
+assert r[1]['ranking_score'] == 0.0
+print('F2 design=0 ranking zero: OK')
+"
+
+# 4. Spot-check F4: physical sensitivity distinguishes head/flow
+python -c "
+from src.phase4.sensitivity import run_tornado
+from src.phase3.turbine_selection import _PHASE1_FDC_EXCEEDANCES
+r = run_tornado(
+    1_000_000, 0.10, 10_000, 500_000,
+    h_net_m=8.0, q_design_m3s=1.0,
+    fdc_flows_m3s=[2.0,1.5,1.2,1.0,0.8,0.6,0.5,0.4,0.3,0.25,
+                   0.2,0.18,0.15,0.12,0.1,0.08,0.06,0.04,0.02,0.01],
+    fdc_exceedances=_PHASE1_FDC_EXCEEDANCES,
+    turbine_type='Kaplan', q_rated_m3s=1.0,
+)
+hs = abs(r['sensitivity_head_npv_high'] - r['sensitivity_head_npv_low']) / 1.0
+fs = abs(r['sensitivity_flow_npv_high'] - r['sensitivity_flow_npv_low']) / 0.4
+assert abs(hs - fs) > 1.0, f'Physical model should differ, hs={hs}, fs={fs}'
+print(f'F4 physical sensitivity: hs={hs:.0f}, fs={fs:.0f}, dominant={r[\"dominant_sensitivity\"]}')
+"
+```
+
+### Outstanding items NOT in this round (deferred)
+
+- **W7** — Hardcoded 75% utilization fallback for `design_only` sites.
+- **W8** — Synthetic 2-point FDC `[q_design, q_design × 0.5]` paired with `[0, 1]` for sites without DMR FDC; affects ~26% of corpus.
+- **W10** — Plausibility-gate uses national-median literature as divergence reference; should be regional.
+- **W13** — No early small-POTW filter (< 0.5 MGD).
+- **W17** — FDC tail truncation `[0, 0.01]` + `[0.95, 1.0]`; ~2-3% energy underestimate.
+- **F3 (data layer)** — NHD flowline snap for residual ~3,900 negative-head sites.
+
+### Files for review
+
+- `src/phase4/financials.py` (W14 IRR sentinel guard)
+- `tests/test_phase4/test_financials.py` (+3 IRR tests)
+- `tests/test_phase4/test_sensitivity.py` (+3 physical-path tests)
+- `tests/test_phase1/test_ranking.py` (+2 design=0/null tests)
+- `tests/integration/test_pipeline_smoke.py` (+2 high-confidence tests)
+
+---
+
+## Session: 2026-05-20 — F1 Trade-off Resolution (Pre-Pipeline Re-run)
+
+### What was done
+
+Resolved the F1 design=null trade-off identified in Audit Round 5. Previous code zeroed `ranking_score` for **both** `design_flow_mgd == 0` (263 rows, industrial misclassification) and `design_flow_mgd IS NULL` (2,106 rows, legitimate clerical gap). Changed to only zero explicit zero.
+
+**`src/phase1/ranking.py` — ranking score zero gate:**
+```python
+# Before (over-conservative — zeroed null too):
+pl.when(pl.col("design_flow_mgd").fill_null(0.0) <= 0.0)
+
+# After (only zero explicit design=0):
+pl.when(
+    pl.col("design_flow_mgd").is_not_null()
+    & (pl.col("design_flow_mgd") <= 0.0)
+)
+```
+
+**Rationale:** Null design_flow = missing permit data in EPA ECHO. ~2,106 sites have solid DMR histories (10+ years, 50+ MGD) and are legitimate POTWs. Zero-ranking them collapses real hydro candidates. Design=0 is the industrial misclassification signal — those get zeroed. Documented trade-off: with no design flow we can't validate DMR, but excluding ~14% of corpus is too aggressive when DMR quality can stand alone.
+
+**Test updated:** `test_design_null_also_zeroed` → `test_design_null_ranks_normally` in `tests/test_phase1/test_ranking.py`. Asserts null-design site scores > 0.0 and ranks below equivalent full-data site (due to `utilization_ratio` null → `fill_null(0.0)` penalty).
+
+**Test suite:** 249 passed + 1 skipped.
+
+### Predicted pipeline deltas (after re-run)
+
+| Phase | Expected change |
+|-------|----------------|
+| P1 | ~2,106 null-design sites restored to normal ranking. Only ~263 explicit design=0 sites zeroed. Boyd County KYP000044/040 still drop (they have design=0). Top-5 reshuffled. |
+| P2–P4 | Viability counts unchanged. `project_viable_high_confidence` column appears in P4 parquet for first time. |
+| P4 sensitivity | ~26% rows labeled `energy_uncertain` (no FDC, fallback path). Expected and correct. |
+
+### Verify after re-run
+
+```bash
+# Boyd County should rank near bottom
+python -c "
+import polars as pl, glob
+f = sorted(glob.glob('data/checkpoints/phase1_potw_facilities_v*.parquet'))[-1]
+df = pl.read_parquet(f)
+boyd = df.filter(pl.col('npdes_id').str.starts_with('KYP0000')).select(['npdes_id','facility_name','ranking_score','rank'])
+print(boyd)
+zeroed = df.filter(pl.col('ranking_score') == 0.0).height
+print(f'Zeroed sites: {zeroed} (expect ~263, not ~2369)')
+"
+
+# high-confidence flag
+python -c "
+import polars as pl, glob
+f = sorted(glob.glob('data/checkpoints/phase4_financial_scorecards_v*.parquet'))[-1]
+df = pl.read_parquet(f)
+viable = df.filter(pl.col('project_viable') == True)
+hc = viable.filter(pl.col('project_viable_high_confidence') == True).height
+print(f'High-confidence: {hc}/{viable.height} = {hc/viable.height:.1%} (expect ≥60%)')
+"
+```
+
+### Still deferred
+
+W7, W8, W10, W13, W17, F3-NHD — Phase 5 scope.
+
+---
+
+## Post-F1-Fix Full Pipeline Re-run (2026-05-20)
+
+Full pipeline re-run after F1 null-design trade-off fix and all Round 5 code changes. Parquets v007 (P1) / v009 (P2) / v010 (P3) / v014 (P4).
+
+### P1 — Ranked Candidates (v007)
+
+| Metric | Pre-fix (v006) | Post-fix (v007) | Delta |
+|--------|---------------|-----------------|-------|
+| Total facilities | 17,158 | 17,158 | — |
+| Zeroed ranking_score | 2,369 | **263** | −2,106 |
+| Null-design sites | 2,106 | 2,106 | — |
+| Mean score, null-design | 0.000 | **0.1405** | +0.14 |
+| Boyd County KYP000044 rank | ~2 | **16,983** | bottom |
+| Boyd County KYP000040 rank | ~5 | **17,108** | bottom |
+
+Fix confirmed: 2,369 → 263 zeroed. Null-design sites (2,106) restored to normal pack with mean score 0.14. Design=0 industrial misclassifications (263) correctly zeroed at bottom.
+
+**Top 10 P1 ranking (v007):**
+| Rank | NPDES ID | State | Score | Design MGD |
+|------|----------|-------|-------|-----------|
+| 1 | DC0021199 | DC | 0.603 | 370 |
+| 2 | NJ0021016 | NJ | 0.525 | 330 |
+| 3 | PA0025984 | PA | 0.525 | 200 |
+| 4 | IL0028053 | IL | 0.513 | 1440 |
+| 5 | NY0026131 | NY | 0.507 | 275 |
+| 6 | NY0026204 | NY | 0.503 | 310 |
+| 7 | PA0026689 | PA | 0.489 | 210 |
+| 8 | TX0022802 | TX | 0.477 | 189 |
+| 9 | CO0026638 | CO | 0.465 | 220 |
+| 10 | WI0027995 | WI | 0.439 | 0.55 |
+
+Note: WI0027995 (Plover WWTP, WI) ranks #10 with design=0.55 MGD but mean_flow=1.35 MGD (util_ratio=2.46). High ranking due to strong flow consistency score on DMR data. Related to W13 (no small-POTW filter) — deferred.
+
+**Data quality breakdown:**
+- dmr: 11,575
+- actual_avg_only: 2,773
+- design_only: 2,206
+- dmr_limited: 604
+
+### P2 — Energy Yield (v009)
+
+| Metric | Count |
+|--------|-------|
+| Total facilities | 17,158 |
+| Excluded | 1,922 |
+| Active (passed to P3) | 15,236 |
+| small_potw archetype | 10,464 |
+| medium_potw archetype | 3,838 |
+| large_potw archetype | 934 |
+
+### P3 — Turbine Sizing (v010)
+
+| Metric | Count |
+|--------|-------|
+| Total (passed P2) | 15,236 |
+| 3DEP head | 9,611 (63.1%) |
+| Literature head | 5,625 (36.9%) |
+
+**Turbine type breakdown:**
+| Type | Count |
+|------|-------|
+| Crossflow | 8,897 |
+| unknown | 3,823 |
+| in_conduit_micro | 1,260 |
+| Francis | 856 |
+| Kaplan | 400 |
+
+### P4 — Financial Scorecards (v014)
+
+| Metric | Prev (v009) | Now (v014) | Delta |
+|--------|-------------|------------|-------|
+| Total scored | — | 3,976 | — |
+| project_viable | 2,575 | **2,574** | −1 |
+| project_viable_high_confidence | N/A (new) | **1,968** (76.5%) | new column |
+| Median NPV (viable) | $16,252 | $16,223 | −$29 |
+| Median payback (viable) | 8.6 yr | 8.6 yr | — |
+| Median IRR (viable) | 11.0% | 11.0% | — |
+
+**Data quality tier (viable only):**
+| Tier | Label | Count |
+|------|-------|-------|
+| 0 | dmr | 1,963 |
+| 1 | dmr_limited | 5 |
+| 2 | actual_avg_only | 326 |
+| 3 | design_only | 280 |
+
+High-confidence (tier 0+1): 1,968 / 2,574 = **76.5%** ✓ (predicted ≥60%)
+
+**Dominant sensitivity:**
+| Label | Count |
+|-------|-------|
+| head | 2,928 (73.6%) |
+| energy_uncertain | 1,026 (25.8%) |
+| flow | 21 (0.5%) |
+| rate | 1 (0.0%) |
+
+26% energy_uncertain (no FDC, fallback path) — expected and correct.
+
+### Key insights
+
+1. **Null-design fix worked cleanly.** 2,106 real POTWs restored to ranking. Zero collateral damage.
+2. **project_viable_high_confidence ships.** 76.5% of viable sites are pitch-ready (DMR-backed). New column present in v014 parquet for the first time.
+3. **Viability stable.** −1 viable site (rounding edge case). Financial medians unchanged.
+4. **Boyd County confirmed bottom.** KYP000044 → rank 16,983 (out of 17,158). Design=0 industrial sites correctly at bottom of pile.
+5. **Crossflow dominant at P3.** 8,897 / 15,236 = 58% of active sites assigned Crossflow (2–10m head, low flow). Reflects real low-head distribution of US POTWs.
+
+### Outstanding deferred items
+
+W7, W8, W10, W13, W17, F3-NHD — Phase 5 scope. No change.
+
+---

@@ -134,3 +134,125 @@ class TestRanking:
         for col in ranked_df.columns:
             assert not col.startswith("_norm_"), f"Temp column leaked: {col}"
             assert not col.endswith("_capped"), f"Temp column leaked: {col}"
+        assert "_mean_flow_for_ranking" not in ranked_df.columns
+
+    def test_design_zero_zeros_ranking_score(self):
+        """Sites with design_flow_mgd == 0 must have ranking_score == 0 and rank last.
+
+        Regression guard: KYP000044/KYP000040 Boyd County (design=0, mean=243 MGD)
+        previously ranked #2/#5 due to high raw DMR flow.  The post-fix code zeros
+        ranking_score for design<=0 so misclassified industrial discharges don't
+        appear at the top of P1 visualisations.
+        """
+        import numpy as np
+        from src.phase1.flow_features import _compute_fdc
+
+        flows = np.full(36, 40.0)
+        fdc = _compute_fdc(flows)
+        df = pl.DataFrame({
+            "npdes_id": ["Good", "Industrial", "Tiny"],
+            "facility_name": ["Real POTW", "Misclassified", "Small Real"],
+            "city": ["C", "C", "C"],
+            "state_code": ["MN", "MN", "MN"],
+            "zip": ["55401", "55401", "55401"],
+            "latitude": [44.9, 44.9, 44.9],
+            "longitude": [-93.2, -93.2, -93.2],
+            "facility_type_indicator": ["POTW", "POTW", "POTW"],
+            "facility_type_code": ["POT", "POT", "POT"],
+            "major_minor": ["M", "M", "m"],
+            # Industrial has high mean_flow but design=0 — should be zeroed
+            "design_flow_mgd": [50.0, 0.0, 5.0],
+            "actual_avg_flow_mgd": [40.0, 240.0, 4.0],
+            "permit_status_code": ["EFF", "EFF", "EFF"],
+            "mean_flow_mgd": [40.0, 240.0, 4.0],
+            "median_flow_mgd": [40.0, 240.0, 4.0],
+            "std_flow_mgd": [2.0, 5.0, 0.2],
+            "cv_flow": [0.05, 0.02, 0.05],
+            "p10_flow_mgd": [37.0, 235.0, 3.7],
+            "p25_flow_mgd": [38.5, 237.0, 3.85],
+            "p75_flow_mgd": [41.5, 243.0, 4.15],
+            "p90_flow_mgd": [43.0, 245.0, 4.3],
+            "min_flow_mgd": [35.0, 230.0, 3.5],
+            "max_flow_mgd": [45.0, 250.0, 4.5],
+            "n_months_data": [36, 36, 36],
+            "n_years_data": [3, 3, 3],
+            "pct_missing": [0.0, 0.0, 0.0],
+            "utilization_ratio": [0.80, None, 0.80],
+            "flow_trend_mgd_per_year": [0.0, 0.0, 0.0],
+            "seasonal_amplitude_mgd": [3.0, 5.0, 0.3],
+            "flow_duration_curve": [fdc, _compute_fdc(np.full(36, 240.0)), _compute_fdc(np.full(36, 4.0))],
+            "data_quality": ["dmr", "dmr_limited", "dmr"],
+        })
+
+        ranked = compute_ranking(df)
+        ind = ranked.filter(pl.col("npdes_id") == "Industrial").to_dicts()[0]
+        good = ranked.filter(pl.col("npdes_id") == "Good").to_dicts()[0]
+        assert ind["ranking_score"] == 0.0, (
+            f"design=0 site should have score=0, got {ind['ranking_score']}"
+        )
+        assert ind["rank"] == 3, (
+            f"design=0 site should rank LAST (3 of 3), got rank {ind['rank']}"
+        )
+        # The real POTW (Good) should now be #1 — not the high-flow industrial
+        assert good["rank"] == 1, (
+            f"Real POTW should outrank misclassified industrial, got rank {good['rank']}"
+        )
+
+    def test_design_null_ranks_normally(self):
+        """design_flow_mgd = null sites are NOT zeroed — only explicit design=0 is zeroed.
+
+        Null design_flow means missing permit data (clerical gap), not an industrial
+        misclassification. ~2,106 corpus sites fall here. Zeroing them collapses
+        legitimate POTWs with good DMR history. Leave in normal ranking.
+        Documented in WOWERS_PROJECT_JOURNAL.md (F1 trade-off resolution).
+        """
+        import numpy as np
+        from src.phase1.flow_features import _compute_fdc
+
+        fdc = _compute_fdc(np.full(36, 40.0))
+        df = pl.DataFrame({
+            "npdes_id": ["WithDesign", "NoDesign"],
+            "facility_name": ["A", "B"],
+            "city": ["C", "C"],
+            "state_code": ["MN", "MN"],
+            "zip": ["55401", "55401"],
+            "latitude": [44.9, 44.9],
+            "longitude": [-93.2, -93.2],
+            "facility_type_indicator": ["POTW", "POTW"],
+            "facility_type_code": ["POT", "POT"],
+            "major_minor": ["M", "M"],
+            "design_flow_mgd": [50.0, None],
+            "actual_avg_flow_mgd": [40.0, 40.0],
+            "permit_status_code": ["EFF", "EFF"],
+            "mean_flow_mgd": [40.0, 40.0],
+            "median_flow_mgd": [40.0, 40.0],
+            "std_flow_mgd": [2.0, 2.0],
+            "cv_flow": [0.05, 0.05],
+            "p10_flow_mgd": [37.0, 37.0],
+            "p25_flow_mgd": [38.5, 38.5],
+            "p75_flow_mgd": [41.5, 41.5],
+            "p90_flow_mgd": [43.0, 43.0],
+            "min_flow_mgd": [35.0, 35.0],
+            "max_flow_mgd": [45.0, 45.0],
+            "n_months_data": [36, 36],
+            "n_years_data": [3, 3],
+            "pct_missing": [0.0, 0.0],
+            "utilization_ratio": [0.80, None],
+            "flow_trend_mgd_per_year": [0.0, 0.0],
+            "seasonal_amplitude_mgd": [3.0, 3.0],
+            "flow_duration_curve": [fdc, fdc],
+            "data_quality": ["dmr", "dmr"],
+        })
+
+        ranked = compute_ranking(df)
+        no_design = ranked.filter(pl.col("npdes_id") == "NoDesign").to_dicts()[0]
+        with_design = ranked.filter(pl.col("npdes_id") == "WithDesign").to_dicts()[0]
+        assert no_design["ranking_score"] > 0.0, (
+            "design=null sites should rank normally (not zeroed) — "
+            f"got {no_design['ranking_score']}"
+        )
+        # Null-design site scores lower than full-design (utilization_ratio is null → 0),
+        # but must still rank in normal pack (not zeroed to exactly 0.0)
+        assert no_design["ranking_score"] < with_design["ranking_score"], (
+            "null-design site should rank below full-data site (missing utilization)"
+        )

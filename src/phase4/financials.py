@@ -252,6 +252,18 @@ def compute_scorecard(
     # consistent.  See phase4/run.py: rev_usd = annual_revenue(energy_kwh, state).
     annual_net_cf = annual_revenue_usd - annual_opex_usd
 
+    # project_viable: NPV positive, payback within 20 years, AND IRR is a real
+    # solver result (not a sentinel +3.0/−0.99 or NaN). Sentinel IRR signals
+    # degenerate economics — e.g. CapEx so tiny IRR pegs out at >300%, or all
+    # net cash flows negative (IRR locked at −99%).  Excluding those keeps
+    # ``project_viable`` aligned with what a human investor would call viable.
+    irr_real = (
+        not math.isnan(irr)
+        and irr > -0.99
+        and irr < 3.0
+    )
+    viable = bool(npv > 0 and payback <= 20.0 and irr_real)
+
     return {
         "annual_net_cf_usd":          annual_net_cf,
         "npv_usd":                    npv,
@@ -259,5 +271,5 @@ def compute_scorecard(
         "irr":                        irr,
         "payback_years":              payback if not math.isinf(payback) else _INF_SENTINEL,
         "lcoe_per_kwh":               lcoe   if not math.isinf(lcoe)    else _INF_SENTINEL,
-        "project_viable":             bool(npv > 0 and payback <= 20.0),
+        "project_viable":             viable,
     }

@@ -66,11 +66,13 @@ def _add_normalised_components(df: pl.DataFrame) -> pl.DataFrame:
         normalised = (c - min_val) / (max_val - min_val + 1e-12)
         return (1.0 - normalised) if invert else normalised
 
-    # 1. mean_flow — higher is better; fill null (no design flow) with 0
+    # 1. mean_flow — higher is better.  Use a temporary ranking column so the
+    #    F4 null signal in mean_flow_mgd is preserved in the output parquet.
+    #    Null sites score 0 (correctly ranked last for flow).
     df = df.with_columns(
-        pl.col("mean_flow_mgd").fill_null(0.0).alias("mean_flow_mgd")
+        pl.col("mean_flow_mgd").fill_null(0.0).alias("_mean_flow_for_ranking")
     )
-    df = df.with_columns(minmax("mean_flow_mgd").alias("_norm_mean_flow"))
+    df = df.with_columns(minmax("_mean_flow_for_ranking").alias("_norm_mean_flow"))
 
     # 2. flow consistency — lower CV is better (invert cv_flow)
     #    Cap CV at 2.0 before normalising so extreme outliers don't dominate
@@ -80,9 +82,11 @@ def _add_normalised_components(df: pl.DataFrame) -> pl.DataFrame:
         minmax("_cv_capped", invert=True).alias("_norm_consistency")
     )
 
-    # 3. utilisation — higher is better, but cap at MAX_UTIL
+    # 3. utilisation — higher is better, but cap at MAX_UTIL.
+    #    fill_null(0.0) so sites with design_flow=0 or null don't get
+    #    a neutral 0.5 mid-score — they should rank last on this dimension.
     df = df.with_columns(
-        pl.col("utilization_ratio").fill_null(0.5).clip(0.0, MAX_UTIL).alias("_util_capped")
+        pl.col("utilization_ratio").fill_null(0.0).clip(0.0, MAX_UTIL).alias("_util_capped")
     ).with_columns(
         minmax("_util_capped").alias("_norm_utilization")
     )
@@ -114,8 +118,28 @@ def _add_composite_score(df: pl.DataFrame, weights: dict[str, float]) -> pl.Data
     )
     df = df.with_columns(score_expr.alias("ranking_score"))
 
+    # Zero ranking_score for facilities with design_flow_mgd = 0 or null.
+    # These are misclassified industrial / data-incomplete sites that happen
+    # to have high DMR flow (e.g. Boyd County KYP000044).  They are correctly
+    # excluded at Phase 2 (sparse_dmr_artifact), but a zero ranking_score
+    # prevents them from appearing at the top of any P1 visualisation or ML
+    # feature table.
+    if "design_flow_mgd" in df.columns:
+        # Zero only explicit design_flow == 0 (industrial misclassification signal).
+        # Null design_flow means missing permit data — may still be a real POTW,
+        # so leave those in normal ranking rather than collateral-zeroing ~2,106 sites.
+        df = df.with_columns(
+            pl.when(
+                pl.col("design_flow_mgd").is_not_null()
+                & (pl.col("design_flow_mgd") <= 0.0)
+            )
+              .then(0.0)
+              .otherwise(pl.col("ranking_score"))
+              .alias("ranking_score")
+        )
+
     # Drop the intermediate _norm_ and _capped columns
-    temp_cols = [c for c in df.columns if c.startswith("_norm_") or c.endswith("_capped") or c in ("_cv_capped", "_util_capped", "_years_f", "_p10_capped")]
+    temp_cols = [c for c in df.columns if c.startswith("_norm_") or c.endswith("_capped") or c in ("_cv_capped", "_util_capped", "_years_f", "_p10_capped", "_mean_flow_for_ranking")]
     return df.drop(temp_cols)
 
 
