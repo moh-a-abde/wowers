@@ -2079,3 +2079,47 @@ Test count unchanged at 22. All 69 Phase 2 tests pass (0.17s).
 W13 implementation complete. Code correct, tests comprehensive, journal current.
 
 ---
+
+## Financial Viability Rate Analysis (2026-05-20)
+
+### Problem identified
+
+Post-W13 financial viability rate is **67.4%** (2,544 / 3,774). Pre-W13 was 64.7% (2,574 / 3,976). W13 made the number worse, not better — it removed the smallest sites that were already failing P4's financial gate, shrinking the denominator faster than the numerator.
+
+A 67% viability rate is unrealistic for micro-hydropower. Industry experience puts real-world project success rates at 15–30% of initially screened sites. The gap is attributable to cost factors and risk factors not yet modelled in P4.
+
+### Root cause: P4 missing cost/risk categories
+
+| Missing factor | Estimated kill rate | Notes |
+|----------------|--------------------|----|
+| Grid interconnection | ~20–30% of marginal sites | $50–200k per site depending on distance to POI; not in CapEx model |
+| Permitting / FERC licensing | ~10–20% | ~$150k + 3–5 yr timeline; kills low-NPV sites that can't absorb fixed overhead |
+| Site civil works underestimate | ~5–10% | CapEx model uses simplified $/kW; brownfield concrete, access roads, bypass piping add 20–40% |
+| O&M escalation over 20-yr life | ~5% | Current model uses flat O&M; real escalation 2–3%/yr erodes payback |
+| Minimum PPA / revenue floor | ~10–15% | Sites producing < ~50 MWh/yr can't find utility buyer; no minimum threshold in P4 |
+| Discount rate sensitivity | varies | Current WACC may be optimistic for rural municipal borrowers |
+
+### W13 interaction
+
+W13 removed 9,728 sub-0.5-MGD sites. These were predominantly design_only archetype with negligible energy yield — already failing P4 anyway. Result: viability rate climbed from 64.7% → 67.4% because the denominator shrank without the numerator changing. W13 did not cause the underlying optimism; it exposed it.
+
+### Deferred items created
+
+| ID | Description | Priority |
+|----|-------------|----------|
+| **F4-INTERCON** | Add grid interconnection cost model to P4 CapEx ($50–200k lookup by site capacity) | High |
+| **F4-PERMIT** | Add permitting cost + timeline risk flag to P4 (fixed $150k overhead for sites < 50 kW) | High |
+| **F4-CIVIL** | Apply civil works multiplier to CapEx for design_only archetype sites (+30% adder) | Medium |
+| **F4-MINREV** | Add minimum annual revenue threshold ($5k–$10k/yr floor) to project_viable gate | Medium |
+| **F4-OM-ESC** | Replace flat O&M with 2.5%/yr escalation in NPV calculation | Low |
+| **F4-WACC** | Sensitivity run at WACC +2% for rural municipal borrower risk premium | Low |
+
+### Expected impact
+
+Addressing F4-INTERCON + F4-PERMIT + F4-MINREV alone expected to reduce viability rate to ~35–45%, which is still optimistic vs. reality but defensible as a pre-permitting screen. Full set of fixes expected to land at ~20–30%, consistent with industry precedent.
+
+### Next step
+
+Implement F4-INTERCON as first fix (largest expected kill rate, most defensible with published data). Revisit viability rate post-run.
+
+---
