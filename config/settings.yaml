@@ -55,11 +55,17 @@ cost_model:
       B: -0.25
       min_per_kw: 2000
       max_per_kw: 15000
+    Crossflow:           # CINK/Ossberger-style cross-flow; simpler runner → lower cost
+      A: 7500
+      B: -0.28
+      min_per_kw: 500
+      max_per_kw: 7500
   opex_pct_of_capex:
     Kaplan: 0.025
     Francis: 0.020
     Pelton: 0.015
     in_conduit_micro: 0.030
+    Crossflow: 0.020     # simpler runner, lower maintenance than Kaplan
 
 # ── Financials ────────────────────────────────────────────────────────────────
 financials:
@@ -124,6 +130,10 @@ epa:
 
 usgs:
   elevation_url: "https://epqs.nationalmap.gov/v1/json"
+
+# ── Phase 2: Monte Carlo Energy Estimation ────────────────────────────────────
+phase2:
+  min_viable_mean_flow_mgd: 0.5   # sites below this threshold excluded as small_potw (W13)
 
 # ── Phase 3: Turbine Sizing ────────────────────────────────────────────────────
 phase3:

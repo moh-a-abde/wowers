@@ -25,19 +25,46 @@ from typing import Any
 import numpy as np
 import polars as pl
 
+from src.common import config
 from src.phase2.energy_physics import run_monte_carlo
 from src.phase2.head_assumptions import classify_archetype, get_head_distribution
 
 log = logging.getLogger("wowers.phase2.monte_carlo")
 
+# W13: minimum mean flow threshold — sites below this are not viable for micro-hydro
+_MIN_VIABLE_FLOW_MGD: float = float(
+    config.get("phase2.min_viable_mean_flow_mgd", 0.5)
+)
+
+# Schema key list — exclusion rows are built from this to prevent silent drift
+# if the success-path dict gains new fields.
+_OUTPUT_KEYS: tuple[str, ...] = (
+    "npdes_id", "archetype",
+    "head_assumed_low_m", "head_assumed_mode_m", "head_assumed_high_m",
+    "energy_p10_kwh_yr", "energy_p50_kwh_yr", "energy_p90_kwh_yr",
+    "energy_mean_kwh_yr", "energy_std_kwh_yr",
+    "power_p50_kw", "capacity_factor_p50",
+    "head_m_p10", "head_m_p50", "head_m_p90",
+    "equivalent_homes_p50", "excluded", "exclusion_reason",
+)
+
 # ── Exclusion filter (pre-Phase-2) ────────────────────────────────────────────
 
 def _exclude(row: dict) -> str | None:
-    """Return an exclusion reason string, or None if the row is usable."""
+    """Return an exclusion reason string, or None if the row is usable.
+
+    Checks in priority order:
+      1. no_usable_flow  — None, NaN, zero, or negative mean flow
+      2. small_potw      — mean flow below W13 viability threshold
+      3. sparse_dmr_artifact — dmr_limited with < 3 months of data
+    """
     mean_flow = row.get("mean_flow_mgd")
-    if mean_flow is None or mean_flow <= 0:
+    # isinstance guard handles None and non-numeric; `> 0` rejects NaN (NaN > 0 == False)
+    if not (isinstance(mean_flow, (int, float)) and mean_flow > 0):
         return "no_usable_flow"
-    dq = row.get("data_quality", "dmr")
+    if mean_flow < _MIN_VIABLE_FLOW_MGD:
+        return "small_potw"
+    dq = row.get("data_quality", "design_only")
     n_months = row.get("n_months_data", 99)
     if dq == "dmr_limited" and (n_months is None or n_months < 3):
         return "sparse_dmr_artifact"
@@ -52,25 +79,10 @@ def _process_one(row: dict, n_iterations: int, seed: int | None) -> dict:
     npdes_id = row["npdes_id"]
 
     if exclusion is not None:
-        return {
-            "npdes_id":             npdes_id,
-            "archetype":            None,
-            "head_assumed_low_m":   None,
-            "head_assumed_mode_m":  None,
-            "head_assumed_high_m":  None,
-            "energy_p10_kwh_yr":    None,
-            "energy_p50_kwh_yr":    None,
-            "energy_p90_kwh_yr":    None,
-            "energy_mean_kwh_yr":   None,
-            "energy_std_kwh_yr":    None,
-            "power_p50_kw":         None,
-            "capacity_factor_p50":  None,
-            "head_m_p10":           None,
-            "head_m_p50":           None,
-            "head_m_p90":           None,
-            "equivalent_homes_p50": None,
-            "excluded":             True,
-            "exclusion_reason":     exclusion,
+        return {k: None for k in _OUTPUT_KEYS} | {
+            "npdes_id":         npdes_id,
+            "excluded":         True,
+            "exclusion_reason": exclusion,
         }
 
     design_flow = row.get("design_flow_mgd")
