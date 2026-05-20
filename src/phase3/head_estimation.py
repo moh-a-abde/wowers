@@ -61,7 +61,7 @@ DESIGN_FALLBACK_GROSS_M: float = _cfg("design_fallback_head_gross_m", 5.0)
 
 # Sanity: reject 3DEP-derived head if it differs from Phase-2 literature head
 # by more than this multiplier (catches cases where API returned wrong point)
-_MAX_DIVERGENCE_RATIO: float = 2.0
+_MAX_DIVERGENCE_RATIO: float = 4.0
 
 
 # ── Head source classifiers ───────────────────────────────────────────────────

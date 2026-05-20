@@ -278,12 +278,22 @@ def _fill_missing_with_design_flow(df: pl.DataFrame) -> pl.DataFrame:
             n_suspicious,
             _DMR_DESIGN_RATIO_CAP,
         )
-    df = df.with_columns(
+    # Null out all flow stats derived from the same bogus DMR readings so the
+    # Phase 1 parquet is not misleading for excluded sites (e.g. TN0056545 with
+    # median=807 MGD, FDC=[939, …] on a 0.023 MGD plant).
+    _null_cols = [
+        "mean_flow_mgd", "median_flow_mgd", "std_flow_mgd", "cv_flow",
+        "p10_flow_mgd", "p25_flow_mgd", "p75_flow_mgd", "p90_flow_mgd",
+        "min_flow_mgd", "max_flow_mgd", "flow_duration_curve",
+    ]
+    df = df.with_columns([
         pl.when(suspicious_dmr)
         .then(pl.lit(None))
-        .otherwise(pl.col("mean_flow_mgd"))
-        .alias("mean_flow_mgd")
-    )
+        .otherwise(pl.col(c))
+        .alias(c)
+        for c in _null_cols
+        if c in df.columns
+    ])
 
     # Compute utilization ratio where possible
     df = df.with_columns([

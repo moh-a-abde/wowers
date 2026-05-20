@@ -1126,3 +1126,72 @@ the Phase 1 artifact record.
 Recommended execution order: F4 → F1 → F2 → re-run pipeline → measure residual → decide on F3.
 
 ---
+
+## F1 / F2 / F4 Implementation & Re-run Results — 2026-05-19
+
+All three fixes were implemented and Phases 1, 3, and 4 were re-run to measure impact.
+
+### Fixes implemented
+
+| Fix | File(s) changed | Description |
+|---|---|---|
+| **F4** | `src/phase1/flow_features.py` | When `suspicious_dmr` guard fires, null all 11 flow columns (`mean_flow_mgd`, `median_flow_mgd`, `std_flow_mgd`, `cv_flow`, `p10–p90_flow_mgd`, `min_flow_mgd`, `max_flow_mgd`, `flow_duration_curve`) |
+| **F1** | `src/phase3/outfall_coords.py` | Complete rewrite — load `npdes_outfalls_layer.csv` (filtered to `SUB_TYPE_DESC == "External Outfall"` & `LATLONG_TYPE == "Permitted Feature"`) as primary coord source; fall back to `NPDES_PERM_FEATURE_COORDS.csv` only for NPDES IDs with no external outfall record; deduplicate with `keep="first"` to prioritise outfalls layer |
+| **F2** | `src/phase3/head_estimation.py` | Raised `_MAX_DIVERGENCE_RATIO` from `2.0` → `4.0` to stop legitimate high-head Appalachian sites from being rejected when their 3DEP reading significantly exceeds the national-median literature value |
+
+Tests added/updated: `tests/test_phase3/test_outfall_coords.py` extended with three new tests (`test_outfalls_layer_preferred_over_pfc`, `test_pfc_fallback_for_ids_not_in_layer`, `test_non_external_outfall_rows_ignored`) and existing tests updated to explicitly pass `outfalls_layer_path=Path("/nonexistent/layer.csv")` where the outfalls layer is irrelevant to the test.
+
+### Phase 1 results (F4)
+
+```
+WARNING: Nulling mean_flow_mgd for 459 rows where mean_flow > 5× design_flow (DMR reporting artifact)
+Total POTW facilities:   17,158
+With DMR flow data:      12,114 (70.6%)
+Without DMR (fallback):   5,044
+```
+
+F4 is firing on 459 DMR artifacts (same as prior run — correct, the count is stable).  All 11 flow columns are now nulled for those rows, cleaning the Phase 1 parquet artifact.
+
+### Phase 3 results (F1 + F2)
+
+| Metric | Before (pre-fix) | After | Delta |
+|---|---|---|---|
+| Head from USGS 3DEP | 8,773 | **9,631** | **+858** |
+| Head from literature | 6,491 | **5,633** | **−858** |
+| Viable turbine sites | 3,736 | **3,873** | **+137** |
+| Estimated total energy | — | 515,895 MWh/yr | — |
+
+**3DEP head distribution (post-fix):** min 0.000006 m · median 3.07 m · max 40.6 m — physically sane; high-head Appalachian sites (up to ~41 m) are now correctly included.
+
+**Actual gain vs prediction:** +858 (predicted 2,000–3,000 from F1 + ~1,200 from F2).  Smaller than expected because:
+- Many of the outfalls layer coords point to discharge locations that are still at or below facility grade (flat terrain, coastal, near-sea-level sites) — F1 fixes coordinates but DEM remains flat.
+- 3,896 sites still show negative head after F1 (down from 4,101; F1 fixed ~205 of the worst coordinate-swap cases).
+- Remaining literature sites are genuinely hard cases requiring NHD stream snap (F3) to resolve.
+
+### Phase 4 results
+
+| Metric | Before (pre-fix) | After | Delta |
+|---|---|---|---|
+| Viable projects (NPV>0 & payback≤20yr) | 950 (25.4%) | **1,097 (28.3%)** | **+147** |
+| Median payback (viable) | 14.9 yr | **14.3 yr** | **−0.6 yr** |
+| Total portfolio CapEx | $199.2M | $206.4M | +$7.2M |
+| Total portfolio revenue | $46.5M/yr | **$49.9M/yr** | **+$3.4M/yr** |
+
+### Current pipeline state (post F4/F1/F2)
+
+| Phase | Output | Key number |
+|---|---|---|
+| Phase 1 | 17,158 POTW facilities ranked | 459 DMR artifacts scrubbed |
+| Phase 3 | 15,264 facilities → 3,873 viable | 9,631 on 3DEP head / 5,633 on literature |
+| Phase 4 | 3,873 scored → **1,097 viable projects** | Median payback 14.3 yr · $49.9M/yr revenue |
+
+### Remaining literature sites
+
+5,633 sites still on literature head.  Breakdown of reasons:
+- **~3,896** — negative head even after F1 (outfall elevation ≥ facility elevation; flat / coastal terrain or residual coordinate error)
+- **~790** — divergence still too large after F2 (3DEP reading implausible even at 4× ratio)
+- **~947** — no outfall coord found in either source
+
+Next step to close the gap: **F3** (NHD flowline snap) for the ~3,896 negative-head cases.  Defer until Phase 5 prep; evaluate ROI after seeing Phase 5 ML signal on current dataset.
+
+---
