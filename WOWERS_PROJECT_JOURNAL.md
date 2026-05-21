@@ -2737,4 +2737,468 @@ Decision point for the team meeting:
 
 Once decided, the only remaining technical work before Phase 5 is W8 synthetic-FDC stratification and DOE HydroSource EHA dataset collection.
 
+
+---
+
+## Strategic Assessment & Business-Value Analysis — May 20 2026
+
+This entry captures an honest strategic assessment of WOWERS' business value, a pivot strategy, and a concrete revenue-line / dataset implementation roadmap. Captured for the team to read end-to-end before deciding which path to take after graduation.
+
+### Short answer
+
+Strong capstone / portfolio project. Modest consulting business. Not a VC-scale startup as currently scoped. Worth finishing, worth shipping, but be honest with yourselves about which path you're on.
+
+### What the numbers actually say
+
+After all calibration fixes, the model finds **359 viable sites** across the US. The bankable sweet spot is the `small_ferc` tier (25–250 kW) with **292 sites at 63.3 % viability**. Median project CapEx is $340k, median annual revenue $46k, median payback 8.3 years.
+
+Math the pitch deck won't show:
+
+- **Total addressable hardware market:** 292 viable sites × ~$340k = **~$99M total, not per year.** That is the ceiling on POTW micro-hydro hardware.
+- **Realistic deployment haircut:** F4-CIVIL still deferred (+30 % CapEx on civil works), interconnection studies kill 20–40 % of paper-viable sites, municipal procurement cycles kill another chunk. Real-world conversion of "viable on paper" → "actually built" is typically 10–20 %. So the realistically buildable market is closer to **~30–60 sites over 5+ years.**
+- **Software / screening market:** at $5–10k per POTW with a 5 % take rate of viable sites, that's $90k–$300k lifetime revenue. Not VC-scale.
+
+### What's working in your favor
+
+1. **The data moat is real.** Integrating EPA ECHO + DMR (16 years) + USGS 3DEP elevation + state electricity rates is 6+ months of work. Nobody else has done it for POTW outfalls. If the methodology is right, you own this niche.
+2. **The methodology is defensible.** 305 tests passing. Financial gates calibrated against FERC / NREL benchmarks. The model card you would ship survives academic peer review and external due diligence.
+3. **The IIJA / IRA funding tailwind is genuine.** Federal money explicitly targets water-sector energy efficiency right now. POTW operators have budget. Timing is favorable.
+4. **Career value is high.** This is exactly the kind of full-stack data-science project (raw data → pipeline → ML → financial modeling → policy implications) that lands MS graduates into senior-IC roles at Tesla Energy, Form Energy, Sila, Heliogen, etc.
+
+### What's structurally working against the project
+
+1. **POTW outfalls are physically bad hydro geography.** Head 3–8 m, modest flow. The best US hydro sites are at existing dams, irrigation drops, and industrial cooling discharge — not sewage treatment plants. WOWERS is screening the worst-physics cohort.
+2. **Municipal sales cycles are 18–36 months for capital purchases.** Two grad students cannot sustainably run that sales motion.
+3. **ESCOs (Veolia, Suez, Trane, Honeywell, Siemens) already audit POTWs for energy.** If micro-hydro becomes a real opportunity they will add it overnight. The window for an independent screening tool is narrow.
+4. **The micro-hydro turbine supply chain is thin.** Ossberger, Mavel, CINK, GUGLER — tiny European OEMs with 12–18 month lead times. Even if you sell the screen, the customer cannot move fast.
+5. **9.5 % headline viability is a hard pitch.** The 63.3 % `small_ferc` number is better but needs careful framing. Non-technical audiences (city councils, board members) will hear "9 % viable" and stop listening.
+
+### Three honest paths
+
+| Path | Realistic outcome | Effort |
+|---|---|---|
+| **A. Finish as MS capstone, open-source the tool** | Strong portfolio piece. Possible academic publication. ~50–200 users over time. Lands both team members in good clean-energy data roles. | What you're already doing |
+| **B. Consulting on top of the tool** | $80–150k / year per person as freelance hydropower screening consultant for 2–4 years, until ESCOs internalise it. Real income, no equity upside. | Add ~10 client engagements / yr after graduation |
+| **C. Pivot to startup** | Requires expanding beyond POTW micro-hydro: industrial cooling discharge, mining dewatering, irrigation networks, water-utility transmission. Same engineering methodology, 5–20× larger market per vertical. Possibly fundable at seed stage with a strategic partner (turbine OEM or water utility). | Significant — needs market discovery, founder commitment, probably one more vertical built end-to-end |
+
+### What I'd do in this position
+
+1. **Finish Phase 5** to land the capstone. The ML model on this data is the differentiator vs. anyone who could replicate the screening logic.
+2. **Publish the dataset.** Get the methodology in front of EPA Region 5, DOE Water Power Technologies Office, and 1–2 academic groups (ORNL Water Power, NREL Hydropower). Citations alone will pay back the effort.
+3. **Before graduation, decide between B and C.** Don't fall into "we built a thing, surely it's a company." If after talking to 15 POTW operators and 5 ESCOs you find a real pull signal for paid screening — pursue B. If you find a pull signal for screening *plus* one of the bigger verticals (industrial discharge especially), then C becomes interesting.
+4. **Be honest with the Fowler judges and any other competition you enter.** 33.25 / 40 is a respectable score; don't overclaim. The strongest pitch is *"we found the bankable subset of an overlooked corner of the energy transition"* — not *"we'll dominate municipal hydropower."*
+
+### Bottom line
+
+Worth doing? **Yes — strongly, for career and academic value, and for a real (if small) consulting market.**
+
+Worth pursuing as a venture-scale startup? **Probably not at this scope.** With a methodology pivot to higher-head / higher-flow industrial verticals, **maybe.**
+
+You've built a credible piece of energy-data engineering. Don't oversell it as a market opportunity, don't undersell it as career capital. Finish Phase 5 cleanly, ship the dataset, decide what to do after graduation with real information instead of hype.
+
+---
+
+## Pivot Strategy — From POTW Screen to Distributed-Hydro Platform
+
+### Core insight
+
+**The methodology is the asset, not the POTW dataset.** The pipeline (EPA data integration → flow features → head estimation → turbine selection → tiered financial scorecard) works on any conduit-hydro problem. POTW outfalls are the *worst-physics* application of it. We built a Ferrari and parked it in the slowest lane.
+
+What needs to change is **what data we point this engine at**, not the engine itself.
+
+### Rank-ordered pivot targets
+
+| # | Vertical | Why it beats POTW | Existing market? | Effort to build (with current codebase) |
+|---|---|---|---|---|
+| **1** | **Water utility PRVs** (pressure-reducing valves in drinking-water distribution) | Always-on flow + always-present pressure drop = guaranteed energy. Behind-the-meter, no FERC. Customer = water utility (same buyer class, simpler economics) | **Yes** — InPipe Energy, Rentricity, LucidPipe prove the market. Currently underserved. | **~3–4 weeks** |
+| **2** | **Industrial cooling-water discharge** (power plants, refineries, food / bev, data centers, fabs) | Higher head (condenser pressure), higher flow, corporate buyers (~10× faster than municipal). NPDES industrial permits cover it. | **Yes** — fragmented; no dominant screening tool exists | ~6–8 weeks (different physics calibration for high-temp flows) |
+| **3** | **Mine dewatering** (coal, copper, iron, lithium) | High head from depth, large continuous pumping. Per-site CapEx $1–10 M. ~14,000 active US mines. | Niche but real (Anaconda Hydro, etc.) | ~8–12 weeks (regulatory complexity high) |
+| **4** | **Irrigation canal drops** (USBR + state irrigation districts) | Engineered head drops already exist. Western US scale. | **Yes** — Natel, Voith do this; we'd be the screening layer | ~4–6 weeks |
+| **5** | **POTW (current)** | Bad physics, slow customer, small TAM | Limited | Already built |
+
+### 4–6 week execution plan
+
+#### Week 1–2: validate before building
+
+**Talk to 10 humans before writing any more code:**
+
+- 3 water utility operations directors (American Water, Saint Paul Regional Water Services, Metropolitan Council ES) → "Do you know what your PRV pressure drops are? Would a screening report identifying energy-recovery candidates have $5–15k of value to you?"
+- 2 ESCO business-development leads (Veolia, Trane, Honeywell Building Solutions) → "Are you screening for micro-hydro in your water audits today? Would a SaaS tool that does it be useful?"
+- 2 turbine OEMs (Rentricity, InPipe, Natel, Mavel North America) → "Would you pay for qualified lead-gen from a national screening database?"
+- 2 state energy office staff (Minnesota Department of Commerce, Wisconsin PSC) → "Is this a dataset you'd license or fund as policy planning?"
+- 1 EPA Region 5 / DOE Water Power Tech Office contact → "Is this dataset publishable, citable, fundable?"
+
+**Stop and reassess after week 2.** If 3+ people pull, build. If nobody pulls, that's a real signal too — drop to "ship as open-source dataset + consulting side income."
+
+#### Week 3–4: build the second vertical (water utility PRVs)
+
+Highest-leverage technical move. Why specifically this:
+
+- **Data exists and is free.** EPA SDWA Public Water System Inventory ~50,000 community water systems; AWIA-mandated asset inventories give pipe topology; state PUC filings give rate data.
+- **Existing code reuses 80 %+.** Phase 1 ingest (new data source), Phase 2 (replace flow Monte Carlo with steady-state utility production data), Phase 3 (replace 3DEP head estimation with PRV pressure-drop from system topology), Phase 4 (gates work as-is).
+- **Customer economics are dramatically better.** PRVs have predictable 24/7 flow + pressure. Capacity factors 70–90 % vs 30–50 %. Median bankable CapEx ~$150k. Median payback 4–6 yr vs 8–12 yr.
+- **Behind-the-meter generation = no interconnection cost.** F4-INTERCON tier drops to near-zero for PRV applications.
+
+Expected output: a second viable-site parquet with probably 1,500–5,000 viable PRV sites at much better economics. Headline becomes *"identified 1,500+ behind-the-meter micro-hydro sites in US water utilities."*
+
+#### Week 5–6: rebrand + customer-facing product
+
+**Rename the project.** WOWERS is acronym-clever but locks scope to wastewater.
+
+| Candidate | Pros |
+|---|---|
+| ConduitHydro | Directly describes what it does |
+| Flowscan | Broader, memorable |
+| HydroLens | Implies screening / filtering |
+| DistributedHydro | Exactly accurate |
+
+**Ship a 1-page customer-facing interface.** Streamlit / Gradio is fine. Input: utility ID or NPDES ID. Output: ranked candidate sites with NPV / payback / permit tier / CapEx breakdown. Difference between research project and product.
+
+**Open-source the underlying dataset** as a public CSV / parquet with attribution. This is what generates academic citations, EPA inbound interest, and turbine-OEM sales-lead inquiries. Don't gate the data — gate the analysis service.
+
+### The honest pitch-deck change
+
+| Before | After |
+|---|---|
+| "We screen US POTW wastewater outfalls for hydro potential." | "We're the national screening platform for distributed micro-hydro — water utilities, wastewater plants, industrial discharge, and mine dewatering. Our methodology integrates EPA + USGS + state utility data into a single financial scorecard. Today we cover 17K POTWs and 50K water systems; expanding to industrial and mining in 2026." |
+| 9.5 % viability rate (sounds bad) | "We've identified ~2,000 bankable sites across two verticals with combined CapEx market of ~$500 M and 6-year median payback. Per-vertical viability rates: 63 % in the FERC small-hydro POTW band, ~40 % expected for water-utility PRVs." |
+| TAM: $99 M | TAM: $500 M – $2 B (depends on vertical count) |
+
+That's the difference between a research project and an investable thesis.
+
+### Code-base changes before graduation
+
+1. **Modularise Phase 1 ingest.** Currently POTW-specific. Refactor so a new vertical = a new ingest module that emits the same `ranked_candidates.parquet` schema. **Single highest-leverage refactor.**
+2. **Add a `vertical` column** to every parquet output. Lets you train one Phase 5 ML model across all verticals — more training data, better generalisation.
+3. **Parametrise the F4 cost models per vertical.** PRVs have no interconnection cost. Industrial discharge has higher equipment cost (corrosion). Mine dewatering has $0 permitting. Tier configs in `settings.yaml` should be vertical-scoped.
+4. **Ship a `serve/` directory** with a Gradio or Streamlit app that loads the latest parquet and lets users query it. Demo asset for every customer conversation.
+
+---
+
+## Revenue-Line Implementation Detail
+
+Concrete reuse / build / dataset breakdown for each line of the proposed business model. Use this as the build-vs-buy decision sheet when committing to a path.
+
+### Revenue line 1 — Screening reports (one-off custom run + interpretation per utility / POTW)
+
+**Customer:** Water utilities, POTW operators
+**Price:** $5–15k per engagement
+**Year-1 volume target:** 20–40 engagements
+**Year-1 revenue:** $100–600k
+
+#### Reusable from current code
+- Full Phase 1 → Phase 4 pipeline
+- `financial_scorecards.parquet` per-site output
+- Per-tier `permitting_tier` categorical
+- Tornado sensitivity analysis
+- All test infrastructure
+
+#### What to add
+- **Per-utility filter API.** Function that takes a list of NPDES IDs (or future PWSIDs) and emits a custom parquet subset
+- **Report-generation module** (`src/reports/`)
+  - PDF template using WeasyPrint or Quarto (both Python-native, no LaTeX needed)
+  - Cover page, exec summary, per-site detail pages, methodology appendix
+  - Branded letterhead, page numbers, table-of-contents
+- **Sensitivity scenarios table per site** (electricity rate ±30 %, head ±50 %, flow ±20 %) — already computed in Phase 4 tornado, just needs presentation layer
+- **Custom electricity-rate override** so client can plug in their actual contracted rate instead of state-average
+- **Markdown → PDF CLI**: `python -m src.reports.generate --npdes_ids ids.csv --client-name "..." --output report.pdf`
+
+#### Datasets needed (beyond what's in repo)
+- **Client's own electricity bills** (provided by customer for the contracted rate)
+- Nothing else — current data covers it
+
+#### Tech-stack additions
+- `weasyprint` (Python PDF generation) OR `quarto-cli` (more polished, slightly heavier)
+- `jinja2` (template engine)
+- `matplotlib` / `plotly` for per-site charts in the PDF
+
+#### Effort estimate
+**1–2 weeks** to ship v1. Mostly templating work; pipeline is done.
+
+---
+
+### Revenue line 2 — API access to the screening database
+
+**Customer:** ESCOs, turbine OEMs, engineering consultants
+**Price:** $500–2k / month subscription
+**Year-1 volume target:** 5–15 subscribers
+**Year-1 revenue:** $30–360k
+
+#### Reusable from current code
+- All parquet outputs
+- Per-vertical schemas (once vertical column is added)
+- Tier definitions (`permitting_tier`, `data_quality`, `turbine_type`)
+
+#### What to add
+- **FastAPI service** (`src/api/`)
+  - `GET /sites?state=MN&min_kw=25&max_payback=10` (filtered query)
+  - `GET /sites/{npdes_id}` (single-site detail)
+  - `GET /tiers/summary?vertical=potw` (cohort statistics)
+  - `GET /benchmarks` (national / per-tier viability rates for context)
+- **DuckDB backend.** Parquet → DuckDB is `read_parquet(...)`; supports SQL-over-parquet with no separate database server. Massive simplification vs Postgres.
+- **Auth + rate limiting.** JWT for simple tier-based auth; FastAPI middleware for rate limiting. No Auth0 needed initially.
+- **Stripe Billing integration** (`stripe-python` SDK). Webhook handler to update customer tier on subscription change.
+- **OpenAPI / Swagger docs** auto-generated by FastAPI — no extra work.
+- **Update pipeline.** Cron job (or GitHub Actions on schedule) that re-runs Phase 1 quarterly when EPA refreshes DMR data, then re-publishes the parquet to the API.
+- **CDN / object storage** for the parquet (Cloudflare R2 or AWS S3 — R2 has no egress fees).
+
+#### Datasets needed
+- All current parquet outputs **become** the API source of truth
+- EPA DMR refresh cadence: typically February (prior fiscal year)
+- No new datasets, just an automated refresh layer
+
+#### Tech-stack additions
+- `fastapi`, `uvicorn` (REST framework + ASGI server)
+- `duckdb` (in-process SQL over parquet)
+- `stripe` (billing)
+- `python-jose` or `pyjwt` (token auth)
+- Hosting: Fly.io or Render.com ($0–30 / mo for early stage)
+
+#### Effort estimate
+**2–3 weeks** for MVP. Stripe integration is the longest part if it's the team's first time.
+
+---
+
+### Revenue line 3 — Lead-gen referrals to turbine OEMs
+
+**Customer:** Rentricity, InPipe, Ossberger, Mavel, Natel, CINK, GUGLER
+**Price:** $1–3k per qualified lead
+**Year-1 volume target:** 30–60 leads
+**Year-1 revenue:** $30–180k
+
+#### Reusable from current code
+- Per-site detail: `rated_power_kw`, `turbine_type`, `annual_energy_kwh`, `total_capex_usd`, `payback_years`
+- `turbine_type` already maps directly to OEM product lines:
+  - `Kaplan` → Mavel, GUGLER, Voith
+  - `Crossflow` → Ossberger, CINK
+  - `Francis` → Mavel, GUGLER, Voith
+  - `Pelton` → Pelton small-shop fabricators
+  - `in_conduit_micro` → Rentricity, InPipe, LucidPipe, Soar Technology
+
+#### What to add
+- **OEM product-line filter rules** in config (e.g. Mavel = 50–1,000 kW Kaplan; Ossberger = 20–500 kW Crossflow). Static YAML for now; can become dynamic later.
+- **Lead-routing module** that joins Phase 4 parquet × OEM filter rules → per-OEM CSV of matched sites
+- **Site-detail "lead sheet"** — 1-page PDF per site with the technical specs OEMs need to quote: rated_kw, head, design flow, FDC summary, turbine type recommendation, location, NPDES contact
+- **CRM integration.** Year-1: Google Sheet shared with each OEM. Year-2: HubSpot free tier or Pipedrive ($15 / user / mo).
+- **Conversion tracking.** Each lead gets a UUID; OEM reports back lead → quote → sale stage; we track per-OEM conversion rates.
+- **Outbound templating** — `mailmerge` or simple Python script with Jinja2 templates for personalised intros to each lead sheet.
+
+#### Datasets needed
+- **OEM product catalogs** (compile manually from manufacturer websites — 1-day effort per OEM)
+- **OEM contact list** — purchase from a B2B contacts provider ($100–500 one-time) or scrape LinkedIn Sales Navigator if you have it
+- **POTW operator contact info** — already in EPA ECHO (`PERMIT_CONTACT_NAME`, `PERMIT_CONTACT_PHONE` fields)
+- **Historical lead → quote conversion rates** — get from partner OEMs once you have a relationship; needed to set pricing
+
+#### Tech-stack additions
+- `pandas` (already in repo)
+- `jinja2` (also covered by reports module)
+- Google Sheets API or HubSpot API
+- Nothing heavy
+
+#### Effort estimate
+**1–2 weeks** for lead-routing + per-site lead-sheet template. Sales motion is human work.
+
+---
+
+### Revenue line 4 — Custom data-layer integration for state energy offices / USDOE
+
+**Customer:** State energy offices, USDOE Water Power Technologies Office, EPA regions
+**Price:** $25–75k per engagement
+**Year-1 volume target:** 1–3 engagements
+**Year-1 revenue:** $25–225k
+
+#### Reusable from current code
+- Full pipeline + dataset
+- Methodology documentation (`ARCHITECTURE.md`, this journal)
+- Per-state filter is already trivial via `state_code` column
+
+#### What to add
+- **GIS export module** (`src/exports/gis.py`)
+  - Shapefile output (`geopandas` + Shapely; site points + polygon overlays)
+  - GeoJSON output for web-based state GIS systems
+  - KML for Google Earth–style state planning tools
+- **White-label report template** — strip WOWERS branding, accept client logo + colour scheme as config
+- **State-specific data-layer integration**
+  - Minnesota: MN DNR water-appropriations permits; MN Geospatial Commons watershed boundaries
+  - Wisconsin: WDNR water-use permits
+  - Each state's PUC utility service-territory shapefile
+- **HIFLD cross-references** for federal infrastructure overlays (electric service territories, substation locations) — already public
+- **Methodology paper** (peer-reviewable academic write-up)
+  - Pre-registered analysis plan
+  - Bias / limitation disclosures
+  - Reproducibility README (Docker image, pinned environment)
+
+#### Datasets needed
+- **HIFLD Homeland Infrastructure Foundation-Level Data**: https://hifld-geoplatform.opendata.arcgis.com/  (electric substations, transmission lines, service territories — free, public)
+- **State PUC GIS layers** — each state has a different portal. Minnesota: https://gisdata.mn.gov/. Wisconsin: https://data-wi-dnr.opendata.arcgis.com/.
+- **USGS National Hydrography Dataset (NHD)** — already partly integrated; needed for irrigation / industrial pivots too
+- **EIA-861 utility-level rate filings**: https://www.eia.gov/electricity/data/eia861/ (already partly used in `state_rates.yaml`)
+- **Census TIGER boundaries** for county / municipal overlays
+- **EPA EJScreen** for environmental-justice cross-references (state offices love this)
+
+#### Tech-stack additions
+- `geopandas`, `shapely`, `fiona`, `pyproj` (GIS stack)
+- `folium` or `pydeck` (interactive maps for client deliverables)
+
+#### Effort estimate
+**2–4 weeks** per state engagement initially; ~1 week / state after the GIS export module is built.
+
+---
+
+### Revenue line 5 — Academic / DOE grant work
+
+**Customer:** NSF SBIR, DOE Water Power Tech Office, EPA, state energy R&D programs
+**Price:** $50–250k per grant
+**Year-1 volume target:** 1–2 grants
+**Year-1 revenue:** $50–500k
+
+#### Reusable from current code
+- **Everything.** The methodology IS the grant proposal.
+- 305 passing tests + reproducibility = academic credibility
+- Phase 5 ML work is exactly the kind of "novel methodology with public benefit" pitch grant programmes fund
+
+#### What to add
+- **Formal methodology paper** (~20 pages, journal-ready)
+  - Model card (Mitchell et al. 2019 format)
+  - Bias / limitation section
+  - Validation against DOE HydroSource benchmark
+  - Code availability statement (GitHub link)
+- **Pre-registered Phase 5 research plan** (publish on OSF.io before training)
+- **Reproducibility package**
+  - Dockerfile + pinned environment
+  - Public S3 / Zenodo bucket with raw + processed data
+  - Single-command pipeline re-run (`make run-all`)
+- **Letters of support** from EPA / DOE / academic contacts (need to cultivate — start now)
+- **Indirect-cost agreement with St. Thomas** if they're the prime grantee (or pivot to fiscal-sponsor like Linux Foundation Energy)
+- **Match-funding partner** — many SBIR programmes require 30–50 % match; state programmes or a turbine OEM partner can provide
+
+#### Datasets needed (for validation)
+- **DOE HydroSource EHA dataset** (Existing Hydropower Assets) — https://hydrosource.ornl.gov/dataset/existing-hydropower-assets-eha — already in the post-Phase-5 TODO list
+- **DOE NHAAP** (National Hydropower Asset Assessment Program) — https://hydrosource.ornl.gov/dataset/nhaap-non-powered-dam-resource-assessment
+- **USGS NSIP** (National Streamflow Information Programme) — for hydrology benchmarking
+- **NREL ATB** (Annual Technology Baseline) cost data — for CapEx model validation
+- **EIA EHS** (Electricity Monthly) for cross-checking state rate trends
+
+#### Tech-stack additions
+- `papermill` (parameterised notebook execution for reproducibility)
+- LaTeX or Quarto for the paper itself
+- Docker for the reproducibility image
+- Zenodo (free dataset DOI hosting)
+- OSF.io (free pre-registration)
+
+#### Effort estimate
+- Paper draft: **4–6 weeks** (most of that is iteration, not first draft)
+- Reproducibility package: **1 week**
+- SBIR Phase I proposal: **3–4 weeks** (Phase I is ~$275k, ~6 month projects)
+- DOE WPTO proposal: **6–8 weeks** (larger amounts, more competitive)
+
+---
+
+## Pivot-Vertical Dataset Sourcing
+
+For each candidate vertical, the data sources we'd ingest, where they live, licence terms, and integration notes. This is the *"where do I download the new Phase 1 source data?"* answer.
+
+### Vertical 1 — Water utility PRVs (drinking water distribution)
+
+| Dataset | URL / portal | What it provides | Licence | Integration notes |
+|---|---|---|---|---|
+| **EPA SDWIS** (Safe Drinking Water Information System) | https://www.epa.gov/enviro/sdwis-search | ~50,000 community water systems, system size, served population | Public domain | This is the Phase 1 ingest equivalent of EPA ECHO. Same approach. |
+| **EPA SDWIS Federal Data Warehouse** | https://www.epa.gov/ground-water-and-drinking-water/safe-drinking-water-information-system-sdwis-federal-reporting | Quarterly XML / CSV exports | Public domain | Same |
+| **AWIA water-system asset inventories** | State drinking-water programs (each state) | Pipe topology, pressure zones, PRV locations | Varies by state — most public on request | The valuable data. PRV locations are the screen target. Outreach effort required per state. |
+| **WaterRF (Water Research Foundation) Project 4321** | https://www.waterrf.org/ | Pressure-management benchmarking data | **Paid** — ~$2–5k for non-members | Useful but optional |
+| **EIA-861** | https://www.eia.gov/electricity/data/eia861/ | Utility-level electricity rates (residential / commercial / industrial) | Public domain | Already partly used; need residential rate for utility self-consumption |
+| **USGS NHD** (National Hydrography Dataset) | https://www.usgs.gov/national-hydrography/national-hydrography-dataset | Source-water locations | Public domain | For end-to-end utility water-balance modelling |
+| **State PUC tariff filings** | Each state PUC portal | Time-of-use rates, demand charges, net-metering rules | Public domain | Critical for accurate revenue model |
+
+**Integration shortcut:** SDWIS PWSIDs map cleanly to NPDES IDs in concept (unique 9-character facility codes); reuse the entire Phase 1 ingest pattern with `PWSID` as primary key instead of `npdes_id`.
+
+### Vertical 2 — Industrial cooling-water discharge
+
+| Dataset | URL / portal | What it provides | Licence | Integration notes |
+|---|---|---|---|---|
+| **EPA NPDES Industrial dataset** | https://echo.epa.gov/tools/data-downloads (Industrial DMR) | Same DMR system as POTW, different facility type | Public domain | **Reuse 100 % of Phase 1 DMR ingest code**; just change the facility-type filter |
+| **EIA-860** | https://www.eia.gov/electricity/data/eia860/ | Power-plant cooling water intake / discharge / pressure data | Public domain | Best dataset for power-plant cooling — already structured |
+| **EIA-923** | https://www.eia.gov/electricity/data/eia923/ | Monthly power-plant operations including cooling water | Public domain | Time-series companion to 860 |
+| **EPA TRI** (Toxics Release Inventory) | https://www.epa.gov/toxics-release-inventory-tri-program | Identifies large industrial dischargers (any sector) | Public domain | Use as a discovery tool for non-power industrial sites |
+| **DOE Industrial Assessment Centers (IAC) database** | https://iac.university/ | Facility-level energy audit data | Public domain | Real-world energy intensity benchmarks |
+| **BLS Quarterly Census of Employment and Wages (QCEW)** | https://www.bls.gov/cew/ | Industrial NAICS distribution by location | Public domain | For sizing addressable market per NAICS |
+| **EPA Facility Registry Service** | https://www.epa.gov/frs | Cross-reference all EPA-tracked facilities | Public domain | Joins TRI ↔ NPDES ↔ AIR ↔ RCRA on facility ID |
+
+**Integration shortcut:** EPA ECHO already covers industrial NPDES permits. The Phase 1 filter just needs `facility_type_indicators` updated and the POTW-specific exclusions removed.
+
+### Vertical 3 — Mine dewatering
+
+| Dataset | URL / portal | What it provides | Licence | Integration notes |
+|---|---|---|---|---|
+| **MSHA Mine Data Retrieval System** | https://www.msha.gov/data-and-reports/mine-data-retrieval-system | ~14,000 active US mines: location, type, operator, depth | Public domain | Primary ingest source |
+| **USGS Mineral Resources Online Spatial Data** | https://mrdata.usgs.gov/ | Mine locations + geology (for depth / head inference) | Public domain | Companion to MSHA |
+| **EPA TRI** (mining sector) | https://www.epa.gov/toxics-release-inventory-tri-program | Large mines with water discharge | Public domain | Cross-reference for dewatering volumes |
+| **State mining permits** | Each state DNR / DEQ | Site-specific water permits, depth data | Varies — most public | Highest-fidelity data, state-by-state outreach |
+| **USGS NHD + groundwater levels** | https://water.usgs.gov/ogw/ | Local water-table elevation (for depth → head conversion) | Public domain | Needed for head estimation analogue to 3DEP |
+
+**Integration shortcut:** MSHA has facility-level operator + location data; depth + active dewatering volume require a one-time scrape of state mining permits per state where you operate.
+
+### Vertical 4 — Irrigation canal drops
+
+| Dataset | URL / portal | What it provides | Licence | Integration notes |
+|---|---|---|---|---|
+| **USBR Water Information System (WIS)** | https://water.usbr.gov/ | Daily / monthly canal flows for Bureau projects | Public domain | Primary source — covers nearly all federal canals |
+| **USGS NHDPlus** | https://nhdplus.com/ | Canal hydrography (linear features) | Public domain | Spatial canal network |
+| **USDA NASS Census of Agriculture** (Irrigation) | https://www.nass.usda.gov/Publications/AgCensus/ | County-level irrigation use | Public domain | TAM sizing by region |
+| **State irrigation district records** | Each state DWR | District-specific canal infrastructure, head drops | Varies | District-level outreach for the highest-fidelity data |
+| **DOI / BIA water-resources data** | https://www.doi.gov/ost/tribal_relations | Tribal-water-resource projects | Public domain | Underserved cohort with strong federal funding |
+| **CA DWR canal database** (California specifically) | https://water.ca.gov/ | The largest state-level irrigation network in the US | Public domain | If we pick one state to dominate first, this is it |
+
+**Integration shortcut:** USBR provides authoritative federal-project data covering ~90 % of large Western canal flows. Phase 1 ingest is again a structural reuse — replace EPA ECHO with the USBR REST API.
+
+---
+
+## Recommended sequencing
+
+1. **Week 1–2 (now, before any code):** Customer-validation calls per the 4–6-week plan above. **Do not skip this.**
+2. **Decide A / B / C** after the calls based on real pull signal.
+3. **If B (consulting):** Revenue lines 1 (screening reports) + 4 (state energy offices) are the cleanest entry. Build the report-generation module + GIS export. ~3 weeks.
+4. **If C (startup pivot):** Build the PRV vertical (Vertical 1 above) and the API (Revenue line 2). ~6 weeks. Then talk to a turbine-OEM partner for Revenue line 3.
+5. **In parallel (always do):** Modularise Phase 1 ingest, add `vertical` column, ship the Streamlit / Gradio demo. These are no-regret moves regardless of which path you choose.
+6. **Phase 5 ML** is the academic / capstone capstone — finish it last because it's the most expensive in time and its output is most useful if it can train across multiple verticals.
+
+### Files / directories this would create (cumulative)
+
+```
+src/
+├── ingest/                  # NEW — pluggable ingest per vertical
+│   ├── potw.py              # existing Phase 1 logic refactored
+│   ├── pws.py               # NEW — SDWIS ingest
+│   ├── industrial.py        # NEW — NPDES industrial
+│   ├── mining.py            # NEW — MSHA + state permits
+│   └── irrigation.py        # NEW — USBR + state DWR
+├── phase1/                  # existing
+├── phase2/                  # existing
+├── phase3/                  # existing
+├── phase4/                  # existing, with vertical-scoped configs
+├── phase5/                  # PENDING — ML model
+├── reports/                 # NEW — PDF report generation
+│   ├── templates/
+│   └── generate.py
+├── api/                     # NEW — FastAPI service
+│   ├── main.py
+│   ├── auth.py
+│   └── billing.py
+├── exports/                 # NEW — GIS / state deliverables
+│   ├── gis.py
+│   └── statepack.py
+└── serve/                   # NEW — Streamlit / Gradio demo
+    └── app.py
+```
+
+### Status
+
+| Item | Status |
+|---|---|
+| Honest strategic assessment | ✅ documented |
+| Pivot strategy + 4–6 week plan | ✅ documented |
+| Per-revenue-line implementation detail | ✅ documented (this section) |
+| Per-vertical dataset sourcing | ✅ documented (this section) |
+| Team customer-validation calls | ⏸ next action (week 1–2) |
+
 ---
