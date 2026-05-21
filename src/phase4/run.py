@@ -24,7 +24,12 @@ from pathlib import Path
 import polars as pl
 
 from src.common import config, io, logging_setup
-from src.phase4.cost_models import annual_opex, capex_per_kw, total_capex
+from src.phase4.cost_models import (
+    annual_opex,
+    capex_per_kw,
+    project_capex,
+    total_capex,  # noqa: F401  (kept for external callers / tests)
+)
 from src.phase4.financials import (
     DEGRADATION_RATE, DISCOUNT_RATE, PROJECT_YEARS, compute_scorecard,
 )
@@ -114,12 +119,19 @@ def run(
         if rated_kw <= 0 or energy_kwh <= 0:
             continue  # skip non-viable rows that slipped through
 
-        cap_usd      = total_capex(t_type, rated_kw)
-        cap_per_kw   = capex_per_kw(t_type, rated_kw)
-        opex_usd     = annual_opex(t_type, cap_usd)
+        # CapEx breakdown (F4-INTERCON + F4-PERMIT-TIER included)
+        capex_bd     = project_capex(t_type, rated_kw)
+        eq_capex     = float(capex_bd["equipment_capex_usd"])
+        intc_capex   = float(capex_bd["interconnection_capex_usd"])
+        perm_capex   = float(capex_bd["permitting_capex_usd"])
+        perm_tier    = str(capex_bd["permitting_tier"])
+        cap_usd      = float(capex_bd["total_project_capex_usd"])
+        cap_per_kw   = capex_per_kw(t_type, rated_kw)         # equipment $/kW (unchanged metric)
+        opex_usd     = annual_opex(t_type, eq_capex)          # O&M on equipment only
         elec_rate    = electricity_rate(state_code)
         rev_usd      = annual_revenue(energy_kwh, state_code)
 
+        # compute_scorecard enforces the F4-MINREV revenue floor internally.
         scorecard = compute_scorecard(
             annual_energy_kwh=energy_kwh,
             elec_rate_per_kwh=elec_rate,
@@ -137,19 +149,23 @@ def run(
         dq_tier = _DQ_TIER.get(row.get("data_quality") or "design_only", 3)
 
         financial_rows.append({
-            "npdes_id":            npdes_id,
-            "state_code":          state_code,
-            "turbine_type":        t_type,
-            "rated_power_kw":      rated_kw,
-            "annual_energy_kwh":   energy_kwh,
-            "capacity_factor":     row.get("capacity_factor"),
-            "capex_per_kw":        cap_per_kw,
-            "total_capex_usd":     cap_usd,
-            "annual_opex_usd":     opex_usd,
-            "elec_rate_per_kwh":   elec_rate,
-            "annual_revenue_usd":  rev_usd,
-            "data_quality":        row.get("data_quality"),
-            "data_quality_tier":   dq_tier,
+            "npdes_id":                  npdes_id,
+            "state_code":                state_code,
+            "turbine_type":              t_type,
+            "rated_power_kw":            rated_kw,
+            "annual_energy_kwh":         energy_kwh,
+            "capacity_factor":           row.get("capacity_factor"),
+            "capex_per_kw":              cap_per_kw,         # equipment-only $/kW
+            "equipment_capex_usd":       eq_capex,           # F4: breakdown
+            "interconnection_capex_usd": intc_capex,         # F4-INTERCON
+            "permitting_capex_usd":      perm_capex,         # F4-PERMIT-TIER ($)
+            "permitting_tier":           perm_tier,          # F4-PERMIT-TIER label
+            "total_capex_usd":           cap_usd,            # project CapEx (all-in)
+            "annual_opex_usd":           opex_usd,
+            "elec_rate_per_kwh":         elec_rate,
+            "annual_revenue_usd":        rev_usd,
+            "data_quality":              row.get("data_quality"),
+            "data_quality_tier":         dq_tier,
             **scorecard,
         })
 
@@ -249,7 +265,47 @@ def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
     log.info("=" * 60)
     log.info("Phase 4 Complete")
     log.info(f"  Total scored:            {total:,}")
-    log.info(f"  Project viable (NPV>0 & payback≤20yr): {n_viable:,} ({n_viable/max(total,1)*100:.1f}%)")
+    log.info(
+        f"  Project viable (NPV>0, payback≤20yr, IRR real, revenue≥floor): "
+        f"{n_viable:,} ({n_viable/max(total,1)*100:.1f}%)"
+    )
+
+    # Per-permitting-tier breakdown (F4-PERMIT-TIER + C-side reporting fix).
+    # Reports viability rate by FERC permitting cohort so the headline
+    # number is contextualised by site size class rather than reported as a
+    # single (potentially misleading) national rate.
+    if "permitting_tier" in df.columns and "project_viable" in df.columns:
+        log.info("  Viability by permitting tier:")
+        # Display in regulatory-severity order so the log reads small → big.
+        _TIER_ORDER = ("qualified_facility", "small_ferc", "full_nepa")
+        for tier in _TIER_ORDER:
+            cohort = df.filter(pl.col("permitting_tier") == tier)
+            if len(cohort) == 0:
+                continue
+            v = cohort.filter(pl.col("project_viable") == True).shape[0]  # noqa: E712
+            log.info(
+                f"    {tier:>20}: {len(cohort):>5,} sites, "
+                f"{v:>4,} viable ({v/len(cohort)*100:5.1f}%)"
+            )
+
+    # MINREV-only kill count: sites that pass NPV / payback / IRR but fail
+    # the F4-MINREV revenue floor.  Tracks whether MINREV is doing meaningful
+    # work (target: > 0; redundant if 0).
+    if {"project_viable", "npv_usd", "payback_years", "irr",
+        "annual_revenue_usd"}.issubset(df.columns):
+        from src.phase4.financials import MIN_ANNUAL_REVENUE_USD as _MIN_REV
+        minrev_only = df.filter(
+            (pl.col("project_viable") == False)  # noqa: E712
+            & (pl.col("npv_usd") > 0)
+            & (pl.col("payback_years") <= 20.0)
+            & (pl.col("irr") > -0.99)
+            & (pl.col("irr") < 3.0)
+            & (pl.col("annual_revenue_usd") < _MIN_REV)
+        )
+        log.info(
+            f"  MINREV-only kills (floor=${_MIN_REV:,.0f}/yr): "
+            f"{len(minrev_only):,}"
+        )
 
     if "payback_years" in df.columns and "project_viable" in df.columns:
         valid_payback = df.filter(pl.col("project_viable") == True)["payback_years"]  # noqa: E712
@@ -259,6 +315,15 @@ def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
     if "total_capex_usd" in df.columns:
         total_inv = df["total_capex_usd"].sum() / 1e6
         log.info(f"  Total portfolio CapEx:   ${total_inv:,.1f}M")
+        if "equipment_capex_usd" in df.columns:
+            eq    = df["equipment_capex_usd"].sum()       / 1e6
+            intc  = df["interconnection_capex_usd"].sum() / 1e6
+            perm  = df["permitting_capex_usd"].sum()      / 1e6
+            log.info(
+                f"    Equipment:           ${eq:,.1f}M  |  "
+                f"Interconnection: ${intc:,.1f}M  |  "
+                f"Permitting: ${perm:,.1f}M"
+            )
 
     if "annual_revenue_usd" in df.columns:
         total_rev = df["annual_revenue_usd"].sum() / 1e6

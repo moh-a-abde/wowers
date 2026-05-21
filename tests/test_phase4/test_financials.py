@@ -5,6 +5,7 @@ import math
 import pytest
 
 from src.phase4.financials import (
+    MIN_ANNUAL_REVENUE_USD,
     compute_irr,
     compute_lcoe,
     compute_npv,
@@ -262,4 +263,154 @@ class TestComputeScorecard:
         if sc["npv_usd"] > 0 and sc["payback_years"] <= 20:
             assert sc["irr"] > -0.99
             assert sc["irr"] < 3.0
+            assert sc["project_viable"] is True
+
+
+# ── F4-MINREV: minimum annual revenue gate ────────────────────────────────────
+
+class TestMinRevenueGate:
+    """F4-MINREV: sites earning < min_annual_revenue_usd must not be viable."""
+
+    def _scorecard(self, **kw):
+        defaults = dict(
+            annual_energy_kwh=_ENERGY,
+            elec_rate_per_kwh=_RATE,
+            annual_opex_usd=_OPEX,
+            total_capex_usd=_CAPEX,
+            annual_revenue_usd=_REVENUE,
+        )
+        defaults.update(kw)
+        return compute_scorecard(**defaults)
+
+    def test_revenue_above_floor_can_be_viable(self):
+        # Baseline scenario clears all gates including MINREV
+        sc = self._scorecard(min_annual_revenue_usd=5_000.0)
+        assert sc["project_viable"] is True
+
+    def test_revenue_below_floor_blocks_viability(self):
+        """Site with positive NPV but tiny revenue must be flagged non-viable."""
+        # Tiny site: cheap CapEx, NPV-positive on paper, but $2k/yr revenue
+        # falls below $5k floor → not viable.
+        sc = compute_scorecard(
+            annual_energy_kwh=20_000.0,    # 20 MWh/yr
+            elec_rate_per_kwh=0.10,
+            annual_opex_usd=200.0,
+            total_capex_usd=10_000.0,
+            annual_revenue_usd=2_000.0,
+            min_annual_revenue_usd=5_000.0,
+        )
+        # NPV is positive, payback short — but revenue too small
+        assert sc["npv_usd"] > 0
+        assert sc["payback_years"] < 20
+        assert sc["project_viable"] is False, (
+            "Sub-$5k/yr revenue must trip the MINREV gate even with positive NPV"
+        )
+
+    def test_floor_at_exact_revenue_passes(self):
+        # Revenue == floor must still pass (>=, not >)
+        sc = compute_scorecard(
+            annual_energy_kwh=_ENERGY,
+            elec_rate_per_kwh=_RATE,
+            annual_opex_usd=_OPEX,
+            total_capex_usd=_CAPEX,
+            annual_revenue_usd=5_000.0,
+            min_annual_revenue_usd=5_000.0,
+        )
+        # NPV at $5k/yr revenue with $500k CapEx is likely negative — so
+        # don't assert viable, just assert the gate itself accepts equality.
+        # Easier check: switch CapEx low so the only constraint is MINREV.
+        sc2 = compute_scorecard(
+            annual_energy_kwh=_ENERGY,
+            elec_rate_per_kwh=_RATE,
+            annual_opex_usd=_OPEX,
+            total_capex_usd=50_000.0,
+            annual_revenue_usd=5_000.0,
+            min_annual_revenue_usd=5_000.0,
+        )
+        # At equality the MINREV gate itself should not block.
+        # (Other gates may still apply; we only test MINREV semantics here.)
+        if sc2["npv_usd"] > 0 and sc2["payback_years"] <= 20:
+            assert sc2["project_viable"] is True
+
+    def test_stricter_floor_can_reject_otherwise_viable(self):
+        # Same site, $5k floor → viable; $100k floor → not viable
+        kwargs = dict(
+            annual_energy_kwh=100_000.0,   # 100 MWh/yr
+            elec_rate_per_kwh=0.10,
+            annual_opex_usd=500.0,
+            total_capex_usd=40_000.0,
+            annual_revenue_usd=10_000.0,
+        )
+        sc_loose = compute_scorecard(**kwargs, min_annual_revenue_usd=5_000.0)
+        sc_strict = compute_scorecard(**kwargs, min_annual_revenue_usd=100_000.0)
+        assert sc_loose["project_viable"] is True
+        assert sc_strict["project_viable"] is False
+
+
+# ── F4-MINREV-RAISE: $5k → $20k floor regression ─────────────────────────────
+
+class TestMinRevenueRaisedFloor:
+    """F4-MINREV-RAISE: default floor moved from $5,000 → $20,000 on 2026-05-20.
+
+    These tests pin the new default so an accidental config rollback would
+    be caught immediately, and document the *meaningful-kill* scenario that
+    motivated the raise (a site that passes NPV / payback / IRR but would
+    be filtered out at $20k while sneaking through at $5k).
+    """
+
+    def test_default_floor_is_20k(self):
+        # Module-level constant reflects the raised default.
+        assert MIN_ANNUAL_REVENUE_USD == pytest.approx(20_000.0)
+
+    def test_default_floor_blocks_revenue_between_5k_and_20k(self):
+        """Site with $12k/yr revenue, positive NPV — must fail at default $20k floor.
+
+        This is exactly the kind of site that slipped through the old $5k
+        floor.  The MINREV-RAISE fix is meant to catch it.
+        """
+        # Tiny CapEx → positive NPV at $12k/yr revenue
+        sc = compute_scorecard(
+            annual_energy_kwh=120_000.0,   # 120 MWh/yr
+            elec_rate_per_kwh=0.10,
+            annual_opex_usd=300.0,
+            total_capex_usd=30_000.0,
+            annual_revenue_usd=12_000.0,
+            # Pull the default $20k floor — do NOT override.
+        )
+        assert sc["npv_usd"] > 0
+        assert sc["payback_years"] <= 20.0
+        assert -0.99 < sc["irr"] < 3.0
+        assert sc["project_viable"] is False, (
+            "Site with $12k revenue must be blocked by the raised $20k MINREV floor"
+        )
+
+    def test_old_5k_floor_would_have_passed_same_site(self):
+        """Same site as above — explicitly setting floor to $5k flips the verdict.
+
+        Demonstrates that the raised floor is doing genuine work, not just
+        redundant double-counting of the NPV gate.
+        """
+        common = dict(
+            annual_energy_kwh=120_000.0,
+            elec_rate_per_kwh=0.10,
+            annual_opex_usd=300.0,
+            total_capex_usd=30_000.0,
+            annual_revenue_usd=12_000.0,
+        )
+        sc_5k  = compute_scorecard(**common, min_annual_revenue_usd=5_000.0)
+        sc_20k = compute_scorecard(**common, min_annual_revenue_usd=20_000.0)
+        assert sc_5k["project_viable"] is True
+        assert sc_20k["project_viable"] is False
+
+    def test_revenue_at_or_above_20k_default_still_viable(self):
+        """Boundary check — a $20k-revenue site that clears all other gates passes."""
+        sc = compute_scorecard(
+            annual_energy_kwh=200_000.0,
+            elec_rate_per_kwh=0.10,
+            annual_opex_usd=500.0,
+            total_capex_usd=50_000.0,
+            annual_revenue_usd=20_000.0,
+            # default floor
+        )
+        if sc["npv_usd"] > 0 and sc["payback_years"] <= 20:
             assert sc["project_viable"] is True

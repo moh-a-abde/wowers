@@ -67,12 +67,43 @@ cost_model:
     in_conduit_micro: 0.030
     Crossflow: 0.020     # simpler runner, lower maintenance than Kaplan
 
+  # F4-INTERCON: grid interconnection cost tiers (USD)
+  # Tier lookup by rated_power_kw upper bound (inclusive).
+  # Range: $50k–$200k per FERC small-hydro / NREL distributed-generation surveys.
+  interconnection:
+    tiers:
+      - {max_kw:      10, cost_usd:  50000}
+      - {max_kw:      50, cost_usd: 100000}
+      - {max_kw:     250, cost_usd: 150000}
+      - {max_kw: 1000000, cost_usd: 200000}  # catch-all upper bound
+
+  # F4-PERMIT-TIER: tiered permitting / environmental review cost (USD)
+  # Tier lookup by rated_power_kw upper bound (inclusive).  Replaces the
+  # original single-step model with FERC small-hydro practice:
+  #   - qualified_facility (≤25 kW): conduit exemption / qualifying facility
+  #   - small_ferc        (≤250 kW): abbreviated FERC review + state cert
+  #   - full_nepa         ( >250 kW): full FERC licensing + NEPA EA/EIS
+  permitting:
+    tiers:
+      - {max_kw:      25, cost_usd:  25000, label: qualified_facility}
+      - {max_kw:     250, cost_usd:  75000, label: small_ferc}
+      - {max_kw: 1000000, cost_usd: 150000, label: full_nepa}
+
 # ── Financials ────────────────────────────────────────────────────────────────
 financials:
   discount_rate: 0.06
   project_lifetime_years: 30
   degradation_rate: 0.002
   rec_value_per_kwh: 0.01
+  # F4-MINREV: minimum annual revenue floor (USD/yr) for ``project_viable``.
+  # Below this floor the site cannot absorb fixed soft costs (insurance,
+  # accounting, periodic inspection) even with positive NPV/IRR.
+  # Raised 2026-05-20 from $5,000 → $20,000 (F4-MINREV-RAISE):
+  #   - At $5k the floor never killed a site that NPV didn't already kill
+  #     (0 unique kills out of 3,783 in the prior Phase 4 run).
+  #   - $20k is the midpoint of the $15k–$25k "small project soft-cost
+  #     absorption" band discussed in the May 20 calibration review.
+  min_annual_revenue_usd: 20000
 
 # ── Phase 1: Ranking weights ──────────────────────────────────────────────────
 ranking:

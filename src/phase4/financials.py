@@ -35,10 +35,24 @@ from src.common import config
 # ── Financial parameters ──────────────────────────────────────────────────────
 
 _FIN = config.get("financials", {})
-DISCOUNT_RATE:       float = float(_FIN.get("discount_rate",           0.06))
-PROJECT_YEARS:       int   = int(  _FIN.get("project_lifetime_years",   30))
-DEGRADATION_RATE:    float = float(_FIN.get("degradation_rate",         0.002))
-REC_PER_KWH:         float = float(_FIN.get("rec_value_per_kwh",        0.01))
+DISCOUNT_RATE:        float = float(_FIN.get("discount_rate",            0.06))
+PROJECT_YEARS:        int   = int(  _FIN.get("project_lifetime_years",    30))
+DEGRADATION_RATE:     float = float(_FIN.get("degradation_rate",          0.002))
+REC_PER_KWH:          float = float(_FIN.get("rec_value_per_kwh",         0.01))
+
+# F4-MINREV: minimum annual revenue threshold for ``project_viable``.
+# Sites earning less than this floor are not bankable regardless of NPV/IRR
+# because fixed soft costs (insurance, accounting, asset management, periodic
+# inspections) consume too large a fraction of revenue.
+#
+# Default raised 2026-05-20 from $5,000 → $20,000 (F4-MINREV-RAISE).  At the
+# $5,000 floor the gate had **0 unique kills** in the Phase 4 run — every
+# sub-floor site already failed the NPV gate, so the floor was cosmetic.
+# $20,000 is the midpoint of the $15k–$25k "soft-cost absorption" band
+# identified in the May 20 calibration review.  Override via the
+# ``min_annual_revenue_usd`` key in ``config/settings.yaml`` under
+# ``financials``.
+MIN_ANNUAL_REVENUE_USD: float = float(_FIN.get("min_annual_revenue_usd", 20_000.0))
 
 
 # ── Cash-flow helpers ─────────────────────────────────────────────────────────
@@ -212,16 +226,23 @@ _INF_SENTINEL: float = 1e6
 
 
 def compute_scorecard(
-    annual_energy_kwh:  float,
-    elec_rate_per_kwh:  float,
-    annual_opex_usd:    float,
-    total_capex_usd:    float,
-    annual_revenue_usd: float,
-    discount_rate:      float = DISCOUNT_RATE,
-    project_years:      int   = PROJECT_YEARS,
-    degradation_rate:   float = DEGRADATION_RATE,
+    annual_energy_kwh:      float,
+    elec_rate_per_kwh:      float,
+    annual_opex_usd:        float,
+    total_capex_usd:        float,
+    annual_revenue_usd:     float,
+    discount_rate:          float = DISCOUNT_RATE,
+    project_years:          int   = PROJECT_YEARS,
+    degradation_rate:       float = DEGRADATION_RATE,
+    min_annual_revenue_usd: float = MIN_ANNUAL_REVENUE_USD,
 ) -> dict[str, float]:
     """Compute the full financial scorecard for one facility.
+
+    Args:
+        min_annual_revenue_usd: F4-MINREV floor.  Sites with annual revenue
+            below this threshold are flagged ``project_viable = False`` even
+            if NPV / IRR / payback would otherwise pass — too small to
+            absorb fixed soft costs in practice.  Default from settings.yaml.
 
     Returns a flat dict suitable for building a Polars/pandas row.
     """
@@ -262,7 +283,14 @@ def compute_scorecard(
         and irr > -0.99
         and irr < 3.0
     )
-    viable = bool(npv > 0 and payback <= 20.0 and irr_real)
+    # F4-MINREV: sites below the annual revenue floor are not bankable.
+    revenue_above_floor = annual_revenue_usd >= min_annual_revenue_usd
+    viable = bool(
+        npv > 0
+        and payback <= 20.0
+        and irr_real
+        and revenue_above_floor
+    )
 
     return {
         "annual_net_cf_usd":          annual_net_cf,
