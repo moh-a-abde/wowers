@@ -128,6 +128,14 @@ def run(
             annual_revenue_usd=rev_usd,
         )
 
+        # data_quality_tier: numeric encoding for ML training
+        #   0 = dmr (best: real measured discharge data)
+        #   1 = dmr_limited (measured but sparse — <12 months)
+        #   2 = actual_avg_only (one-number average, no time series)
+        #   3 = design_only (worst: design-permit flow only, no measurements)
+        _DQ_TIER = {"dmr": 0, "dmr_limited": 1, "actual_avg_only": 2, "design_only": 3}
+        dq_tier = _DQ_TIER.get(row.get("data_quality") or "design_only", 3)
+
         financial_rows.append({
             "npdes_id":            npdes_id,
             "state_code":          state_code,
@@ -140,20 +148,65 @@ def run(
             "annual_opex_usd":     opex_usd,
             "elec_rate_per_kwh":   elec_rate,
             "annual_revenue_usd":  rev_usd,
+            "data_quality":        row.get("data_quality"),
+            "data_quality_tier":   dq_tier,
             **scorecard,
         })
+
+    # Add project_viable_high_confidence: viable AND backed by real measured data.
+    # data_quality_tier 0 = dmr (best), 1 = dmr_limited.  Tiers 2/3 are
+    # design-permit or one-number averages — not suitable for investment pitch.
+    for fr in financial_rows:
+        fr["project_viable_high_confidence"] = bool(
+            fr.get("project_viable") and (fr.get("data_quality_tier", 3) <= 1)
+        )
 
     log.info(f"  Scored {len(financial_rows):,} facilities")
 
     # ── Step 3: Sensitivity analysis ──────────────────────────────────────────
+    # Build a lookup for physical inputs (FDC + head + turbine params) so
+    # run_tornado can use the Option B physically-distinct model.
+    _MGD_TO_M3S = 0.043813
+    _p3_lookup: dict[str, dict] = {}
+    for row in turbines.to_dicts():
+        fdc_raw = row.get("flow_duration_curve")
+        fdc_m3s = (
+            [float(v) * _MGD_TO_M3S for v in fdc_raw]
+            if fdc_raw is not None else None
+        )
+        _p3_lookup[row["npdes_id"]] = {
+            "h_net_m":       row.get("head_net_m"),
+            "q_design_m3s":  row.get("q_design_m3s"),
+            "fdc_flows_m3s": fdc_m3s,
+            "turbine_type":  row.get("turbine_type"),
+            "q_rated_m3s":   row.get("q_rated_m3s"),
+        }
+
+    # FDC exceedance grid from Phase 1 config (same grid used by Phase 3)
+    from src.common import config as _cfg
+    _FDC_EXCEEDANCES: list[float] = _cfg.get(
+        "ranking.fdc_exceedance_probs",
+        [0.01, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45,
+         0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95],
+    )
+
     if run_sensitivity:
-        log.info("[3/4] Running tornado sensitivity analysis …")
+        log.info("[3/4] Running tornado sensitivity analysis (Option B physical model) …")
         for fr in financial_rows:
+            phys = _p3_lookup.get(fr["npdes_id"], {})
+            fdc  = phys.get("fdc_flows_m3s")
+            fdc_e = _FDC_EXCEEDANCES[: len(fdc)] if fdc else None
             tornado = run_tornado(
                 annual_energy_kwh=fr["annual_energy_kwh"],
                 elec_rate_per_kwh=fr["elec_rate_per_kwh"],
                 annual_opex_usd=fr["annual_opex_usd"],
                 total_capex_usd=fr["total_capex_usd"],
+                h_net_m=phys.get("h_net_m"),
+                q_design_m3s=phys.get("q_design_m3s"),
+                fdc_flows_m3s=fdc,
+                fdc_exceedances=fdc_e,
+                turbine_type=phys.get("turbine_type"),
+                q_rated_m3s=phys.get("q_rated_m3s"),
             )
             fr.update(tornado)
     else:
@@ -198,8 +251,8 @@ def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
     log.info(f"  Total scored:            {total:,}")
     log.info(f"  Project viable (NPV>0 & payback≤20yr): {n_viable:,} ({n_viable/max(total,1)*100:.1f}%)")
 
-    if "payback_years" in df.columns:
-        valid_payback = df.filter(pl.col("payback_years") < 1e6)["payback_years"]
+    if "payback_years" in df.columns and "project_viable" in df.columns:
+        valid_payback = df.filter(pl.col("project_viable") == True)["payback_years"]  # noqa: E712
         if len(valid_payback) > 0:
             log.info(f"  Median payback (viable): {valid_payback.median():.1f} yr")
 

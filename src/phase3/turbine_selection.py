@@ -91,18 +91,22 @@ def select_turbine_type(h_net_m: float, q_m3s: float) -> str:
     """Rule-based turbine type selection from H-Q operating point.
 
     Decision tree matches the standard IEC/industry selection nomograph:
-      1. Pelton  : H > 50 m  AND  Q < 2 m³/s
-      2. Francis : 10 ≤ H ≤ 300 m  (fallback for high-H high-Q too)
-      3. Kaplan  : 1 ≤ H < 10 m  AND  Q ≥ 0.5 m³/s
-      4. in_conduit_micro : H < 10 m  OR  Q < 0.5 m³/s (smallest scale)
+      1. Pelton          : H > 50 m  AND  Q < 2 m³/s
+      2. Francis         : H ≥ 10 m  (any Q)
+      3. Crossflow       : 2 ≤ H < 10 m  AND  Q < 0.5 m³/s
+                           (Ossberger/CINK-style; good part-load at medium-low head)
+      4. Kaplan          : 2 ≤ H < 10 m  AND  Q ≥ 0.5 m³/s  (high-flow low-head)
+      5. in_conduit_micro: H < 2 m  (inline micro-turbine, very low head)
     """
     if h_net_m > 50 and q_m3s < 2.0:
         return "Pelton"
     if h_net_m >= 10.0:
         return "Francis"
-    if q_m3s >= 0.5:
-        return "Kaplan"
-    return "in_conduit_micro"
+    if h_net_m >= 2.0 and q_m3s < 0.5:
+        return "Crossflow"  # medium-low head, modest flow → Ossberger/CINK
+    if h_net_m >= 2.0 and q_m3s >= 0.5:
+        return "Kaplan"     # low head, high flow — Kaplan needs adequate head clearance
+    return "in_conduit_micro"  # H < 2 m or Q < 0.04 m³/s
 
 
 # ── Efficiency curves η(q) ────────────────────────────────────────────────────
@@ -132,6 +136,12 @@ def efficiency_at_part_load(turbine_type: str, q_fraction: float) -> float:
     if turbine_type == "Pelton":
         # Efficient over wide range; cutoff at minimum nozzle opening (~15%)
         return 0.88 if q >= 0.15 else 0.0
+
+    if turbine_type == "Crossflow":
+        # Ossberger/CINK-style cross-flow runner: good part-load response,
+        # flat efficiency curve.  Empirical fit to manufacturer hill charts.
+        eta = -0.10 * q ** 2 + 0.20 * q + 0.72
+        return max(0.0, min(0.82, eta)) if q >= 0.10 else 0.0
 
     if turbine_type == "in_conduit_micro":
         # Simpler fixed geometry; minimum flow threshold for operation

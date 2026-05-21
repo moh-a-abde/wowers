@@ -44,7 +44,13 @@ class TestSelectTurbineType:
         assert select_turbine_type(h_net_m=9.9, q_m3s=0.5) == "Kaplan"
 
     def test_in_conduit_low_flow(self):
-        assert select_turbine_type(h_net_m=2.0, q_m3s=0.1) == "in_conduit_micro"
+        # h<2m and q<0.5 → in_conduit_micro (Crossflow starts at 2m)
+        assert select_turbine_type(h_net_m=1.5, q_m3s=0.1) == "in_conduit_micro"
+
+    def test_crossflow_medium_low_head(self):
+        # h in [2, 10) and q<0.5 → Crossflow (Ossberger/CINK range)
+        assert select_turbine_type(h_net_m=2.0, q_m3s=0.1) == "Crossflow"
+        assert select_turbine_type(h_net_m=6.0, q_m3s=0.3) == "Crossflow"
 
     def test_in_conduit_very_low_head(self):
         assert select_turbine_type(h_net_m=1.5, q_m3s=0.3) == "in_conduit_micro"

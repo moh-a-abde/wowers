@@ -170,8 +170,17 @@ def _load_outfalls_layer(
 def _load_perm_feature_coords(
     npdes_ids: Optional[set[str]],
     path: Path,
+    exclude_ids: Optional[set[str]] = None,
 ) -> pl.DataFrame:
-    """Load coordinates from NPDES_PERM_FEATURE_COORDS.csv (fallback source)."""
+    """Load coordinates from NPDES_PERM_FEATURE_COORDS.csv (fallback source).
+
+    Args:
+        npdes_ids:   Optional allowlist. Pass None to load all.
+        path:        Path to NPDES_PERM_FEATURE_COORDS.csv.
+        exclude_ids: Optional set of NPDES IDs already covered by the
+                     outfalls layer — skipped here to avoid redundant I/O
+                     on the 626k-row file.
+    """
     empty = pl.DataFrame(
         {"npdes_id": pl.Series([], dtype=pl.Utf8),
          "lat_outfall": pl.Series([], dtype=pl.Float64),
@@ -196,6 +205,8 @@ def _load_perm_feature_coords(
                 continue
             if npdes_ids is not None and npdes_id not in npdes_ids:
                 continue
+            if exclude_ids is not None and npdes_id in exclude_ids:
+                continue  # already covered by outfalls layer — skip
 
             feat    = (row.get("PERM_FEATURE_NMBR") or "").strip()
             lat_raw = (row.get("LATITUDE_MEASURE")  or "").strip()
@@ -259,21 +270,27 @@ def load_primary_outfall_coords(
     primary = _load_outfalls_layer(id_set, layer_path)
 
     # Source 2: Generic permit-feature coords for IDs not covered by source 1
-    already_covered: Optional[set[str]] = (
+    already_covered: set[str] = (
         set(primary["npdes_id"].to_list()) if len(primary) > 0 else set()
     )
-    remaining_ids: Optional[set[str]] = (
-        (id_set - already_covered) if id_set is not None else None
-    )
-    # If all requested IDs are covered, skip source 2 entirely
-    if remaining_ids is not None and len(remaining_ids) == 0:
-        fallback = pl.DataFrame(
-            {"npdes_id": pl.Series([], dtype=pl.Utf8),
-             "lat_outfall": pl.Series([], dtype=pl.Float64),
-             "lon_outfall": pl.Series([], dtype=pl.Float64)}
-        )
+
+    if id_set is not None:
+        remaining_ids: Optional[set[str]] = id_set - already_covered
+        # If all requested IDs are covered, skip source 2 entirely
+        if not remaining_ids:
+            fallback = pl.DataFrame(
+                {"npdes_id": pl.Series([], dtype=pl.Utf8),
+                 "lat_outfall": pl.Series([], dtype=pl.Float64),
+                 "lon_outfall": pl.Series([], dtype=pl.Float64)}
+            )
+        else:
+            fallback = _load_perm_feature_coords(remaining_ids, coords_path)
     else:
-        fallback = _load_perm_feature_coords(remaining_ids, coords_path)
+        # Load all — but pass exclude_ids so rows already in the outfalls layer
+        # are skipped inline, avoiding redundant I/O on the 626k-row PFC file.
+        fallback = _load_perm_feature_coords(
+            None, coords_path, exclude_ids=already_covered or None
+        )
 
     # Deduplicate: outfalls-layer row always wins over PFC fallback row for same ID.
     combined = pl.concat([primary, fallback]).unique(subset=["npdes_id"], keep="first")

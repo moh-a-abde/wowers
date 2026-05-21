@@ -72,6 +72,31 @@ class TestComputeHeadRow:
         )
         assert src != "usgs_3dep", "Wildly divergent 3DEP head should not be used"
 
+    def test_f2_regression_2_5x_ratio_now_accepted(self):
+        """F2 fix: divergence ratio raised from 2.0 → 4.0.
+
+        A 3DEP reading at 2.5× literature P50 was previously rejected
+        (ratio 1.5 > 2.0) but must now be accepted (1.5 < 4.0).
+        Example: literature=3.27m, 3DEP head=3.27*3.5=~11.4m → accepted.
+        """
+        lit_p50 = 3.27  # national median literature head
+        # 3DEP gross head at 2.5× literature (ratio = (2.5-1) = 1.5 — within 4.0)
+        threeDEP_gross = lit_p50 * 3.5   # ratio = 2.5, well inside 4.0
+        from src.phase3.head_estimation import HEAD_LOSS_FRACTION
+        facility_elev = 200.0
+        outfall_elev = facility_elev - threeDEP_gross
+
+        gross, net, src, valid, conf = _compute_head_row(
+            elev_facility_m=facility_elev,
+            elev_outfall_m=outfall_elev,
+            head_p50_literature_m=lit_p50,
+        )
+        assert src == "usgs_3dep", (
+            f"3DEP head at 3.5× literature should pass divergence gate "
+            f"(ratio={2.5:.1f} < 4.0); got src={src}"
+        )
+        assert net == pytest.approx(threeDEP_gross * (1 - HEAD_LOSS_FRACTION), rel=1e-4)
+
     def test_head_below_minimum_is_invalid(self):
         """Net head below MIN_NET_HEAD_M should set head_valid = False."""
         gross, net, src, valid, conf = _compute_head_row(

@@ -112,20 +112,19 @@ def _compute_head_row(
             return gross, net, source, False, "high"
 
         else:
-            # Plausibility gate: reject wildly inconsistent 3DEP readings.
-            # If literature says 5 m but 3DEP says 50 m, distrust the API.
-            pass  # handled by plausible flag below
+            # Positive head above minimum: apply plausibility gate only here.
+            # No need to check divergence for negative-head or sub-minimum
+            # paths — those are already handled above.
+            plausible = True
+            if head_p50_literature_m is not None and head_p50_literature_m > 0:
+                ratio = abs(candidate_net - head_p50_literature_m) / head_p50_literature_m
+                if ratio > _MAX_DIVERGENCE_RATIO:
+                    plausible = False  # wildly inconsistent — fall back below
 
-        plausible = candidate_net > 0  # negative → already implausible
-        if head_p50_literature_m is not None and head_p50_literature_m > 0:
-            ratio = abs(candidate_net - head_p50_literature_m) / head_p50_literature_m
-            if ratio > _MAX_DIVERGENCE_RATIO:
-                plausible = False  # wildly inconsistent — fall back below
-
-        if plausible:
-            gross = candidate_gross
-            net = candidate_net
-            source = "usgs_3dep"
+            if plausible:
+                gross = candidate_gross
+                net = candidate_net
+                source = "usgs_3dep"
 
     # ── Path 2: Only facility elevation — no outfall elevation yet ──────────
     # In Phase 3 we don't yet have separate outfall coordinates from NPDES

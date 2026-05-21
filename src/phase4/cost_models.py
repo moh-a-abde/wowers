@@ -50,15 +50,17 @@ _TYPE_PARAMS: dict[str, dict] = {
     "Francis":          _load_type("Francis",           8_500,  -0.32,   700,  9_000),
     "Pelton":           _load_type("Pelton",            7_000,  -0.30,   600,  8_000),
     "in_conduit_micro": _load_type("in_conduit_micro", 12_000,  -0.25, 2_000, 15_000),
+    # Crossflow (Ossberger/CINK): simpler runner → lower cost than Kaplan
+    "Crossflow":        _load_type("Crossflow",         7_500,  -0.28,   500,  7_500),
 }
 
 # OpEx fraction of CapEx per type
 _OPEX_PCT: dict[str, float] = {}
-for t in ("Kaplan", "Francis", "Pelton", "in_conduit_micro"):
+for t in ("Kaplan", "Francis", "Pelton", "in_conduit_micro", "Crossflow"):
     pct = config.get(f"cost_model.opex_pct_of_capex.{t}")
     if pct is None:
         pct = {"Kaplan": 0.025, "Francis": 0.020, "Pelton": 0.015,
-               "in_conduit_micro": 0.030}[t]
+               "in_conduit_micro": 0.030, "Crossflow": 0.020}[t]
     _OPEX_PCT[t] = float(pct)
 
 
@@ -68,7 +70,7 @@ def capex_per_kw(turbine_type: str, rated_power_kw: float) -> float:
     """Installed cost per kW using the power-law model.
 
     Args:
-        turbine_type:   One of Kaplan, Francis, Pelton, in_conduit_micro.
+        turbine_type:   One of Kaplan, Francis, Pelton, in_conduit_micro, Crossflow.
         rated_power_kw: Nameplate power (kW).  Must be > 0.
 
     Returns:
