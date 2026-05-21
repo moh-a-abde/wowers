@@ -2123,3 +2123,137 @@ Addressing F4-INTERCON + F4-PERMIT + F4-MINREV alone expected to reduce viabilit
 Implement F4-INTERCON as first fix (largest expected kill rate, most defensible with published data). Revisit viability rate post-run.
 
 ---
+
+## DMR Null-FDC Bug Investigation & Fix — May 20 2026
+
+### Summary
+
+Investigated 435 `dmr`-tier sites that had valid `n_months_data` but null `flow_duration_curve` and null `mean_flow_mgd`. Found a Phase 1 bug in `src/phase1/flow_features.py`.
+
+### Root cause
+
+The `suspicious_dmr` ratio guard in `_fill_missing_with_design_flow()` checked `mean_flow_mgd > 5x design_flow_mgd`. A **single bogus DMR reading** (e.g. 300 MGD filed against a 0.252 MGD design plant for one month) inflated the mean above the cap, causing the guard to null ALL flow stats — including the FDC built from 70 legitimate months at ~0.19 MGD.
+
+The per-reading `MAX_FLOW_MGD = 2000` sanity cap didn't help: a 300 MGD reading is below 2,000 but still 1,190× the 0.252 MGD design flow.
+
+### Findings
+
+| Group | Sites | Cause |
+|---|---|---|
+| Single-outlier victims (mean inflated, median OK) | 407 | One bad month → mean > cap → all stats nulled |
+| True unit errors (both mean AND median absurd) | 20 | All readings bogus — correct to null |
+| Null design_flow (can't ratio-check) | 8 | Tiny/corrupt design entries (0.001 MGD) |
+
+- Mean `n_months_data` for all 435: **107 months** (median 110, max 192) — definitely NOT sparse data
+- All 435 had valid timeseries data; the bug was in the aggregation gate, not missing source data
+- W13 impact: 407 recovered sites will have `mean_flow_mgd` computed from clean data; of those, **374 will have mean ≥ 0.5 MGD** and survive W13 to enter Phase 2+
+
+### Fix implemented
+
+Changed from a **post-hoc mean check** to a **per-reading pre-filter** in `compute_flow_features()`:
+
+1. Joined `design_flow_mgd` into the timeseries loop (before `_compute_for_facility`)
+2. For each site, filter individual readings `> cap × design_flow` BEFORE computing mean/FDC
+3. Sites where ALL readings exceed the cap (true unit errors) produce `len(flows)==0` → fall through to `design_only` fallback
+4. Kept downstream `suspicious_dmr` block as safety net for sites where `design_flow_mgd` was null at filter time
+
+**File changed**: `src/phase1/flow_features.py` — `compute_flow_features()` function
+**Tests added**: `TestSingleOutlierFix` class in `tests/test_phase1/test_flow_features.py` (2 new regression tests)
+**All tests**: 37/37 Phase 1 tests pass
+
+### Phase 1 re-run required
+
+This fix changes Phase 1 output. **Must re-run Phase 1 before W8 synthetic FDC fix** — these 435 sites need real FDC from their actual data, not a synthetic 2-point approximation.
+
+Expected outcome after re-run:
+- ~407 sites recover from `data_quality=dmr / stats=null` to `data_quality=dmr / stats=valid`
+- ~374 of those will enter Phase 2+ with real FDC
+- ~20 sites remain correctly nulled (true unit errors)
+- Net W8 target for synthetic FDC drops: from ~1,321 sites to ~914 (the 407 dmr sites no longer need it)
+
+### W8 revised scope (post-fix)
+
+After the dmr-null-FDC fix, W8 synthetic FDC applies only to:
+- `design_only` sites: ~2,206 active pre-W13, ~752 post-W13
+- `actual_avg_only` sites: ~773 active pre-W13
+- `dmr_limited` (< 12 months): ~42 active post-W13
+- `dmr` with null FDC (post-fix): ~20 true unit errors (these should stay as `design_only` fallback, not get synthetic FDC)
+
+Total W8 target: **~1,567 sites** (was ~1,321 before this analysis, but prior estimate missed that 435 dmr-nulls were a bug, not a W8 case).
+
+---
+
+## Post-Fix Pipeline Run — May 20 2026
+
+Re-ran all 4 phases after implementing the per-reading outlier filter fix.
+
+### Phase 1 results
+
+| Metric | Value |
+|---|---|
+| Total POTW facilities | 17,158 |
+| With DMR flow data | 12,172 (70.9%) |
+| Design-flow fallback | 4,986 |
+| Bad readings dropped | **7,801** individual DMR readings exceeding 5× design |
+| dmr-tier null-FDC sites | **0** (was 435 before fix ✅) |
+
+Data quality breakdown post-fix:
+
+| Tier | Count |
+|---|---|
+| dmr | 11,561 |
+| actual_avg_only | 2,779 |
+| design_only | 2,207 |
+| dmr_limited | 611 |
+
+The 20 true unit-error `dmr` sites correctly fell through to `design_only` fallback. All 407 single-outlier sites now have valid `mean_flow_mgd` and FDC.
+
+### Phase 2 results
+
+| Metric | Value |
+|---|---|
+| Total facilities | 17,158 |
+| Estimated (not excluded) | 5,468 |
+| Excluded (no usable data) | 11,690 |
+| National P50 energy | 699.3 GWh/yr |
+| Median facility P50 | 24,095 kWh/yr |
+
+### Phase 3 results
+
+| Metric | Value |
+|---|---|
+| Total processed | 5,468 |
+| Viable turbine sites | 3,783 (69.2%) |
+| Head from USGS 3DEP | 3,780 |
+| Head from literature | 1,688 |
+| Total energy | 514,717 MWh/yr |
+| Avg rated power | 20 kW |
+
+Turbine breakdown: Crossflow 2,771 | Francis 452 | Kaplan 364 | in_conduit_micro 196
+
+### Phase 4 results
+
+| Metric | Value |
+|---|---|
+| Total scored | 3,783 |
+| Project viable (NPV>0, payback≤20yr) | **2,609 (69.0%)** |
+| Median payback (viable) | 8.7 yr |
+| Total portfolio CapEx | $169.2M |
+| Total portfolio revenue | $49.7M/yr |
+
+### Assessment
+
+The dmr-null-FDC fix is working correctly — **0 dmr-tier sites with null FDC** (down from 435). The 69.0% viability rate is unchanged because this was a data quality fix, not a financial gate change. The F4 financial fixes (INTERCON + PERMIT + MINREV) are still needed to bring viability to a realistic 35–45%.
+
+### Next steps (in order)
+
+1. Implement F4-INTERCON (grid interconnection cost model)
+2. Implement F4-MINREV (minimum annual revenue threshold)
+3. Implement F4-PERMIT (permitting cost + risk flag)
+4. Re-run Phase 4 only — verify viability drops to 35–45%
+5. Implement W8 synthetic FDC for ~1,567 affected sites
+6. Collect DOE HydroSource EHA dataset
+7. Collect FERC conduit exemption filings
+8. Start Phase 5
+
+---

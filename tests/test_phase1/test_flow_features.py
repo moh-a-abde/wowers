@@ -115,3 +115,77 @@ class TestFDCComputation:
         import numpy as np
         fdc = _compute_fdc(np.array([7.5]))
         assert all(abs(v - 7.5) < 0.01 for v in fdc)
+
+
+class TestSingleOutlierFix:
+    """Regression tests for the per-reading outlier filter (Phase 1 bug fix).
+
+    Root cause: a single bogus DMR month (e.g. 300 MGD on a 0.19 MGD plant)
+    inflated mean_flow_mgd above the 5x design ratio cap, causing the safety-net
+    guard to null ALL stats — including the FDC built from 70 legitimate months.
+    Fix: filter individual readings > cap × design_flow BEFORE computing stats.
+    """
+
+    def _make_ts(self, npdes_id: str, good_flows: list[float], bad_flow: float) -> pl.DataFrame:
+        import datetime
+        rows = []
+        for i, f in enumerate(good_flows):
+            rows.append({
+                "npdes_id": npdes_id,
+                "outfall": "001",
+                "period_end": datetime.date(2015 + i // 12, 1 + i % 12, 28),
+                "avg_flow_mgd": f,
+                "max_flow_mgd": f,
+                "min_flow_mgd": f,
+                "is_estimated": False,
+                "fiscal_year": 2015 + i // 12,
+            })
+        rows.append({
+            "npdes_id": npdes_id,
+            "outfall": "001",
+            "period_end": datetime.date(2020, 6, 30),
+            "avg_flow_mgd": bad_flow,
+            "max_flow_mgd": bad_flow,
+            "min_flow_mgd": bad_flow,
+            "is_estimated": False,
+            "fiscal_year": 2020,
+        })
+        return pl.DataFrame(rows)
+
+    def _make_facility(self, npdes_id: str, design: float) -> pl.DataFrame:
+        return pl.DataFrame({
+            "npdes_id": [npdes_id],
+            "facility_name": ["Test WWTP"],
+            "state_code": ["TX"],
+            "city": ["Test City"],
+            "county": ["Test County"],
+            "latitude": [30.0],
+            "longitude": [-90.0],
+            "design_flow_mgd": [design],
+            "actual_avg_flow_mgd": [None],
+        })
+
+    def test_single_outlier_does_not_null_fdc(self):
+        """70 good months (0.2 MGD) + 1 bad month (300 MGD) → FDC and mean_flow survive."""
+        ts = self._make_ts("TST_OUTLIER", [0.2] * 70, bad_flow=300.0)
+        facilities = self._make_facility("TST_OUTLIER", design=0.5)
+        result = compute_flow_features(ts, facilities)
+        row = result.filter(pl.col("npdes_id") == "TST_OUTLIER")
+        assert row.height == 1
+        assert row["mean_flow_mgd"][0] is not None, "mean_flow_mgd should not be nulled"
+        assert row["flow_duration_curve"][0] is not None, "FDC should not be nulled"
+        assert abs(row["mean_flow_mgd"][0] - 0.2) < 0.01, (
+            f"mean_flow should be ~0.2 MGD, got {row['mean_flow_mgd'][0]}"
+        )
+        assert row["data_quality"][0] == "dmr"
+
+    def test_true_unit_error_still_nulled(self):
+        """All months at 300 MGD on a 0.5 MGD design plant → stats correctly nulled."""
+        ts = self._make_ts("TST_UNIT_ERR", [300.0] * 36, bad_flow=350.0)
+        facilities = self._make_facility("TST_UNIT_ERR", design=0.5)
+        result = compute_flow_features(ts, facilities)
+        row = result.filter(pl.col("npdes_id") == "TST_UNIT_ERR")
+        assert row.height == 1
+        assert row["mean_flow_mgd"][0] is None or row["flow_duration_curve"][0] is None, (
+            "Unit-error site should have null flow stats"
+        )

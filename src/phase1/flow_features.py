@@ -41,16 +41,52 @@ def compute_flow_features(
     # Aggregate DMR data per facility (use primary outfall = max avg flow outfall)
     primary = _select_primary_outfall(timeseries)
 
+    # Join design_flow_mgd into the timeseries so we can filter per-reading outliers
+    # before computing statistics.  This prevents a single bogus month (e.g. 300 MGD
+    # on a 0.19 MGD plant) from inflating the mean and triggering the ratio guard
+    # against all 70+ legitimate months.
+    design_lookup = potw_facilities.select(["npdes_id", "design_flow_mgd"])
+    primary = primary.join(design_lookup, on="npdes_id", how="left")
+
     # Compute features via Polars + numpy (per group)
     feature_rows: list[dict] = []
     npdes_ids_with_data: set[str] = set()
+    n_outlier_readings_dropped: int = 0
 
     for (npdes_id,), group in primary.group_by(["npdes_id"]):
         flows = group["avg_flow_mgd"].drop_nulls().to_numpy()
         if len(flows) == 0:
             continue
+
+        # Per-reading outlier filter: drop individual months that exceed cap × design.
+        # This handles the "single bad reading inflates mean" failure mode.
+        # Sites where ALL readings fail (true unit-error like TN0056545) produce
+        # len(flows)==0 after filtering → skipped → fall back to design_flow later.
+        design_val = group["design_flow_mgd"][0]
+        if design_val is not None and design_val > 0:
+            cap = float(design_val) * _DMR_DESIGN_RATIO_CAP
+            n_before = len(flows)
+            flows = flows[flows <= cap]
+            dropped = n_before - len(flows)
+            if dropped:
+                log.debug(
+                    "  %s: dropped %d reading(s) > %.1f× design (%.3f MGD cap)",
+                    npdes_id, dropped, _DMR_DESIGN_RATIO_CAP, cap,
+                )
+                n_outlier_readings_dropped += dropped
+
+        if len(flows) == 0:
+            continue
+
         npdes_ids_with_data.add(npdes_id)
         feature_rows.append(_compute_for_facility(npdes_id, flows, group))
+
+    if n_outlier_readings_dropped:
+        log.info(
+            "  Dropped %d individual DMR readings exceeding %.0f× design flow "
+            "(single-month unit errors)",
+            n_outlier_readings_dropped, _DMR_DESIGN_RATIO_CAP,
+        )
 
     dmr_features = pl.DataFrame(feature_rows) if feature_rows else _empty_features_df()
     log.info(f"  DMR features computed for {len(dmr_features):,} facilities")
@@ -262,8 +298,10 @@ def _fill_missing_with_design_flow(df: pl.DataFrame) -> pl.DataFrame:
           .alias("pct_missing"),
     ])
 
-    # Null out mean_flow_mgd if it implausibly exceeds design_flow_mgd by ratio cap.
-    # Catches DMR-derived flows like TN0056545 (585 MGD on 0.023 MGD design plant).
+    # Safety-net: null all flow stats if mean_flow still exceeds ratio cap after
+    # per-reading filtering (catches sites where design_flow_mgd was null at
+    # filter time, or where ALL readings were bogus — TN0056545-style unit errors).
+    # After the upstream per-reading filter this should fire for very few sites.
     suspicious_dmr = (
         pl.col("mean_flow_mgd").is_not_null()
         & pl.col("design_flow_mgd").is_not_null()
@@ -274,7 +312,7 @@ def _fill_missing_with_design_flow(df: pl.DataFrame) -> pl.DataFrame:
     if n_suspicious > 0:
         log.warning(
             "Nulling mean_flow_mgd for %d rows where mean_flow > %.0f× design_flow "
-            "(DMR reporting artifact)",
+            "(residual DMR reporting artifacts after per-reading filter)",
             n_suspicious,
             _DMR_DESIGN_RATIO_CAP,
         )
