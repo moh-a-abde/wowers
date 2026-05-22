@@ -3202,3 +3202,750 @@ src/
 | Team customer-validation calls | ⏸ next action (week 1–2) |
 
 ---
+
+## WOWERS Pivot Data Acquisition Inventory — May 22 2026
+
+This entry is the authoritative inventory of raw pivot-vertical datasets downloaded (or in-flight) to the new SANDISK SSD. It captures source URLs, local paths, sizes, update frequencies, field-level schemas where available, lineage diagrams, and known limitations. Treat this entry as the data-inventory document for the four new verticals; do **not** maintain a separate `DATA_INVENTORY.md` file (kept in-journal per the project's single-source-of-truth convention).
+
+> Status: downloads still in progress at the time of this entry — sizes / counts below reflect the user's published plan, not a verified disk audit. Some folders may be partial. Re-verify counts before any pipeline run.
+
+### Top-level acquisition location
+
+`/Volumes/SANDISK/WOWERS_Pivot_Data/`
+
+```
+WOWERS_Pivot_Data/
+├── V1_Water_Utility_PRVs/
+├── V2_Industrial_Cooling_Water_Discharge/
+├── V3_Mine_Dewatering/
+└── V4_Irrigation_Canal_Drops/
+```
+
+### Vertical-by-vertical one-paragraph summary
+
+**V1 — Water Utility PRVs (Pressure-Reducing Valves).** Identifies community water systems (CWS) operated by drinking-water utilities whose distribution networks contain pressure-reducing valve (PRV) stations — locations where engineered pressure drops dissipate energy that a micro-turbine can recover instead. Matters for micro-hydro because PRV sites have **continuous, predictable flow under significant pressure differentials** and almost zero permitting overhead (behind-the-meter generation inside a single utility's distribution network). Primary screening data: SDWIS for system size, EIA-861 for retail electricity rates (avoided cost), NHDPlus for source-water geometry.
+
+**V2 — Industrial Cooling-Water Discharge.** Identifies once-through cooling water outfalls at power plants and large industrial facilities (refineries, chemical plants, steel mills, large food / bev processors). Matters because once-through cooling produces **continuous, large-volume discharges at elevated temperature** — typically > 5 MGD per outfall — and the discharge pipe always has some pressure head that can drive a turbine. Primary data: EPA NPDES facilities + DMR for flow time series, EIA-860 / 923 for power plant cooling-system inventory and monthly water-use volumes, FRS as the cross-walk between EPA permit IDs and EIA plant IDs, TRI as a discharge-confirmation cross-check, BLS QCEW for regional addressable-market sizing.
+
+**V3 — Mine Dewatering.** Identifies active underground mines (and certain abandoned mines under active dewatering obligation) that pump groundwater out of the workings to keep the mine dry. Matters because pumped-mine water typically exits at **substantial vertical head** (the mine's depth, often 100–1,000+ ft) and at predictable rates determined by the mine's geology rather than weather — uniquely favourable micro-hydro physics. Primary data: MSHA Mine Data Retrieval System for the live mine roster, USGS mrdata for deposit depth and abandoned-mine context.
+
+**V4 — Irrigation Canal Drops.** Identifies engineered drop structures along irrigation canals and laterals — locations where canal grade changes abruptly (slopes engineered to dissipate energy and prevent erosion). Matters because canal drops are **purpose-built head-creating infrastructure** in continuous operation during the irrigation season; many are sited where small distributed hydro can be added without disturbing canal hydraulics. Primary data: NHDPlus V2 for canal geometry / slope / flow, USBR RISE for measured federal-canal flow time series, USDA NASS Census for regional irrigated-acreage prioritisation, CA DWR for California-specific high-fidelity canal GIS layers.
+
+### Master dataset inventory
+
+| # | Dataset | Source Org | Local File Path | Source URL | Format | Size | Update Freq | Primary Key | Pipeline Role |
+|---|---|---|---|---|---|---|---|---|---|
+| 1.1 | SDWA / SDWIS National Download | EPA | `V1_.../SDWA_latest_downloads.zip` | https://echo.epa.gov/files/echodownloads/SDWA_latest_downloads.zip | ZIP of CSVs | ~457 MB | Quarterly (latest only) | PWSID | V1 primary CWS roster |
+| 1.2 | EIA Form 861 (2009–2024) | EIA | `V1_.../EIA861_{YEAR}.zip` × 16 | https://www.eia.gov/electricity/data/eia861/zip/f861{YEAR}.zip | ZIP of XLSX | ~192 MB total | Annual (Sep) | Utility Number | V1 + V2 retail electricity rates |
+| 1.3 | NHDPlus V2 National Seamless (Lower 48) | EPA + USGS | `V1_.../NHDPlusV2_National_Seamless_Lower48.7z` | https://dmap-data-commons-ow.s3.amazonaws.com/NHDPlusV21/Data/NationalData/NHDPlusV21_NationalData_Seamless_Geodatabase_Lower48_07.7z | 7z → File GDB | ~12 GB (zip), ~25 GB unpacked | Static (2012) | COMID | V1 + V4 stream / canal geometry |
+| 2.1 | ECHO NPDES Facilities | EPA | `V2_.../ECHO_NPDES_facilities.zip` | https://echo.epa.gov/files/echodownloads/npdes_downloads.zip | ZIP of CSVs | ~301 MB | Weekly | EXTERNAL_PERMIT_NMBR | V2 facility master |
+| 2.2 | ECHO NPDES Effluent Violations | EPA | `V2_.../ECHO_NPDES_effluent_violations.zip` | https://echo.epa.gov/files/echodownloads/npdes_eff_downloads.zip | ZIP of CSVs | ~2.5 GB | Weekly | EXTERNAL_PERMIT_NMBR | V2 temperature-violation flag |
+| 2.3 | ECHO NPDES DMR (Pre-2009 + FY2009–2026) | EPA | `V2_.../ECHO_NPDES_DMR_{PERIOD}.zip` × 19 | https://echo.epa.gov/files/echodownloads/npdes_dmrs_fy{YEAR}.zip | ZIP of CSVs | ~8.8 GB total | Weekly (current FY) | EXTERNAL_PERMIT_NMBR + PERMIT_FEATURE_NMBR | V2 measured flow time series |
+| 2.4 | ECHO NPDES Outfall Locations | EPA | `V2_.../ECHO_NPDES_outfall_locations.zip` | https://echo.epa.gov/files/echodownloads/npdes_outfalls_layer.zip | ZIP of CSV | ~50 MB | Weekly | EXTERNAL_PERMIT_NMBR + PERMIT_FEATURE_NMBR | V2 outfall lat / lon |
+| 2.5 | ECHO Facility Registry Service (FRS) | EPA | `V2_.../ECHO_FRS.zip` | https://echo.epa.gov/files/echodownloads/frs_downloads.zip | ZIP of CSVs | ~318 MB | Weekly | REGISTRY_ID | V2 cross-program ID crosswalk |
+| 2.6 | EIA Form 860 (2009–2024) | EIA | `V2_.../EIA860_{YEAR}.zip` × 16 | https://www.eia.gov/electricity/data/eia860/archive/xls/eia860{YEAR}.zip (≤ 2023); https://www.eia.gov/electricity/data/eia860/xls/eia8602024.zip (2024) | ZIP of XLSX | ~1.6 GB total | Annual (Sep) | Plant Id | V2 power-plant cooling-system inventory |
+| 2.7 | EIA Form 923 (2009–2025) | EIA | `V2_.../EIA923_{YEAR}.zip` × 17 | https://www.eia.gov/electricity/data/archive/xls/f923_{YEAR}.zip (≤ 2024); https://www.eia.gov/electricity/data/xls/f923_2025.zip (2025 YTD) | ZIP of XLSX | ~850 MB total | Monthly (current); annual (archive) | Plant Id | V2 monthly cooling-water withdrawal / discharge |
+| 2.8 | EPA Toxics Release Inventory (TRI) | EPA | `V2_.../TRI_{YEAR}.zip` × 14 | https://www.epa.gov/system/files/other-files/2024-10/tri_{YEAR}_us_v24a.zip | ZIP | ~560 MB total | Annual | TRIFD | V2 discharge cross-confirmation |
+| 2.9 | BLS Quarterly Census of Employment and Wages (QCEW) | BLS | `V2_.../BLS_QCEW_{YEAR}.zip` × 15 | https://data.bls.gov/cew/data/files/{YEAR}/csv/{YEAR}_annual_by_industry.zip | ZIP of CSVs | ~4.5 GB total | Annual (~6 mo lag) | area_fips + industry_code | V2 regional NAICS market-sizing |
+| 3.1 | MSHA Mine Data (6 tables) | MSHA / DOL | `V3_.../MSHA_{Table}.zip` × 6 | https://arlweb.msha.gov/OpenGovernmentData/DataSets/{Table}.zip | ZIP of CSVs | ~80 MB total | Quarterly snapshot (live DB) | MINE_ID | V3 primary mine roster |
+| 3.2 | USGS Mineral Resources Spatial Data (mrdata) | USGS | `V3_.../USGS_mrdata_instructions.txt` + downloaded shapefiles | https://mrdata.usgs.gov/ | Shapefile / GeoJSON | ~150 MB | Static (per dataset) | DEP_ID | V3 mine depth / commodity context |
+| 4.1 | NHDPlus V2 National (shared) | EPA + USGS | (see 1.3 — referenced, not duplicated) | (see 1.3) | (see 1.3) | (see 1.3) | (see 1.3) | COMID | V4 canal geometry / slope / flow |
+| 4.2 | USBR RISE | USBR | `V4_.../USBR_RISE_instructions.txt` + downloaded JSON / CSV | https://data.usbr.gov/ (API: https://data.usbr.gov/rise/api/result) | JSON / CSV via API | ~100–200 MB | Near-real-time to daily | loc_id | V4 measured federal-canal flow |
+| 4.3 | USDA NASS Census of Agriculture (Irrigation) | USDA | `V4_.../USDA_NASS_Census_instructions.txt` + QuickStats CSV exports | https://quickstats.nass.usda.gov/ | CSV | ~50–200 MB (irrigation subset) | Every 5 years (2012 / 2017 / 2022) | State+County ANSI | V4 county-level irrigated acreage |
+| 4.4 | California DWR | CA DWR | `V4_.../CA_DWR_instructions.txt` + downloaded GIS layers | https://water.ca.gov/ + https://data.cnra.ca.gov/ | Shapefile / CSV | ~50–100 MB | Varies | District ID | V4 California canal infrastructure |
+
+### Folder summary
+
+| Folder | Files | Approx. Total Size | Primary Join Key |
+|---|---|---|---|
+| `V1_Water_Utility_PRVs/` | SDWA zip, EIA-861 × 16, NHDPlus V2 | ~12.5 GB | PWSID |
+| `V2_Industrial_Cooling_Water_Discharge/` | NPDES facilities, NPDES DMR × 19, NPDES effluent, FRS, NPDES outfalls, EIA-860 × 16, EIA-923 × 17, TRI × 14, BLS QCEW × 15 | ~18 GB | EXTERNAL_PERMIT_NMBR / REGISTRY_ID |
+| `V3_Mine_Dewatering/` | MSHA × 6 tables, USGS mrdata (manual) | ~230 MB | MINE_ID |
+| `V4_Irrigation_Canal_Drops/` | NHDPlus V2 (shared with V1), USBR RISE (manual), NASS Census (manual), CA DWR (manual) | ~3 GB (excl. shared NHDPlus) | COMID / loc_id |
+| **Total** | | **~31 GB** | |
+
+---
+
+### Field-level data dictionaries
+
+Field-level dictionaries follow. Data types and lengths are taken from the published source-organisation documentation where available; where the source publishes only a column list, the type is inferred from EPA / EIA / USGS conventions and explicitly marked *(inferred)*.
+
+#### V1 — SDWA / SDWIS files
+
+**File: `SDWA_PUB_WATER_SYSTEMS.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| PWSID | Char | 9 | Unique identifying code for a public water system (state code + 7-digit serial) |
+| PWS_TYPE_CODE | Char | 4 | System type: CWS (Community Water System), NTNCWS, TNCWS |
+| POPULATION_SERVED_COUNT | Numeric | — | Number of people regularly served by the system |
+| SERVICE_CONNECTIONS_COUNT | Numeric | — | Number of active service connections (the V1 PRV screen filters > 500) |
+| GW_SW_CODE | Char | 2 | Primary source water type (GW = groundwater, SW = surface water, GU = groundwater under influence) |
+| STATE_CODE | Char | 2 | Two-letter state code |
+| PWS_NAME | Char | 255 | Water system name *(inferred)* |
+| PRIMACY_AGENCY_CODE | Char | 2 | Primacy agency overseeing the system *(inferred)* |
+| OWNER_TYPE_CODE | Char | 1 | Ownership: L=Local, P=Private, F=Federal, S=State, M=Mixed *(inferred)* |
+
+**File: `SDWA_FACILITIES.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| PWSID | Char | 9 | Foreign key to `SDWA_PUB_WATER_SYSTEMS` |
+| FACILITY_ID | Char | 12 | Facility identifier within a PWS *(inferred)* |
+| FACILITY_TYPE_CODE | Char | 2 | TP = Treatment Plant, DS = Distribution System, SI = Source Intake, WL = Well |
+| WATER_TYPE_CODE | Char | 2 | GW / SW / GU |
+| FACILITY_NAME | Char | 255 | Facility name *(inferred)* |
+| AVAILABILITY_CODE | Char | 1 | Permanent / emergency / seasonal *(inferred)* |
+
+**File: `SDWA_SERVICE_AREAS.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| PWSID | Char | 9 | Foreign key |
+| SERVICE_AREA_TYPE_CODE | Char | 2 | Residential, commercial, agricultural, etc. |
+| IS_PRIMARY_SERVICE_AREA_CODE | Char | 1 | Y / N primary indicator *(inferred)* |
+
+**File: `SDWA_VIOLATIONS_ENFORCEMENT.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| PWSID | Char | 9 | Foreign key |
+| VIOLATION_CODE | Char | 4 | EPA violation type code |
+| VIOLATION_CATEGORY_CODE | Char | 4 | Category (MR, MCL, TT, etc.) |
+| IS_HEALTH_BASED_IND | Char | 1 | Y / N — health-based violation |
+| COMPL_PER_BEGIN_DATE | Date | — | Compliance period start *(inferred)* |
+| COMPL_PER_END_DATE | Date | — | Compliance period end *(inferred)* |
+
+**File: `SDWA_LCR_SAMPLES.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| PWSID | Char | 9 | Foreign key |
+| CONTAMINANT_CODE | Char | 4 | PB90 = Lead 90th-percentile, CU90 = Copper 90th-percentile |
+| SAMPLE_MEASURE | Numeric | — | Measured concentration |
+| UNIT_OF_MEASURE | Char | 10 | mg/L, ug/L, etc. |
+| SAMPLE_COLLECTION_DATE | Date | — | Sampling date *(inferred)* |
+
+**File: `SDWA_EVENTS_MILESTONES.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| PWSID | Char | 9 | Foreign key |
+| EVENT_MILESTONE_CODE | Char | 4 | Treatment-technique milestone code |
+| EVENT_REASON_CODE | Char | 4 | Reason for the milestone event |
+| EVENT_ACTUAL_DATE | Date | — | Date the milestone was achieved |
+
+#### V1 / V2 — EIA Form 861 (Retail Sales of Electricity)
+
+**Sheet: `Sales_Ult_Cust`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| Utility Number | Numeric | — | EIA-assigned utility identifier |
+| Utility Name | Char | 100 | Utility name |
+| State | Char | 2 | Two-letter state code |
+| Residential ¢/kWh | Numeric | — | Average residential retail rate |
+| Commercial ¢/kWh | Numeric | — | Average commercial retail rate |
+| Industrial ¢/kWh | Numeric | — | Average industrial retail rate |
+| Residential Customers | Numeric | — | Count of residential customers |
+| Commercial Customers | Numeric | — | Count of commercial customers |
+| Industrial Customers | Numeric | — | Count of industrial customers |
+
+**Sheet: `Service_Territory`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| Utility Number | Numeric | — | Foreign key to `Utility_Data` |
+| State | Char | 2 | State code |
+| County | Char | 50 | County name (where the utility provides service) |
+
+**Sheet: `Utility_Data`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| Utility Number | Numeric | — | Primary key |
+| Utility Name | Char | 100 | Utility name |
+| Ownership | Char | 30 | Cooperative / Investor-Owned / Municipal / Federal |
+| Entity Type | Char | 30 | Entity classification |
+
+#### V1 / V4 — NHDPlus V2 (Lower 48) — File GDB layers
+
+**Layer: `NHDFlowline`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| COMID | Integer | — | NHDPlus common identifier (primary key joining all NHDPlus layers) |
+| GNIS_NAME | Char | 65 | Geographic Names Information System feature name |
+| FTYPE | Integer | — | Feature type — 336 = Canal Ditch, 460 = StreamRiver, 558 = Artificial Path |
+| FCODE | Integer | — | Feature code (sub-type modifier of FTYPE) |
+| LENGTHKM | Float | — | Reach length in kilometres |
+| REACHCODE | Char | 14 | Hydrologic reach code |
+| FLOWDIR | Integer | — | Flow direction indicator |
+
+**Layer: `PlusFlowlineVAA`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| COMID | Integer | — | Foreign key to `NHDFlowline` |
+| MAXELEVSMO | Float | — | Maximum elevation along the reach (smoothed, cm) |
+| MINELEVSMO | Float | — | Minimum elevation along the reach (smoothed, cm) — used with MAX to derive head drop |
+| SLOPE | Float | — | Reach slope (rise / run) — V4 screen filters > 0.001 for potential drop structures |
+| ARBOLATESU | Float | — | Total upstream length contributing flow |
+| TOTDASQKM | Float | — | Total drainage area (square km) |
+
+**Layer: `EromExtension`** (Enhanced Runoff Method outputs)
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| COMID | Integer | — | Foreign key to `NHDFlowline` |
+| Q0001E | Float | — | Modelled mean annual flow (cfs) — the EROM "E" estimator |
+| V0001E | Float | — | Modelled mean annual velocity (fps) |
+
+**Layer: `Catchment`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| FEATUREID | Integer | — | Equals COMID — joins catchment polygon to flowline |
+| geometry | Polygon | — | Catchment polygon (drainage area) for the flowline |
+
+**Layer: `WBDHUCxx`** (Watershed Boundary Dataset — multiple HUC levels)
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| HUC8 | Char | 8 | 8-digit hydrologic unit code |
+| HUC12 | Char | 12 | 12-digit hydrologic unit code |
+| NAME | Char | 100 | Watershed / subwatershed name |
+
+#### V2 — ECHO NPDES Facilities
+
+**File: `ICIS_FACILITIES.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| REGISTRY_ID | Char | 12 | FRS identifier — primary cross-program key |
+| FACILITY_NAME | Char | 255 | Facility name |
+| GEOCODE_LATITUDE | Numeric | — | Facility latitude (decimal degrees) |
+| GEOCODE_LONGITUDE | Numeric | — | Facility longitude (decimal degrees) |
+| NAICS_CODES | Char | 60 | Pipe-delimited NAICS code list |
+| SIC_CODES | Char | 60 | Pipe-delimited SIC code list |
+| FACILITY_TYPE_INDICATOR | Char | 2 | MJ = Major, NM = Non-Major |
+| STATE_CODE | Char | 2 | Two-letter state code |
+
+**File: `ICIS_PERMITS.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| EXTERNAL_PERMIT_NMBR | Char | 9 | NPDES permit number (state code + 7-digit serial) |
+| REGISTRY_ID | Char | 12 | FRS cross-reference |
+| TOTAL_DESIGN_FLOW_NMBR | Numeric | — | Design flow capacity (MGD) — V2 screen filters > 1 MGD |
+| ACTUAL_AVERAGE_FLOW_NMBR | Numeric | — | Reported actual average flow (MGD) |
+| MAJOR_MINOR_STATUS_FLAG | Char | 1 | M = Major, N = Non-Major |
+| NAICS_CODE | Char | 6 | Primary NAICS code |
+| EXPIRATION_DATE | Date | — | Permit expiration |
+
+**File: `ICIS_NPDES_OUTFALLS.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| EXTERNAL_PERMIT_NMBR | Char | 9 | Foreign key to `ICIS_PERMITS` |
+| PERMIT_FEATURE_NMBR | Char | 3 | Outfall identifier within a permit (e.g. 001, 002) |
+| LATITUDE_MEASURE | Numeric | — | Outfall latitude |
+| LONGITUDE_MEASURE | Numeric | — | Outfall longitude |
+
+#### V2 — ECHO NPDES DMR
+
+**File: `DMRS_FY{YEAR}.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| EXTERNAL_PERMIT_NMBR | Char | 9 | Foreign key to `ICIS_PERMITS` |
+| PERMIT_FEATURE_NMBR | Char | 3 | Outfall identifier |
+| MONITORING_PERIOD_END_DATE | Date | — | End date of the monitoring period (monthly granularity) |
+| PARAMETER_CODE | Char | 5 | EPA parameter code: 50050 = Flow (MGD); 00010 = Temperature; 00400 = pH |
+| DMR_VALUE_NMBR | Numeric | — | Reported numeric value |
+| DMR_UNIT_DESC | Char | 20 | Unit of measure (MGD, mg/L, °F, °C, etc.) |
+| STATISTICAL_BASE_CODE | Char | 4 | MK = Monthly average, DA = Daily maximum, DM = Daily minimum |
+| NODI_CODE | Char | 2 | No-Data-Indicator code (see WOWERS `nodi_codes` config) |
+
+#### V2 — ECHO FRS
+
+**File: `FRS_PROGRAM_LINKS.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| REGISTRY_ID | Char | 12 | FRS facility identifier |
+| PGM_SYS_ACRNM | Char | 10 | EPA program acronym — NPDES, TRI, EIS, AIR, RCRA, SDWIS |
+| PGM_SYS_ID | Char | 30 | Program-specific facility identifier (e.g. NPDES permit number, EIA plant ID for EIS, TRIFD for TRI) |
+
+**File: `FRS_FACILITIES.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| REGISTRY_ID | Char | 12 | Primary key |
+| PRIMARY_NAME | Char | 255 | Master facility name |
+| LATITUDE83 | Numeric | — | NAD83 latitude |
+| LONGITUDE83 | Numeric | — | NAD83 longitude |
+| HUC_CODE | Char | 12 | 12-digit hydrologic unit code |
+| STATE_CODE | Char | 2 | State |
+
+#### V2 — EIA Form 860 (Cooling sheet `6_2_EnviroEquip`)
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| Plant Id | Integer | — | EIA-assigned plant identifier — primary cross-table key |
+| Cooling Id | Char | 10 | Cooling-system identifier within a plant *(inferred)* |
+| Cooling Type 1 | Char | 2 | OC = Once-Through, RC = Recirculating, DC = Dry Cooling, HY = Hybrid |
+| Cooling Water Source 1 | Char | 30 | River, Lake, Ocean, Groundwater, Municipal |
+| Cooling Water Discharge 1 | Char | 30 | River, Lake, Ocean, Pond, Municipal treatment |
+| CWI Withdrawal Rate (GPM) | Numeric | — | Cooling-water-intake withdrawal rate (gallons per minute) |
+
+#### V2 — EIA Form 923 (sheet `8F Cooling Ops`)
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| Plant Id | Integer | — | Foreign key to EIA-860 |
+| Cooling Id | Char | 10 | Cooling-system identifier *(inferred)* |
+| Cooling Type | Char | 2 | OC / RC / DC / HY |
+| Water Source | Char | 30 | River, Lake, etc. |
+| Discharge Volume January (Mgal) | Numeric | — | January monthly discharge volume |
+| Discharge Volume February (Mgal) | Numeric | — | February monthly discharge volume |
+| Discharge Volume March (Mgal) | Numeric | — | March monthly discharge volume |
+| Discharge Volume April (Mgal) | Numeric | — | April monthly discharge volume |
+| Discharge Volume May (Mgal) | Numeric | — | May monthly discharge volume |
+| Discharge Volume June (Mgal) | Numeric | — | June monthly discharge volume |
+| Discharge Volume July (Mgal) | Numeric | — | July monthly discharge volume |
+| Discharge Volume August (Mgal) | Numeric | — | August monthly discharge volume |
+| Discharge Volume September (Mgal) | Numeric | — | September monthly discharge volume |
+| Discharge Volume October (Mgal) | Numeric | — | October monthly discharge volume |
+| Discharge Volume November (Mgal) | Numeric | — | November monthly discharge volume |
+| Discharge Volume December (Mgal) | Numeric | — | December monthly discharge volume |
+
+#### V2 — EPA TRI
+
+**File: `tri_{YEAR}_us_v24a.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| TRIFD | Char | 15 | TRI Facility ID — primary key |
+| FACILITY NAME | Char | 255 | Facility name |
+| LATITUDE | Numeric | — | Facility latitude |
+| LONGITUDE | Numeric | — | Facility longitude |
+| INDUSTRY SECTOR CODE | Char | 6 | NAICS / SIC sector code |
+| CHEMICAL | Char | 255 | TRI chemical name |
+| 5.3 WATER | Numeric | — | Direct water discharge in pounds per year (the V2-relevant column) |
+
+#### V2 — BLS QCEW
+
+**File: `{YEAR}_annual_by_industry.csv` (one row per area × industry)**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| area_fips | Char | 5 | County FIPS code |
+| own_code | Char | 1 | Ownership code (federal / state / local / private) |
+| industry_code | Char | 6 | NAICS code (V2 uses 221 utilities; 311–339 manufacturing; 324 petroleum refining; 325 chemical mfg; 331 primary metal mfg) |
+| agglvl_code | Char | 2 | Aggregation level (county vs national, ownership vs total) |
+| annual_avg_estabs | Integer | — | Annual average establishment count |
+| annual_avg_emplvl | Integer | — | Annual average employment level |
+| avg_annual_pay | Integer | — | Average annual pay (USD) |
+
+#### V3 — MSHA Mine Data
+
+**File: `Mines.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| MINE_ID | Char | 7 | MSHA mine identifier — primary key for all MSHA tables |
+| MINE_NAME | Char | 255 | Mine name *(inferred)* |
+| COAL_METAL_IND | Char | 1 | C = Coal, M = Metal / Non-Metal |
+| MINE_TYPE_CODE | Char | 1 | U = Underground, S = Surface, F = Facility |
+| CURRENT_MINE_STATUS | Char | 2 | AC = Active, TC = Temporarily Closed, AB = Abandoned, NP = Non-Producing |
+| STATE_ABBR | Char | 2 | Two-letter state code |
+| LAT_DGR | Numeric | — | Mine latitude (decimal degrees) |
+| LON_DGR | Numeric | — | Mine longitude (decimal degrees) |
+| PRIMARY_SIC_CD | Char | 4 | Primary SIC code |
+
+**File: `EmploymentProduction.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| MINE_ID | Char | 7 | Foreign key to `Mines` |
+| YEAR | Integer | — | Reporting year |
+| QUARTER | Integer | — | Reporting quarter (1–4) |
+| PRODUCTION | Numeric | — | Production tonnage (units vary by commodity) |
+| HOURS_WORKED | Numeric | — | Total worker hours |
+
+**File: `Violations.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| MINE_ID | Char | 7 | Foreign key |
+| PART_SECTION | Char | 10 | CFR part + section (V3 screen flags 57.11001 = drainage / water-control) |
+| STANDARD_VIOLATED | Char | 30 | Standard violation code |
+| VIOLATION_BEGIN_DT | Date | — | Violation begin date *(inferred)* |
+
+**File: `Accidents.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| MINE_ID | Char | 7 | Foreign key |
+| ACCIDENT_TYPE_CD | Integer | — | Accident type — V3 flags 17 = Inundation (water inflow event) |
+| ACCIDENT_DT | Date | — | Date of accident *(inferred)* |
+
+**File: `Inspections.csv`**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| MINE_ID | Char | 7 | Foreign key |
+| INSPECTION_BEGIN_DT | Date | — | Inspection start |
+| VIOLATIONS_CNT | Integer | — | Number of violations issued during inspection |
+
+#### V3 — USGS mrdata layers
+
+(Schemas vary per dataset; download manually per the steps below. Primary cross-reference: `DEP_ID` in the MRDS layer joins to MSHA `MINE_ID` indirectly via mine name + county spatial join.)
+
+#### V4 — USBR RISE
+
+**API result schema (JSON normalized to CSV per query)**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| loc_id | Integer | — | RISE location identifier |
+| location_name | Char | 255 | Canal / structure name |
+| parameter_name | Char | 60 | "Canal Flow", "Diversion", etc. |
+| parameter_unit | Char | 10 | Typically "cfs" |
+| datetime | DateTime | — | Observation timestamp |
+| result | Numeric | — | Measured value |
+
+#### V4 — USDA NASS QuickStats
+
+**CSV export schema**
+
+| Element | Data Type | Length | Element Definition |
+|---|---|---|---|
+| Year | Integer | — | Census year (2012, 2017, 2022) |
+| Geo Level | Char | 20 | County, State, Region |
+| State | Char | 50 | Full state name |
+| County | Char | 50 | Full county name |
+| State ANSI | Char | 2 | State ANSI / FIPS code |
+| County ANSI | Char | 3 | County ANSI / FIPS code |
+| Data Item | Char | 255 | Full Data Item descriptor (e.g. `IRRIGATION, WATER CONVEYANCE - OPEN DITCH/CANAL - ACRES`) |
+| Value | Numeric | — | Measured value (acres / count / etc.) |
+| CV (%) | Numeric | — | Coefficient of variation (NASS quality indicator) |
+
+#### V4 — California DWR
+
+(Schemas vary by GIS layer; primary candidate layers documented in `CA_DWR_instructions.txt`. Common join keys: District ID, watershed code.)
+
+---
+
+### Data lineage diagrams
+
+#### V1 — Water Utility PRVs
+
+```
+                ┌──────────────────────────────────┐
+                │  SDWA_PUB_WATER_SYSTEMS.csv      │
+                │  (CWS roster, > 500 connections) │
+                └──────────────┬───────────────────┘
+                          PWSID│
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+┌───────▼────────────┐ ┌──────▼─────────────┐ ┌─────▼──────────────────┐
+│ SDWA_FACILITIES    │ │ SDWA_SERVICE_AREAS │ │ SDWA_VIOLATIONS_       │
+│ (treatment+distrib)│ │ (service territory)│ │   ENFORCEMENT          │
+└────────┬───────────┘ └──────┬─────────────┘ └────────────────────────┘
+         │                    │ State+County
+         │                    └────────────┐
+         │                                 ▼
+         │                  ┌──────────────────────────────────┐
+         │                  │  EIA-861 Service_Territory       │─┐
+         │                  └──────────────────────────────────┘ │
+         │                                                       │ Utility#
+         │                  ┌──────────────────────────────────┐ │
+         │                  │  EIA-861 Sales_Ult_Cust          │◄┘
+         │                  │  (¢/kWh by rate class)           │
+         │                  └──────────────────────────────────┘
+         │
+         │ Spatial join via lat/lon
+         ▼
+┌───────────────────────────────────────────────────────────────────┐
+│  NHDPlus V2  →  NHDFlowline (source water reaches)                │
+│             →  PlusFlowlineVAA (slope, elevation, drainage area)  │
+│             →  EromExtension (Q0001E mean annual flow)            │
+│             →  WBDHUC12 (watershed assignment)                    │
+└───────────────────────────────────────────────────────────────────┘
+
+OUTPUT: ranked PRV-candidate water systems with rate-class avoided-cost
+        electricity values and source-water context.
+```
+
+#### V2 — Industrial Cooling-Water Discharge
+
+```
+┌─────────────────────────────┐                  ┌─────────────────────────┐
+│ ICIS_FACILITIES.csv         │                  │  FRS_PROGRAM_LINKS.csv  │
+│ (master facility roster)    │                  │  NPDES ↔ EIS ↔ TRI      │
+└──────────┬──────────────────┘                  └──────────┬──────────────┘
+   REGISTRY_ID                                              │ REGISTRY_ID
+           │                                                │
+           ▼                                                ▼
+┌─────────────────────────────┐                  ┌─────────────────────────┐
+│ ICIS_PERMITS.csv            │                  │ FRS_FACILITIES.csv      │
+│ (design flow > 1 MGD)       │                  │ (master lat/lon, HUC)   │
+└──────────┬──────────────────┘                  └─────────────────────────┘
+   EXTERNAL_PERMIT_NMBR                                     │
+           │                                                │
+           ├────────────────────────────────────────────────┤
+           ▼                                                ▼
+┌─────────────────────────────┐                  ┌─────────────────────────┐
+│ ICIS_NPDES_OUTFALLS.csv     │                  │ EIA-860 Cooling sheet   │
+│ (per-outfall lat/lon)       │                  │ (cooling-type=OC plants)│
+└──────────┬──────────────────┘                  └──────────┬──────────────┘
+           │                                            Plant Id
+           │                                                │
+           ▼                                                ▼
+┌─────────────────────────────────────┐         ┌─────────────────────────┐
+│ DMRS_FY{2009..2026}.csv             │         │ EIA-923 8F Cooling Ops  │
+│ filter PARAMETER_CODE=50050 (flow)  │         │ (monthly cooling Mgal)  │
+│        + 00010 (temperature)        │         └──────────┬──────────────┘
+│ → continuous > 5 MGD outfalls       │                    │
+└──────────┬──────────────────────────┘                    │
+           │                                               │
+           │     ┌─────────────────────────────────────────┘
+           │     │     Cross-confirm via TRI 5.3 WATER column
+           │     │     and ECHO_NPDES_effluent_violations (temp exceedances)
+           ▼     ▼
+   ┌─────────────────────────────────────────┐         ┌──────────────────┐
+   │ V2 candidate cohort                     │         │ BLS QCEW (NAICS) │
+   │ (industrial cooling outfalls)           │◄────────┤ regional market  │
+   └─────────────────────────────────────────┘         │ sizing per county│
+                                                       └──────────────────┘
+```
+
+#### V3 — Mine Dewatering
+
+```
+┌────────────────────────────────────┐
+│ MSHA Mines.csv                     │
+│ filter: MINE_TYPE_CODE=U (underground)
+│        + CURRENT_MINE_STATUS=AC    │
+└──────────┬─────────────────────────┘
+       MINE_ID
+           ├──────────┬──────────────┬──────────────┐
+           ▼          ▼              ▼              ▼
+   ┌───────────┐ ┌──────────┐ ┌─────────────┐ ┌─────────────┐
+   │Employment │ │Violations│ │ Accidents   │ │ Inspections │
+   │Production │ │ PART_SEC=│ │ ACCIDENT_   │ │             │
+   │(active op)│ │57.11001  │ │ TYPE_CD=17  │ │             │
+   │           │ │(drainage)│ │(inundation) │ │             │
+   └───────────┘ └──────────┘ └─────────────┘ └─────────────┘
+                       │             │
+                       └─────┬───────┘
+                             ▼
+              ┌──────────────────────────────────┐
+              │  Flag high-water-inflow mines    │
+              │  (drainage violations OR         │
+              │   inundation accident history)   │
+              └──────────────┬───────────────────┘
+                             │
+              Spatial join (mine name + county) ▼
+              ┌──────────────────────────────────┐
+              │ USGS mrdata (MRDS / USMIN)       │
+              │ → deposit depth                  │
+              │ → commodity type                 │
+              │ → AML (abandoned mines)          │
+              └──────────────────────────────────┘
+```
+
+#### V4 — Irrigation Canal Drops
+
+```
+┌────────────────────────────────────────────────┐
+│ USDA NASS Census (2012 / 2017 / 2022)          │
+│ IRRIGATION, WATER CONVEYANCE - OPEN DITCH      │
+│ → rank counties by canal-irrigated acreage     │
+└───────────────────────┬────────────────────────┘
+                        │
+            County ANSI ▼
+┌────────────────────────────────────────────────┐
+│ NHDPlus V2                                     │
+│   NHDFlowline.FTYPE = 336 (Canal Ditch)        │
+│   ∪ PlusFlowlineVAA.SLOPE > 0.001              │
+│   ∪ EromExtension.Q0001E (flow cfs)            │
+│ → candidate canal-drop reaches                 │
+└───────────────────────┬────────────────────────┘
+                COMID   │
+        ┌───────────────┴─────────────────────────┐
+        │ Spatial join (USBR project boundary)     │
+        ▼                                          │
+┌────────────────────────────────────────┐        │
+│ USBR RISE API                          │        │
+│ /rise/api/result?location=<canal>      │        │
+│ → measured flow time series (cfs)      │        │
+└────────────────────────────────────────┘        │
+                                                  │
+        ┌─────────────────────────────────────────┘
+        │ Spatial join (CA-only)
+        ▼
+┌────────────────────────────────────────┐
+│ CA DWR canal GIS layers                │
+│ → district boundaries, operator info   │
+└────────────────────────────────────────┘
+
+OUTPUT: ranked canal reaches with (head_ft = SLOPE × LENGTHKM × 1000 / 0.3048)
+        × measured-or-modelled flow (cfs) × 0.085 → estimated kW.
+```
+
+---
+
+### Manual downloads required
+
+The following datasets cannot be pulled with a single bulk URL and require step-by-step manual interaction. Each manual dataset has a `*_instructions.txt` file alongside the data folder.
+
+#### 1. USGS mrdata (Mineral Resources Spatial Data) — V3
+
+**Why manual:** No single bulk endpoint; each sub-dataset (USMIN, MRDS, AML) is selected and downloaded individually.
+
+**Steps:**
+1. Visit https://mrdata.usgs.gov/
+2. From the dataset index, download these three layers:
+   - **USMIN — Mineral Industry Locations** (active / inactive mine point dataset)
+   - **MRDS — Mineral Resources Data System** (deposit-level database)
+   - **AML — Abandoned Mine Lands** (legacy / orphaned mine dataset)
+3. For each layer, select the "Download Shapefile" or "Download GeoJSON" option (preferred: Shapefile for QGIS / ArcGIS compatibility).
+4. Save extracted files into `/Volumes/SANDISK/WOWERS_Pivot_Data/V3_Mine_Dewatering/USGS_mrdata/<layer_name>/`.
+5. Document each download (date, version) in `USGS_mrdata_instructions.txt`.
+
+**Approximate effort:** 30–45 min including portal navigation.
+
+#### 2. USBR RISE — V4
+
+**Why manual:** API-keyed and per-location; bulk dump not exposed.
+
+**Steps:**
+1. Visit https://data.usbr.gov/ and identify candidate canal locations via the catalog UI.
+2. For each canal of interest, copy the `loc_id` from the URL.
+3. Query the API:
+   ```
+   GET https://data.usbr.gov/rise/api/result?
+       itemId=<loc_id>&
+       parameterName=Canal Flow&
+       beforeDateTime=2026-01-01&
+       afterDateTime=2009-01-01&
+       format=json
+   ```
+4. Save each response as `V4_.../USBR_RISE/<loc_id>_<parameter>.json` then normalise to CSV per the schema above.
+5. Document chosen `loc_id`s and date ranges in `USBR_RISE_instructions.txt`.
+
+**Recommended starting `loc_id` set:** Colorado River Aqueduct, Central Valley Project canals (Delta-Mendota, Friant-Kern), Columbia Basin Project canals.
+
+**Approximate effort:** 1–2 hours for a starter set of 20–50 canals.
+
+#### 3. USDA NASS Census of Agriculture (Irrigation tables) — V4
+
+**Why manual:** QuickStats UI is required to scope by Data Item; full census downloads are too large to use directly.
+
+**Steps:**
+1. Visit https://quickstats.nass.usda.gov/.
+2. Apply these query filters:
+   - **Program:** CENSUS
+   - **Sector:** ENVIRONMENTAL
+   - **Group:** IRRIGATION
+   - **Commodity:** IRRIGATION
+   - **Data Items:** select the three relevant items —
+     - `IRRIGATION, WATER CONVEYANCE - OPEN DITCH/CANAL - ACRES`
+     - `IRRIGATION, WATER SOURCE - SURFACE WATER - ACRES`
+     - `WATER DISTRICTS, SERVING FARMS - NUMBER`
+   - **Year:** select 2012, 2017, 2022 (multi-select)
+   - **Geographic Level:** COUNTY
+3. Click "Get Data" → "Spreadsheet" → CSV download.
+4. Repeat for each Data Item (or use the "Add" multi-item selector).
+5. Save as `V4_.../USDA_NASS/<data_item>_{2012,2017,2022}.csv`.
+6. Document query filters in `USDA_NASS_Census_instructions.txt`.
+
+**Approximate effort:** 30–45 min.
+
+#### 4. California DWR — V4
+
+**Why manual:** Multiple portals, layer names change occasionally, GIS layer descriptions require human interpretation.
+
+**Steps:**
+1. Visit https://data.cnra.ca.gov/ (the CA Natural Resources Agency open-data portal).
+2. Search for these candidate layers:
+   - **CIMIS Stations** (California Irrigation Management Information System reference ET stations)
+   - **State Water Board Irrigated Lands Regulatory Program** boundaries
+   - **CA Canal / Conveyance GIS layers** (search "canal" within CNRA)
+3. For each layer, choose "Download" → "Shapefile" (preferred) or "GeoJSON".
+4. Save into `V4_.../CA_DWR/<layer_name>/`.
+5. Also check https://water.ca.gov/ for any datasets not surfaced via CNRA portal.
+6. Document downloaded layers (name, date, source URL, layer description) in `CA_DWR_instructions.txt`.
+
+**Approximate effort:** 1–2 hours.
+
+---
+
+### Known limitations
+
+| Limitation | Vertical(s) affected | Impact | Mitigation |
+|---|---|---|---|
+| **SDWA / SDWIS publishes only a quarterly "latest" snapshot — no historical archive.** | V1 | Cannot reconstruct system-size trends over time; treat as point-in-time. | Capture quarterly snapshots locally with date-stamped archive folders so longitudinal analysis is possible going forward. |
+| **MSHA Mine Data is a live snapshot of the operating database.** | V3 | Mine status (`AC`, `TC`, `AB`) reflects the day of download; mines transition status frequently. | Re-download quarterly; date-stamp the archive. Pin the snapshot used for any published model card. |
+| **USBR RISE has no bulk-download interface — every canal requires a separate API query.** | V4 | High manual / scripted effort; rate limits unknown. | Build a `usbr_rise_pull.py` script in `src/ingest/` once the canal candidate set is finalised; respect a conservative 1 req / sec throttle. |
+| **NHDPlus V2 flow estimates (`Q0001E`) are modelled by the Enhanced Runoff Method, not measured.** | V1 + V4 | Per-reach flow has model error; bias is typically systematic by region. | Cross-validate against USBR RISE measured flow for any reach where both are available; quantify modelled-vs-measured bias per HUC4 before publishing portfolio numbers. |
+| **EIA-861 and EIA-923 release schedules lag the current year by 9–18 months.** | V1 + V2 | Most recent year of retail rates and cooling-water volumes is one year behind. | Use the latest available year as the basis; document the as-of date on every scorecard. |
+| **TRI release schedule lags by ~2 years.** | V2 | Cannot cross-confirm discharges for the very latest year. | Treat TRI as a 2-year-lagged validation source, not a screening primary. |
+| **BLS QCEW publishes county-level industry detail with confidentiality suppressions for small NAICS-county cells.** | V2 | Some small markets will have missing establishment counts. | Aggregate to the MSA level or roll up to 3-digit NAICS to recover suppressed cells. |
+| **NHDPlus V2 dataset is from ~2012; minor updates only since.** | V1 + V4 | Some canals built after 2012 are not represented; some abandoned reaches still appear. | Cross-check candidate reaches against current satellite imagery (Sentinel-2 / NAIP) before any site visit. |
+| **California DWR open-data portal restructures periodically — layer names drift.** | V4 | Stored URLs may break over time. | Re-verify layer URLs in `CA_DWR_instructions.txt` once per year; prefer dataset DOIs where available. |
+
+---
+
+### Pipeline-integration plan (per vertical, post-acquisition)
+
+| Vertical | New Phase 1 ingest module to create | Reuses (from current WOWERS) | New code surface |
+|---|---|---|---|
+| V1 PRVs | `src/ingest/pws.py` | All of Phase 2 / 3 / 4 (with vertical-scoped F4 configs) | PRV pressure-drop estimator (replaces 3DEP head lookup) |
+| V2 Industrial | `src/ingest/industrial.py` | Phase 1 DMR loader (filter change only), Phase 2 / 3 / 4 | Cooling-type filter (OC) + EIA-860 / 923 joins |
+| V3 Mines | `src/ingest/mining.py` | Phase 2 (steady-state version) / 3 / 4 | MSHA + mrdata joins; depth → head conversion |
+| V4 Irrigation | `src/ingest/irrigation.py` | Phase 3 / 4 | NHDPlus → slope × length → head conversion; canal-segment FTYPE filter |
+
+Add `vertical: str` column to every Phase 1+ parquet so Phase 5 ML can train across all four cohorts simultaneously.
+
+---
+
+### Session: 2026-05-22
+
+**What was done:**
+- Migrated all WOWERS data from the prior 256 GB external drive to a new 1 TB SANDISK SSD (`/Volumes/SANDISK/`).
+- Re-pointed `data/raw/dmr` and `data/raw/npdes_downloads` symlinks to the new drive.
+- Updated 9 historical `/Volumes/256Drive/` references in `WOWERS_PROJECT_JOURNAL.md` to `/Volumes/SANDISK/` (one-time RULE-2 waiver).
+- Acquired raw datasets for the four pivot verticals (V1–V4) into `/Volumes/SANDISK/WOWERS_Pivot_Data/` — downloads still in progress at end of session.
+- Documented the complete pivot-data inventory in this journal: top-level layout, vertical summaries, master dataset table, folder size summary, field-level data dictionaries for every key CSV / sheet, ASCII lineage diagrams per vertical, manual-download instructions for the 4 datasets that cannot be bulk-pulled, and a known-limitations table.
+
+**Files modified / created:**
+- `data/raw/dmr` symlink — repointed from `/Volumes/256Drive/DMR Datasets` to `/Volumes/SANDISK/DMR Datasets`.
+- `data/raw/npdes_downloads` symlink — repointed from `/Volumes/256Drive/npdes_downloads` to `/Volumes/SANDISK/npdes_downloads`.
+- `WOWERS_PROJECT_JOURNAL.md` — replaced 9 `256Drive` references; appended this **"WOWERS Pivot Data Acquisition Inventory — May 22 2026"** section plus this session-log entry.
+- `/Volumes/SANDISK/WOWERS_Pivot_Data/` (off-repo, on SSD) — populated V1 / V2 / V3 / V4 subfolders with the datasets enumerated above.
+
+**Resources used (source URLs):**
+- EPA ECHO — https://echo.epa.gov/tools/data-downloads (SDWA, NPDES facilities / effluent / DMR / outfalls, FRS).
+- EIA — https://www.eia.gov/electricity/data/eia861/ , https://www.eia.gov/electricity/data/eia860/ , https://www.eia.gov/electricity/data/eia923/.
+- EPA NHDPlus — https://www.epa.gov/waterdata/nhdplus-national-data and S3 mirror at `dmap-data-commons-ow.s3.amazonaws.com/NHDPlusV21/Data/NationalData/`.
+- EPA TRI — https://www.epa.gov/toxics-release-inventory-tri-program.
+- BLS QCEW — https://www.bls.gov/cew/downloadable-data-files.htm.
+- MSHA — https://www.msha.gov/data-and-reports/mine-data-retrieval-system and https://arlweb.msha.gov/OpenGovernmentData/DataSets/.
+- USGS mrdata — https://mrdata.usgs.gov/.
+- USBR RISE — https://data.usbr.gov/ (API: https://data.usbr.gov/rise/api/result).
+- USDA NASS QuickStats — https://quickstats.nass.usda.gov/.
+- CA DWR / CNRA — https://water.ca.gov/ and https://data.cnra.ca.gov/.
+
+**Next steps after this session:**
+1. Finish the remaining in-flight downloads (V1 NHDPlus V2 archive completion; V2 DMR fiscal-year set; V2 BLS QCEW backfill).
+2. Complete the 4 manual downloads per the "Manual downloads required" instructions above (USGS mrdata, USBR RISE, USDA NASS, CA DWR).
+3. Verify disk-resident totals match the inventory table once all downloads complete.
+4. Begin the pre-build customer-validation calls per the prior "Pre-Phase 5 Decision Framework" entry (10 stakeholder conversations across utilities, ESCOs, OEMs, state energy offices, and EPA / DOE).
+5. After validation signal is in, scaffold `src/ingest/pws.py` as the first new vertical (V1 PRVs is the highest-leverage pivot per prior analysis).
+6. Resume Phase 5 ML work in parallel using existing V0 (POTW) outputs while pivot-vertical ingest matures.
+
+---
