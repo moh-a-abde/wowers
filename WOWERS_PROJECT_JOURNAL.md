@@ -3949,3 +3949,177 @@ Add `vertical: str` column to every Phase 1+ parquet so Phase 5 ML can train acr
 6. Resume Phase 5 ML work in parallel using existing V0 (POTW) outputs while pivot-vertical ingest matures.
 
 ---
+
+## Pivot Data Acquisition — Disk Audit & URL Corrections (May 22 2026, evening)
+
+Downloads completed for all four pivot verticals. This entry documents the **deltas** versus the morning's plan-based inventory (above). Treat the morning inventory's tables as superseded where this audit contradicts them; everything not contradicted below remains accurate.
+
+### TL;DR — actual disk usage
+
+| Folder | Planned size (AM) | Actual size on disk | Δ |
+|---|---|---|---|
+| `V1_Water_Utility_PRVs/` | ~12.5 GB | **~7.9 GB** | −4.6 GB |
+| `V2_Industrial_Cooling_Water_Discharge/` | ~18 GB | **~16 GB** | −2 GB |
+| `V3_Mine_Dewatering/` | ~230 MB | **~248 MB** | +18 MB |
+| `V4_Irrigation_Canal_Drops/` | ~3 GB | **~1.2 MB** | −2.9 GB (instructions only — see V4 note) |
+| **Total** | **~31 GB** | **~25 GB** | **−6 GB** |
+
+V4 came in at instruction-files only because every V4 dataset is either API-keyed (USBR RISE), manual-portal (USDA NASS, CA DWR), or already lives in V1 (NHDPlus V2). No raw V4 files until the manual downloads are executed.
+
+### URL corrections discovered during download
+
+The morning inventory's source URLs were close but had several real-world quirks that bit during the actual pull. Recording the canonical forms here for future re-runs.
+
+#### EIA Form 861 — naming changed in 2012
+
+| Year | URL |
+|---|---|
+| 2009 | `https://www.eia.gov/electricity/data/eia861/archive/zip/861_2009.zip` |
+| 2010 | `https://www.eia.gov/electricity/data/eia861/archive/zip/861_2010.zip` |
+| 2011 | `https://www.eia.gov/electricity/data/eia861/archive/zip/861_2011.zip` |
+| 2012–2023 | `https://www.eia.gov/electricity/data/eia861/archive/zip/f861{YEAR}.zip` (`f861` prefix) |
+| 2024 (current) | `https://www.eia.gov/electricity/data/eia861/zip/f8612024.zip` (no `archive/`) |
+
+EIA-861 turned out to be much smaller than the morning estimate — **~60 MB total** for 2009–2024 (was estimated ~192 MB). Excel files compress well.
+
+#### EIA Form 860 — archive vs current split
+
+| Year | URL |
+|---|---|
+| 2009–2023 (archive) | `https://www.eia.gov/electricity/data/eia860/archive/xls/eia860{YEAR}.zip` |
+| 2024 (current) | `https://www.eia.gov/electricity/data/eia860/xls/eia8602024.zip` (no `archive/`) |
+
+Total size confirmed ~1.6 GB across 16 years.
+
+#### EIA Form 923 — archive vs current split + much smaller than estimated
+
+| Year | URL |
+|---|---|
+| 2009–2024 (archive) | `https://www.eia.gov/electricity/data/eia923/archive/xls/f923_{YEAR}.zip` |
+| 2025 (current) | `https://www.eia.gov/electricity/data/eia923/xls/f923_2025.zip` (no `archive/`) |
+
+**Actual total ~290 MB** (was estimated ~850 MB). EIA-923 zips average 9–21 MB per year, not 50 MB.
+
+#### NPDES DMR — lowercase `fy` confirmed
+
+URL pattern confirmed as `https://echo.epa.gov/files/echodownloads/npdes_dmrs_fy{YEAR}.zip` — **lowercase** `fy{YEAR}`. Pre-2009 path is `npdes_dmrs_prefy2009.zip`. Total ~8.8 GB across 19 fiscal-year zips matches the AM estimate.
+
+#### EPA TRI Basic Plus — irregular paths per year
+
+This was the messy one. EPA's TRI Basic Plus files are *not* uniformly named:
+
+| Year | URL |
+|---|---|
+| 2009 | `https://www.epa.gov/system/files/other-files/2025-11/us_2009.zip` |
+| **2010** | `https://www.epa.gov/system/files/other-files/2025-11/us_2010_0.zip` (note **`_0`** suffix) |
+| **2011** | `https://www.epa.gov/system/files/other-files/2026-01/us_2011.zip` (note **different date folder** `2026-01`) |
+| 2012–2022 (except 2010 / 2011) | `https://www.epa.gov/system/files/other-files/2025-11/us_{YEAR}.zip` |
+
+Additional notes that were not in the AM inventory:
+- **Format**: each ZIP contains **10 tab-delimited `.txt` files** labelled 1A, 1B, 2A, 2B, 3A, 3B / 3C, 4, 5, 6 (the standard TRI Basic Plus file family) — *not* CSV.
+- **Update frequency**: EPA replaces the live file for each year as revisions are released, so the URL is stable but the contents drift. Always re-download to pick up corrections.
+- **Actual size**: ~780 MB total (was ~560 MB estimate).
+
+#### MSHA — 5 zips, not 6
+
+The plan listed 6 MSHA tables; the actual download is 5. SIC data turned out to be already embedded in `Mines.csv`, so there is no separate `MSHA_MinesSic.zip`. Naming on the MSHA Open Government Data server also differs slightly from local saved names — recording both below.
+
+| Local file (saved name) | MSHA server URL | Inner CSV |
+|---|---|---|
+| `MSHA_Mines.zip` | `https://arlweb.msha.gov/OpenGovernmentData/DataSets/Mines.zip` | `Mines.csv` |
+| `MSHA_Accidents.zip` | `https://arlweb.msha.gov/OpenGovernmentData/DataSets/Accidents.zip` | `Accidents.csv` |
+| `MSHA_Inspections.zip` | `https://arlweb.msha.gov/OpenGovernmentData/DataSets/Inspections.zip` | `Inspections.csv` |
+| `MSHA_Violations.zip` | `https://arlweb.msha.gov/OpenGovernmentData/DataSets/Violations.zip` | `Violations.csv` |
+| **`MSHA_EmployerProd.zip`** (renamed locally) | `https://arlweb.msha.gov/OpenGovernmentData/DataSets/MinesProdYearly.zip` | `MinesProdYearly.csv` |
+
+Drainage CFR sections to filter in `Violations.csv` are **57.11001** *and* **57.14130** (the morning inventory only listed `57.11001`). Both signal water-control deficiencies.
+
+#### NHDPlus V2 — smaller archive than estimated
+
+Confirmed `~7.3 GB` for the 7z archive (was ~12 GB estimate). Expanded geodatabase ~25 GB as previously documented.
+
+**Additional note**: the seamless geodatabase already ships with `PlusFlowlineVAA`, `EromExtension`, and `ElevSlope` tables — **a separate national attributes file is not required**. The morning inventory implied auxiliary downloads might be needed; they are not.
+
+### Revised master inventory table (deltas only)
+
+This table replaces the AM master inventory **only for the rows listed**. Rows not shown below remain as documented in the morning entry.
+
+| # | Dataset | AM size | Actual size | Notes |
+|---|---|---|---|---|
+| 1.2 | EIA Form 861 | ~192 MB | **~60 MB** | URL naming changes at 2012 boundary; current vs archive split at 2024 |
+| 1.3 | NHDPlus V2 (Lower 48 7z) | ~12 GB | **~7.3 GB** | Self-contained attribute tables — no extra national-attributes pull needed |
+| 2.3 | NPDES DMR (pre-2009 + FY2009–2026) | ~8.8 GB | ~8.8 GB ✓ | URL pattern uses lowercase `fy{YEAR}` |
+| 2.6 | EIA Form 860 | ~1.6 GB | ~1.6 GB ✓ | Archive (≤ 2023) vs current (2024) URL split |
+| 2.7 | EIA Form 923 | ~850 MB | **~290 MB** | Archive (≤ 2024) vs current (2025) URL split; actual zips 9–21 MB/yr |
+| 2.8 | EPA TRI Basic Plus | ~560 MB | **~780 MB** | Per-year URL paths irregular (see TRI section above); format = 10 `.txt` files per year |
+| 3.1 | MSHA Mine Data | 6 tables / ~80 MB | **5 tables / ~248 MB** | SIC merged into `Mines.csv`; `EmployerProd` ZIP wraps `MinesProdYearly.csv` |
+| 4.x | V4 datasets (RISE / NASS / CA DWR / NHDPlus shared) | ~3 GB | **~1.2 MB on disk** | Only instruction files present locally; data is API-keyed, manual-portal, or referenced from V1 |
+
+### Revised folder summary
+
+| Folder | Files | Disk Size (actual) | Primary Join Key |
+|---|---|---|---|
+| `V1_Water_Utility_PRVs/` | SDWA zip, EIA-861 × 16, NHDPlus V2 (7.3 GB) | **~7.9 GB** | PWSID |
+| `V2_Industrial_Cooling_Water_Discharge/` | NPDES facilities + effluent + DMR × 19 + outfalls + FRS, EIA-860 × 16, EIA-923 × 17, TRI × 14, BLS QCEW × 15 | **~16 GB** | EXTERNAL_PERMIT_NMBR / REGISTRY_ID |
+| `V3_Mine_Dewatering/` | MSHA × 5 tables, USGS mrdata (manual) | **~248 MB** | MINE_ID |
+| `V4_Irrigation_Canal_Drops/` | NHDPlus V2 (shared in V1), USBR RISE (API), NASS Census (manual), CA DWR (manual) | **~1.2 MB** (instruction files only) | COMID / loc_id |
+| **Total on disk** | | **~25 GB** | |
+
+### Known-limitations addendum
+
+Adding one new limitation to the morning list:
+
+| New limitation | Vertical | Impact | Mitigation |
+|---|---|---|---|
+| **EPA TRI Basic Plus file paths drift between annual revision cycles.** | V2 | URLs stored from a prior pull will silently 404 once EPA publishes a new revision — observed today for years 2010 (`_0` suffix) and 2011 (different date folder `2026-01`). | Build the V2 TRI ingest module so it scrapes the live "TRI Basic Plus" download page to discover current URLs at run time rather than hard-coding paths. Re-verify on every pipeline run. |
+
+All other limitations from the morning entry stand unchanged:
+- SDWA / SDWIS quarterly-only (no historical archive).
+- MSHA is a live snapshot.
+- USBR RISE requires per-location API queries.
+- NHDPlus V2 flow estimates are modelled, not measured.
+- EIA-861 / 860 / 923 release schedules lag the current year by 9–18 months.
+- TRI publication lags ~2 years.
+- BLS QCEW small-cell confidentiality suppressions.
+- CNRA / CA DWR layer-name drift.
+
+### Pipeline-integration implications
+
+Two concrete impacts on the planned `src/ingest/*.py` modules:
+
+1. **`src/ingest/industrial.py` (V2)** must implement a **live URL discovery** step for TRI Basic Plus rather than hard-coding the per-year paths. Single most fragile data source in V2.
+2. **`src/ingest/mining.py` (V3)** filter for drainage CFR sections in `Violations.csv` must include both **`57.11001`** and **`57.14130`** — easy to miss if only the morning inventory is referenced.
+
+### Session: 2026-05-22 (evening)
+
+**What was done:**
+- Completed pivot-data downloads for all four verticals to `/Volumes/SANDISK/WOWERS_Pivot_Data/`. Final on-disk total ~25 GB (vs ~31 GB planned in the morning).
+- Discovered and recorded URL corrections for EIA-861 (naming change at 2012; archive vs current at 2024), EIA-860 (archive vs current at 2024), EIA-923 (archive vs current at 2025), NPDES DMR (lowercase `fy{YEAR}`), EPA TRI Basic Plus (irregular per-year paths including `_0` suffix on 2010 and a different date folder on 2011), and MSHA (5 tables not 6; `EmployerProd` wraps `MinesProdYearly.csv`).
+- Confirmed NHDPlus V2 archive is 7.3 GB (not 12 GB) and ships with the full attribute-table set (no separate national-attributes download needed).
+- Added drainage CFR section `57.14130` to the V3 violations filter alongside `57.11001`.
+- Noted that V4 contains only instruction files on disk because all V4 datasets are API-keyed (USBR RISE), manual-portal (USDA NASS, CA DWR), or already shared from V1 (NHDPlus V2).
+- Added a new known-limitation entry covering EPA TRI Basic Plus file-path drift between annual revisions.
+
+**Files modified / created:**
+- `/Volumes/SANDISK/WOWERS_Pivot_Data/V1..V4/` — populated with final raw files (off-repo, on SSD).
+- `WOWERS_PROJECT_JOURNAL.md` — appended this "Pivot Data Acquisition — Disk Audit & URL Corrections" section plus this session-log entry.
+
+**Resources used (URLs encountered during the audit):**
+- EIA-861 download page — https://www.eia.gov/electricity/data/eia861/
+- EIA-860 download page — https://www.eia.gov/electricity/data/eia860/
+- EIA-923 download page — https://www.eia.gov/electricity/data/eia923/
+- EPA TRI Basic Plus calendar-years page — https://www.epa.gov/toxics-release-inventory-tri-program/tri-basic-plus-data-files-calendar-years-1987-present
+- MSHA Open Government Data — https://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
+- EPA ECHO download index — https://echo.epa.gov/tools/data-downloads
+- EPA NHDPlus — https://www.epa.gov/waterdata/nhdplus-national-data
+
+**Next steps after this session:**
+1. Execute the four manual downloads per the AM "Manual downloads required" instructions (USGS mrdata, USBR RISE, USDA NASS QuickStats, CA DWR).
+2. After manual pulls finish, perform a second disk audit and reconcile V3 (USGS mrdata) and V4 (RISE / NASS / CA DWR) sizes.
+3. Begin scaffolding `src/ingest/pws.py` (V1) with the SDWA + EIA-861 + NHDPlus reads in place. Highest-leverage pivot per the prior strategic assessment.
+4. When building `src/ingest/industrial.py` (V2), implement live URL discovery for TRI Basic Plus — do **not** hard-code per-year paths.
+5. When building `src/ingest/mining.py` (V3), include both `57.11001` and `57.14130` in the drainage-CFR violation filter.
+6. Begin the customer-validation calls (10 stakeholder conversations) per the prior "Pre-Phase 5 Decision Framework" entry.
+7. Continue Phase 5 ML on existing V0 (POTW) data in parallel with vertical pivots.
+
+---
