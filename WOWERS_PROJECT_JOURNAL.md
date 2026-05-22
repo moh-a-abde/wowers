@@ -4123,3 +4123,101 @@ Two concrete impacts on the planned `src/ingest/*.py` modules:
 7. Continue Phase 5 ML on existing V0 (POTW) data in parallel with vertical pivots.
 
 ---
+
+## Pivot Data Downloader Script — May 22 2026 (evening)
+
+Added a reproducible bulk-download script for the entire pivot-data acquisition. New folder at the repo root:
+
+```
+pivot file download/
+└── download_all_master.sh   (204 lines, executable, ~10.7 KB)
+```
+
+This is the operational artefact that makes the morning's documented dataset inventory and the evening's URL corrections **directly usable by teammates** without re-doing the discovery work.
+
+### What the script does
+
+A single `bash` driver that pulls every bulk-downloadable dataset across all four pivot verticals into the canonical SANDISK folder structure. Total expected download: ~25 GB; runtime 2–6 hours depending on connection speed.
+
+| Step | Datasets pulled |
+|---|---|
+| V1 / SDWA | `SDWA_latest_downloads.zip` |
+| V1 / EIA-861 | 2009–2024 (16 zips, with correct naming pivot at 2012 + 2024 archive split) |
+| V1 / NHDPlus V2 | Seamless Lower-48 geodatabase (~7.3 GB single 7z file) |
+| V2 / ECHO NPDES | facilities, effluent, outfalls, FRS (4 zips) |
+| V2 / DMR | pre-FY2009 + FY2009–FY2026 (19 zips, lowercase `fy{YEAR}`) |
+| V2 / EIA-860 | 2009–2024 (16 zips, archive vs current split at 2024) |
+| V2 / EIA-923 | 2009–2025 (17 zips, archive vs current split at 2025) |
+| V2 / TRI Basic Plus | 2009–2022 (14 zips, irregular per-year paths hard-coded individually — including `_0` suffix on 2010 and the `2026-01` date folder on 2011) |
+| V2 / BLS QCEW | 2009–2023 (15 zips) |
+| V3 / MSHA | 5 zips (Mines / Accidents / Inspections / Violations / MinesProdYearly) |
+| V4 | no bulk pulls — prints manual-download reminder for USBR RISE / USDA NASS / CA DWR |
+
+### Design features (worth knowing before running)
+
+| Feature | Behaviour |
+|---|---|
+| **Idempotent** | Skips any file already on disk and larger than 512 KB. Safe to re-run after partial failure. |
+| **Retry logic** | `curl --fail -L --retry 3` — each URL gets 3 automatic retries on transient network errors. |
+| **Failure detection** | Files smaller than 512 KB are treated as failed downloads (typical when EPA / EIA serve an HTML error page instead of a ZIP). They are flagged in the summary as `✗ SMALL`. |
+| **Progress + summary** | Prints per-file status (`✓ OK`, `✓ SKIP`, `✗ FAIL`, `✗ SMALL`) and a final tally of `Passed / Failed / Skipped`, plus a `du -sh` line per vertical folder. |
+| **Single config knob** | The `BASE` variable at the top of the script (line 25) sets the root data path. Default `/Volumes/SANDISK/WOWERS_Pivot_Data`. Teammates with a different drive name only need to edit that one line. |
+| **Strict mode** | `set -euo pipefail` — exits non-zero on any unhandled error or undefined variable so CI / cron usage is reliable. |
+| **Cross-platform `stat`** | Tries macOS (`stat -f%z`) then Linux (`stat -c%s`) so the same script works on either OS without modification. |
+| **Exit code** | Returns `0` if all downloads succeeded; `1` if any failed (so a teammate's shell can react). |
+
+### Usage
+
+```bash
+chmod +x "pivot file download/download_all_master.sh"
+./pivot\ file\ download/download_all_master.sh
+```
+
+Or, the script-friendly form (matches the comment block):
+
+```bash
+chmod +x /Volumes/SANDISK/WOWERS_Pivot_Data/download_all_master.sh
+/Volumes/SANDISK/WOWERS_Pivot_Data/download_all_master.sh
+```
+
+The second form assumes the script is also copied to the SSD root for off-repo execution — useful when running long downloads from a machine that may not have the WOWERS repo cloned locally.
+
+### Why this is in the repo
+
+- Anyone joining the project (team member, code reviewer, peer reviewer of the eventual paper, grant officer) can now reconstruct the raw-data corpus with a single command.
+- The script **encodes all the URL corrections** captured in the prior "Pivot Data Acquisition — Disk Audit & URL Corrections" section. Anyone re-pulling six months from now will not have to re-discover the EIA-861 / EIA-860 / EIA-923 / TRI quirks.
+- Sets up reproducibility infrastructure required for any future DOE / SBIR grant submission (per the "Revenue line 5 — Academic / DOE grant work" section earlier in this journal).
+
+### Folder placement choice
+
+Lives at the repo root in `pivot file download/` (with the space — matches the user's directory name) rather than `scripts/` or `src/` because:
+
+- It's not part of the Python pipeline — it's an operational data-prep script.
+- Keeping it visible at the root makes it easier for non-engineer teammates to find.
+- The folder name will likely host more pivot-acquisition utilities in the future (URL-verification check, post-download integrity audit, manual-download checklists), so giving it its own top-level folder now avoids future moves.
+
+### Future enhancements (not in this commit)
+
+- Add `verify_downloads.sh` — re-checks every file's size against expected ranges and counts the inner CSVs of each ZIP.
+- Add `discover_tri_urls.py` — scrapes the live TRI Basic Plus download page to detect EPA's annual URL drift and emits an updated URL list. Required for the V2 ingest module per the prior "Pipeline-integration implications" note.
+- Add `manual_download_checklist.md` — concrete step-by-step for the four manual datasets (USGS mrdata / USBR RISE / USDA NASS / CA DWR), consolidating instructions that currently live in per-folder `*_instructions.txt` files on the SSD.
+
+### Session: 2026-05-22 (evening, continued)
+
+**What was done:**
+- Added the `pivot file download/` folder at the repo root.
+- Created `pivot file download/download_all_master.sh` — a 204-line idempotent bash downloader covering every bulk-downloadable dataset across V1–V4, encoding the URL corrections captured earlier in this session.
+
+**Files modified / created:**
+- `pivot file download/download_all_master.sh` — new file (executable, 0700, ~10.7 KB).
+- `WOWERS_PROJECT_JOURNAL.md` — appended this section + this session-log entry.
+
+**Resources used:**
+- All URLs encoded in the script — see the "Pivot Data Acquisition — Disk Audit & URL Corrections" section above for the discovery / verification context behind each one.
+
+**Next steps after this session:**
+1. Have a second team member run the script on a fresh machine + drive to validate the canonical URL set end-to-end.
+2. Add the planned `verify_downloads.sh` and `discover_tri_urls.py` companion scripts.
+3. Continue with the pivot-development plan: manual downloads → `src/ingest/pws.py` scaffold → customer-validation calls.
+
+---
