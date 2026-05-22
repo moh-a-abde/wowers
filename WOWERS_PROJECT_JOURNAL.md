@@ -579,21 +579,21 @@ Two rounds of agent code review were conducted on the Phase 2 and Phase 4 code i
 
 **What was done:**
 - Reviewed full project state: 204/204 tests passing, Phases 1–4 implemented and reviewed, no raw data locally
-- Identified EPA ECHO raw data (~10 GB) was on Tom's external hard drive (`/Volumes/256Drive/`)
-- Confirmed drive contains all DMR fiscal year ZIPs (FY2009–FY2026) flat in `/Volumes/256Drive/DMR Datasets/`
-- Downloaded `npdes_downloads.zip` from `https://echo.epa.gov/files/echodownloads/npdes_downloads.zip` and extracted to `/Volumes/256Drive/npdes_downloads/`; confirmed `ICIS_FACILITIES.csv` and `ICIS_PERMITS.csv` present
+- Identified EPA ECHO raw data (~10 GB) was on Tom's external hard drive (`/Volumes/SANDISK/`)
+- Confirmed drive contains all DMR fiscal year ZIPs (FY2009–FY2026) flat in `/Volumes/SANDISK/DMR Datasets/`
+- Downloaded `npdes_downloads.zip` from `https://echo.epa.gov/files/echodownloads/npdes_downloads.zip` and extracted to `/Volumes/SANDISK/npdes_downloads/`; confirmed `ICIS_FACILITIES.csv` and `ICIS_PERMITS.csv` present
 - Identified structural mismatch: pipeline `_locate_existing_dmr_zips` looks under `{raw_dir}/dmr/`; drive has ZIPs flat with no `dmr/` subfolder — solved via symlink
 - Created `data/raw/` directory in project root
-- Created local symlink: `data/raw/dmr` → `/Volumes/256Drive/DMR Datasets` (gitignored via `data/` rule)
-- Created local symlink: `data/raw/npdes_downloads` → `/Volumes/256Drive/npdes_downloads` (gitignored)
+- Created local symlink: `data/raw/dmr` → `/Volumes/SANDISK/DMR Datasets` (gitignored via `data/` rule)
+- Created local symlink: `data/raw/npdes_downloads` → `/Volumes/SANDISK/npdes_downloads` (gitignored)
 - Verified both symlinks resolve correctly; ICIS CSVs visible through symlink path
 
 **NOTE — Tom's machine only:** The symlinks above (`data/raw/dmr`, `data/raw/npdes_downloads`) are local filesystem entries inside `data/`, which is gitignored. They are NOT committed and will NOT appear on other team members' machines. Other team members must set up their own local data symlinks or directory structure pointing to wherever they store the EPA raw data. The pipeline supports `--raw-dir /path/to/data` CLI flag as an alternative to symlinks.
 
 **Files modified / created:**
 - `WOWERS_PROJECT_JOURNAL.md` — appended this session entry
-- `data/raw/dmr` — local symlink to `/Volumes/256Drive/DMR Datasets` (gitignored, Tom's machine only)
-- `data/raw/npdes_downloads` — local symlink to `/Volumes/256Drive/npdes_downloads` (gitignored, Tom's machine only)
+- `data/raw/dmr` — local symlink to `/Volumes/SANDISK/DMR Datasets` (gitignored, Tom's machine only)
+- `data/raw/npdes_downloads` — local symlink to `/Volumes/SANDISK/npdes_downloads` (gitignored, Tom's machine only)
 
 **Resources used:**
 - EPA ECHO bulk downloads: `https://echo.epa.gov/files/echodownloads/npdes_downloads.zip`
@@ -816,7 +816,7 @@ Top-5 viable sites by annual energy:
 
 **Goal:** Wire `NPDES_PERM_FEATURE_COORDS.csv` into Phase 3 to enable real USGS 3DEP elevation-difference head calculation. Previously `head_source = usgs_3dep` was 0 for all 15,719 sites.
 
-**Context:** User had already downloaded `npdes_outfalls_layer.zip` from **https://echo.epa.gov/files/echodownloads/npdes_outfalls_layer.zip** (free EPA ECHO weekly-updated file) to external drive (`/Volumes/256Drive/npdes_downloads/`), with symlink at `data/raw/npdes_downloads`. Discovered `NPDES_PERM_FEATURE_COORDS.csv` (626k rows, cleaner schema) is better than `npdes_outfalls_layer.csv` (815k rows, LATLONG_TYPE mixed "Facility"/"Permitted Feature"). Key columns: `EXTERNAL_PERMIT_NMBR`, `PERM_FEATURE_NMBR`, `LATITUDE_MEASURE`, `LONGITUDE_MEASURE`.
+**Context:** User had already downloaded `npdes_outfalls_layer.zip` from **https://echo.epa.gov/files/echodownloads/npdes_outfalls_layer.zip** (free EPA ECHO weekly-updated file) to external drive (`/Volumes/SANDISK/npdes_downloads/`), with symlink at `data/raw/npdes_downloads`. Discovered `NPDES_PERM_FEATURE_COORDS.csv` (626k rows, cleaner schema) is better than `npdes_outfalls_layer.csv` (815k rows, LATLONG_TYPE mixed "Facility"/"Permitted Feature"). Key columns: `EXTERNAL_PERMIT_NMBR`, `PERM_FEATURE_NMBR`, `LATITUDE_MEASURE`, `LONGITUDE_MEASURE`.
 
 **What was built:**
 - New `src/phase3/outfall_coords.py`:
@@ -860,7 +860,7 @@ Viable sites by head source: 694 `usgs_3dep` (73%, high confidence), 258 `phase2
 - `tests/test_phase3/test_outfall_coords.py` — new test file
 
 **Resources used:**
-- `data/raw/npdes_downloads/NPDES_PERM_FEATURE_COORDS.csv` (626k rows, symlinked from `/Volumes/256Drive/npdes_downloads/`)
+- `data/raw/npdes_downloads/NPDES_PERM_FEATURE_COORDS.csv` (626k rows, symlinked from `/Volumes/SANDISK/npdes_downloads/`)
   - Source: https://echo.epa.gov/files/echodownloads/npdes_outfalls_layer.zip (free, weekly-updated EPA ECHO download)
 - `logs/runs/phase3_2026-05-19_05-52-12.log`
 - Phase 3 + Phase 4 parquet inspection
