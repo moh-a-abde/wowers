@@ -4221,3 +4221,175 @@ Lives at the repo root in `pivot file download/` (with the space — matches the
 3. Continue with the pivot-development plan: manual downloads → `src/ingest/pws.py` scaffold → customer-validation calls.
 
 ---
+
+## Pivot Data Disk Audit + Code-Impact Analysis — May 23 2026
+
+Follow-up audit of `/Volumes/SANDISK/WOWERS_Pivot_Data/` now that downloads have finished and all zips have been extracted in place, plus a concrete code-change impact analysis for each pivot direction against the current `src/` tree. This entry supersedes the May-22-evening "Disk Audit & URL Corrections" sizes (the previous entry measured pre-extraction; this one measures post-extraction).
+
+### Actual on-disk audit (post-extraction)
+
+Every ZIP has been auto-extracted to a sibling folder. Both the `.zip` and the unpacked tree exist on disk simultaneously, which inflates the footprint roughly **9× over the May-22 PM estimate**:
+
+| Vertical | May-22 PM estimate | **Actual disk usage (May-23)** | Δ |
+|---|---|---|---|
+| V1 Water Utility PRVs | ~7.9 GB | **~27 GB** | +19.1 GB |
+| V2 Industrial Cooling Discharge | ~16 GB | **~197 GB** | +181 GB |
+| V3 Mine Dewatering | ~248 MB | **~2.2 GB** | +1.95 GB |
+| V4 Irrigation Canal Drops | ~1.2 MB | ~1.1 MB | ~0 |
+| **Total** | **~25 GB** | **~226 GB** | **+201 GB** |
+
+Practical implication: **the SSD is more committed than the journal previously implied.** No data has been lost — both the raw and extracted forms are intact and can be regenerated from each other — but anyone calculating free-disk requirements for a second team member's machine should plan for ~250 GB headroom, not ~25 GB.
+
+### What is actually on disk, per vertical
+
+#### V1 — Water Utility PRVs (~27 GB)
+
+| Item | Files / Folders | Notes |
+|---|---|---|
+| SDWA / SDWIS | `SDWA_latest_downloads.zip` (499 MB) + `SDWA_latest_downloads/` | EPA SDWIS national CWS roster |
+| EIA-861 | `EIA861_{2009..2024}.zip` (16 files, ~60 MB total) + `EIA861_{2012..2024}/` extracted folders | Pre-2012 zips not yet extracted (extraction was done for 2012+ only) |
+| NHDPlus V2 | `NHDPlusV2_National_Seamless_Lower48.7z` (7.3 GB) + `NHDPlusNationalData/` (~25 GB extracted geodatabase) | Self-contained GDB — attribute tables included |
+| NHDPlus V2 attrs (empty) | `NHDPlusV2_NationalAttributes_01.7z` (329 B) | Empty / failed; not needed — main GDB already has the attribute tables |
+| README | `README.md` (12 KB) | Vertical-specific download notes |
+
+**Primary join key:** `PWSID` (9-char state code + 7-digit serial).
+
+#### V2 — Industrial Cooling Discharge (~197 GB) — *by far the biggest*
+
+| Item | Files / Folders | Notes |
+|---|---|---|
+| ECHO NPDES facilities | `ECHO_NPDES_facilities.zip` + `ECHO_NPDES_facilities/` | Industrial facility master roster |
+| ECHO NPDES effluent | `ECHO_NPDES_effluent_violations.zip` + extracted `NPDES_EFF_VIOLATIONS.csv` | Temperature-violation flag for once-through cooling |
+| ECHO NPDES DMRs | `ECHO_NPDES_DMR_pre_FY2009.zip` + `ECHO_NPDES_DMR_FY{2009..2026}.zip` (19 files) + 19 extracted `NPDES_DMRS_FY{YEAR}.csv` (also pre-2009 as `NPDES_DMRS_PREFY2009.csv`) | Monthly measured flow time series |
+| ECHO NPDES outfalls | `ECHO_NPDES_outfall_locations.zip` + `npdes_outfalls_layer.csv` | Per-outfall lat / lon |
+| ECHO FRS | `ECHO_FRS.zip` + `ECHO_FRS/` | NPDES ↔ EIA plant ID ↔ TRI cross-walk |
+| EIA-860 | `EIA860_{2009..2024}.zip` (16 files) + 16 extracted folders | Cooling-system equipment per plant |
+| EIA-923 | `EIA923_{2009..2025}.zip` (17 files) + extracted folders + standalone `EIA923_Schedules_2_3_4_5_M_12_2025_20FEB2026.xlsx` | Monthly cooling-water withdrawal / discharge |
+| EPA TRI Basic Plus | `TRI_{2009..2022}.zip` (14 files) + 14 extracted folders | Discharge cross-confirmation; tab-delimited `.txt` format |
+| BLS QCEW | `BLS_QCEW_{2009..2023}.zip` (15 files) + 15 extracted `{YEAR}.annual.by_industry/` folders | County-level NAICS counts for TAM sizing |
+
+**Primary join keys:** `EXTERNAL_PERMIT_NMBR` (NPDES) ↔ `REGISTRY_ID` (FRS) ↔ `Plant Id` (EIA).
+
+#### V3 — Mine Dewatering (~2.2 GB)
+
+| Item | Files | Notes |
+|---|---|---|
+| MSHA Mines | `MSHA_Mines.zip` (6.9 MB) + `Mines.txt` (37 MB) | SIC merged into `Mines.csv` — no separate SIC file |
+| MSHA Accidents | `MSHA_Accidents.zip` (49 MB) + `Accidents.txt` (216 MB) | Filter `ACCIDENT_TYPE_CD = 17` (inundation) for water-inflow history |
+| MSHA Inspections | `MSHA_Inspections.zip` (69 MB) + `Inspections.txt` (328 MB) | Inspection activity |
+| MSHA Violations | `MSHA_Violations.zip` (114 MB) + `Violations.txt` (1.3 GB) | Filter `PART_SECTION ∈ {57.11001, 57.14130}` for drainage violations |
+| MSHA EmployerProd | `MSHA_EmployerProd.zip` (6.7 MB) + `MinesProdYearly.txt` (57 MB) | Production tonnage — proxy for pump runtime |
+| USGS mrdata | `USGS_mrdata_instructions.txt` + `USGS_mrdata_note.txt` | Manual download not yet executed |
+| README | `README.md` (8.3 KB) | Per-vertical notes |
+
+**Primary join key:** `MINE_ID` (7-character MSHA identifier).
+
+#### V4 — Irrigation Canal Drops (~1.1 MB — instructions only)
+
+| Item | Files | Status |
+|---|---|---|
+| NHDPlus V2 | (shared with V1 — do not duplicate) | ✅ available via V1 |
+| USBR RISE | `USBR_RISE_instructions.txt` | ⏳ API-keyed; not yet pulled |
+| USDA NASS Census | `USDA_NASS_Census_2012_NOTE.txt`, `_2017_NOTE.txt`, `_2022_NOTE.txt`, `USDA_NASS_Census_instructions.txt` | ⏳ Manual QuickStats download; NOTE files exist but bulk data may be partial |
+| CA DWR | `CA_DWR_instructions.txt` | ⏳ Manual portal download; not yet pulled |
+| README | `README.md` (8.6 KB) | Per-vertical notes |
+
+**Primary join key:** `COMID` (NHDPlus) + `loc_id` (USBR RISE). Until the four manual / API-keyed pulls complete, V4 cannot be developed.
+
+### Code-impact analysis vs current `src/` tree
+
+Current state (POTW-only pipeline):
+
+```
+src/
+├── __init__.py
+├── common/                  (config, io, download, logging — REUSABLE across all verticals)
+├── phase1/                  (POTW-specific ingest, filter, DMR, flow features, ranking)
+├── phase2/                  (Monte Carlo energy estimation — REUSABLE w/ vertical-specific head)
+├── phase3/                  (Turbine selection + 3DEP head — head_estimation needs per-vertical variant)
+└── phase4/                  (CapEx, OpEx, NPV, IRR, financial gates — REUSABLE w/ scoped configs)
+```
+
+#### Universal refactors (every pivot direction requires these)
+
+| Change | Where | Why | Effort |
+|---|---|---|---|
+| Modularise Phase 1 ingest | `src/phase1/` → split into `src/ingest/potw.py` (existing) + new vertical modules | Current ingest hard-codes the EPA POTW filter; cannot reuse for SDWIS / industrial NPDES / MSHA / NHDPlus without breaking the POTW path | 3–5 days |
+| Add `vertical: str` column | All Phase 1+ parquet outputs (`ranked_candidates.parquet`, `turbine_sizing.parquet`, `financial_scorecards.parquet`) | Lets Phase 5 ML train across all verticals + downstream analytics stratify cleanly | < 1 day |
+| Vertical-scoped F4 configs | `config/settings.yaml` `cost_model.*` / `permitting.*` / `interconnection.*` | Each vertical has different cost economics (PRVs no interconnection, mines no permitting, etc.) | 1–2 days |
+| Per-vertical head estimation | `src/phase3/head_estimation_*.py` (one module per vertical) | 3DEP elevation is POTW-specific; PRV needs pressure-drop; mines need depth; canals need slope × length | Per-vertical (see below) |
+| New `paths.raw_data_v{1,2,3,4}` keys | `src/common/config.py` + `config/settings.yaml` | So each ingest module reads from its own SANDISK subfolder | < 1 day |
+
+#### Per-pivot specifics
+
+##### V1 — Water Utility PRVs (~3–4 weeks, highest reuse)
+
+| New code | Modified code | Reusable as-is |
+|---|---|---|
+| `src/ingest/pws.py` — reads SDWA CSVs, filters CWS by `SERVICE_CONNECTIONS_COUNT > 500`, joins facility list + service area + service territory | `src/phase4/cost_models.py` → add `vertical="prv"` branch with `interconnection_capex_usd = $0` (behind-the-meter) | All of Phase 2 (Monte Carlo, NHDPlus reaches feed flow) |
+| `src/ingest/eia861.py` — reads EIA-861 Excel sheets (`Sales_Ult_Cust`, `Service_Territory`, `Utility_Data`), maps utility → state+county → PWSID via spatial join | `src/phase4/financials.py` → expected payback drops to 4–6 yr (better economics; document expected change in viability rate) | All of Phase 4 financial scorecard math |
+| `src/phase3/head_estimation_prv.py` — replaces 3DEP elevation with PRV pressure-drop estimation; initial proxy: use SDWA pressure-zone data via lead / copper sampling | `src/common/config.py` → add `paths.raw_data_v1 = "/Volumes/SANDISK/WOWERS_Pivot_Data/V1_Water_Utility_PRVs/"` | All of `common/` infrastructure |
+
+##### V2 — Industrial Cooling Discharge (~6–8 weeks, medium reuse)
+
+| New code | Modified code | Reusable as-is |
+|---|---|---|
+| `src/ingest/industrial.py` — reads NPDES facilities filtered to industrial NAICS (not POTW), DMR with `PARAMETER_CODE=50050` + `00010`, joins via FRS to EIA-860 cooling-system type | `src/phase1/filter_potw.py` → replicate-and-replace with `filter_industrial.py` that filters out POTW (`facility_type_indicators != "POTW"`) | Phase 1 DMR loader (filter change only) |
+| `src/ingest/eia860_923.py` — reads EIA-860 sheet `6_2_EnviroEquip` for cooling-type = OC plants, joins EIA-923 sheet `8F Cooling Ops` for monthly volumes | `src/phase4/cost_models.py` → corrosion-resistant equipment adder for warm / treated cooling water (+15–25 % equipment CapEx) | Phase 2 / 3 with scope tweaks |
+| `src/ingest/tri.py` — reads TRI Basic Plus tab-delimited files for discharge cross-confirmation; **must implement live URL discovery** (TRI paths drift annually per the known-limitations entry) | New `industrial_permit` tier in permitting config (industrial behind-the-meter generation is permitted differently than FERC small-hydro) | All of `common/` |
+| `src/phase3/head_estimation_cooling.py` — head from condenser pressure (typically 30–50 ft for once-through plants) | | |
+
+##### V3 — Mine Dewatering (~8–12 weeks, heaviest lift)
+
+| New code | Modified code | Reusable as-is |
+|---|---|---|
+| `src/ingest/mining.py` — reads MSHA `Mines.txt`, filters `MINE_TYPE_CODE = U` + `CURRENT_MINE_STATUS = AC`; joins `Violations.txt` filtered to `PART_SECTION ∈ {57.11001, 57.14130}`; joins `Accidents.txt` filtered to `ACCIDENT_TYPE_CD = 17` | `src/phase2/monte_carlo.py` → add deterministic "constant-flow" mode (mine dewatering is geology-driven, not weather-driven) | All of `common/` |
+| `src/ingest/usgs_mrdata.py` — reads USGS mrdata shapefiles (MRDS / USMIN / AML); geo-join via mine name + county to fill in deposit depth (manual download required first) | `src/phase4/cost_models.py` → `permitting_capex_usd = $0` (existing operational permits cover energy recovery) | Phase 4 financial scorecard math |
+| `src/phase3/head_estimation_mining.py` — head from mine depth (typically 100–1,000+ ft); pump-discharge pressure assumption | `src/phase4/financials.py` → economics: per-site CapEx $1–10 M (10–100× POTW scale), payback 3–5 yr | Phase 3 turbine selection (Pelton heavily preferred for high-head mines) |
+
+##### V4 — Irrigation Canal Drops (~4–6 weeks once data is available — *blocked on data*)
+
+| New code | Modified code | Reusable as-is |
+|---|---|---|
+| `src/ingest/irrigation.py` — reads NHDPlus V2 `NHDFlowline` filtered to `FTYPE = 336` (Canal Ditch), joins `PlusFlowlineVAA.SLOPE > 0.001`, joins `EromExtension.Q0001E` for flow | `src/phase4/cost_models.py` → behind-the-meter (no interconnection); seasonal capacity factor (35–60 % during irrigation season) | All of Phase 4 |
+| `src/ingest/usbr_rise.py` — API client for `https://data.usbr.gov/rise/api/result`; throttle to ~1 req/s | `src/phase2/monte_carlo.py` → add seasonal mode (vs continuous POTW) | Most of Phase 3 |
+| `src/ingest/usda_nass.py` — reads QuickStats CSV exports to rank counties by canal-irrigated acreage | | |
+| `src/phase3/head_estimation_canal.py` — head from `SLOPE × LENGTHKM × 1000 / 0.3048` (slope-to-feet conversion) | | |
+
+> ⚠ **V4 is data-blocked** until USBR RISE (API), USDA NASS QuickStats (manual portal), and CA DWR (manual portal) are pulled. The current SSD content for V4 is instruction files only.
+
+### Recommendation given current data state
+
+| Pivot | Data ready? | Code reuse | Effort | Customer economics | **Priority** |
+|---|---|---|---|---|---|
+| V1 PRVs | ✅ all bulk data on disk | ~80 % | 3–4 weeks | Best (CF 70–90 %, 4–6 yr payback) | **1 — start here** |
+| V2 Industrial | ✅ all bulk data on disk (197 GB) | ~60 % | 6–8 weeks | Larger TAM, slower per-site | **2 — after V1 modular pattern proves out** |
+| V3 Mining | ✅ all MSHA on disk; USGS mrdata still manual | ~50 % | 8–12 weeks | Best per-site economics ($1–10 M); novel head model | **3 — after V1/V2 modular structure stabilises** |
+| V4 Canals | ⏸ blocked on USBR / NASS / CA DWR manual pulls | ~70 % | 4–6 weeks post-data | Seasonal CF; established Western US market | **4 — pull data first, then build** |
+
+**Recommended first action: scaffold `src/ingest/pws.py` for V1** — it's the highest-leverage technical move per all prior analysis, all data is available, and successfully shipping it proves the modular ingest pattern that the other three verticals depend on.
+
+### Session: 2026-05-23
+
+**What was done:**
+- Audited `/Volumes/SANDISK/WOWERS_Pivot_Data/` post-extraction; discovered actual disk usage is **~226 GB**, not the ~25 GB documented in the May-22 PM entry (every ZIP has been auto-extracted to a sibling folder, so the raw + unpacked forms both occupy disk).
+- Verified the exact file / folder inventory for each of the four pivot verticals against the SSD contents — captured in the per-vertical tables above.
+- Mapped the current `src/` tree against each pivot direction's data needs and produced a code-impact table per vertical: universal refactors (modular ingest, `vertical` column, scoped configs, per-vertical head estimation) plus per-pivot new / modified / reusable code surfaces.
+- Ranked pivot directions by combined data-readiness + code-reuse + economics to produce a concrete recommendation: **V1 first** (data ready, ~80 % reuse, best economics), V2 second, V3 third, V4 last (data-blocked).
+
+**Files modified / created:**
+- `WOWERS_PROJECT_JOURNAL.md` — appended this "Pivot Data Disk Audit + Code-Impact Analysis" section + this session-log entry.
+
+**Resources used:**
+- Live `ls -lh` / `du -sh` audit of `/Volumes/SANDISK/WOWERS_Pivot_Data/V{1..4}/`.
+- Source tree inspection of `src/phase{1..4}/` to produce the code-impact tables.
+- Prior journal entries: "WOWERS Pivot Data Acquisition Inventory" (May 22 AM), "Pivot Data Acquisition — Disk Audit & URL Corrections" (May 22 PM), "Pivot Data Downloader Script" (May 22 evening), "Strategic Assessment & Business-Value Analysis" (May 20).
+
+**Next steps after this session:**
+1. Decide the pivot path with the team (V1 PRVs is the recommended technical first move regardless of overall strategy choice between A / B / C from the May-20 framework).
+2. If green-lit, scaffold `src/ingest/pws.py` reading SDWA + EIA-861 + NHDPlus V2 and emitting the same `ranked_candidates.parquet` schema with the new `vertical = "prv"` column.
+3. Execute the four manual / API-keyed data pulls (USGS mrdata for V3; USBR RISE, USDA NASS, CA DWR for V4) so V3 and V4 are not data-blocked when their turn comes.
+4. Once V1 ingest is shipped end-to-end through Phase 4, snapshot the new per-vertical viability + economics tables and update the "Per-tier Reporting" deck framing accordingly.
+5. Continue Phase 5 ML scaffolding on the existing V0 (POTW) outputs in parallel — V0 plus V1 will eventually be the multi-vertical training set.
+
+---
