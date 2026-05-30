@@ -4393,3 +4393,98 @@ src/
 5. Continue Phase 5 ML scaffolding on the existing V0 (POTW) outputs in parallel — V0 plus V1 will eventually be the multi-vertical training set.
 
 ---
+
+## Data Inventory, Energy Methodology & Data Gaps Report — May 30 2026
+
+Prepared at the director's request: before any pivot decision, document (1) what data we currently hold and what is missing, (2) how energy and savings are actually calculated and which inputs are real vs assumed, and (3) whether the datasets contain per-pipe discharge volume or plant pumping energy. This is a read-only audit of the existing V0 (POTW) pipeline — no code changed.
+
+### 1. Current data inventory and gaps
+
+#### What we have now (on disk / wired into the pipeline)
+
+| Dataset | What it includes | Source | Used for |
+|---|---|---|---|
+| EPA ECHO `ICIS_FACILITIES.csv` | Facility name, lat/lon, state, facility type | ECHO `npdes_downloads.zip` | Plant location, mapping |
+| EPA ECHO `ICIS_PERMITS.csv` | `design_flow_mgd`, `actual_avg_flow_mgd`, major/minor flag, permit status | ECHO `npdes_downloads.zip` | POTW filter, flow fallback |
+| EPA ECHO DMR FY2009–2024 (~279M rows) | Monthly **measured** flow, parameter `50050` (MGD), per outfall | `npdes_dmrs_fy{YEAR}.zip` | Real flow time series → FDC |
+| `NPDES_PERM_FEATURE_COORDS.csv` + `npdes_outfalls_layer.csv` | Outfall (discharge-pipe) lat/lon | `npdes_outfalls_layer.zip` | Outfall elevation lookup |
+| USGS 3DEP elevation | Ground elevation at facility + outfall coordinates | API `epqs.nationalmap.gov/v1/json` | Head (elevation difference) |
+| `config/electricity_rates/state_rates.yaml` | 2023 EIA industrial electricity rate, 50 states + DC | EIA Table 5.6.B | Revenue calculation |
+| `data/turbines/turbine_manufacturers.csv` | 15 rows / 10 manufacturers: flow + head envelope, η, $/kW, WW-cert | Manufacturer websites | Turbine type/manufacturer match |
+
+Processed outputs on disk: `data/processed/phase1..4` (ranked candidates, energy yield estimates, turbine sizing, financial scorecards).
+
+#### Missing / nice-to-have data (ranked by impact on result accuracy)
+
+| Gap | Why it matters | Where to get it | Link |
+|---|---|---|---|
+| Real head / elevation at outfall | Head is the largest energy driver. ~40% of sites currently fall back to a literature guess (3/5/8 m by size class); 3DEP DEM is noisy and flips negative on flat terrain | NHDPlus V2 stream-snap (already on SSD, not yet wired); site survey; permit drawings | https://www.epa.gov/waterdata/nhdplus-national-data |
+| Pipe / penstock diameter + length | Needed for real friction loss (currently a flat 15% assumption) and to confirm in-conduit turbine fit | NPDES permit application Form 2A; state permit PDFs (not in bulk ECHO) | https://www.epa.gov/npdes/npdes-applications-and-program-updates |
+| Plant energy use / pump energy | Core to a credible "energy savings" story (see §3) | EPRI / EPA / state surveys (see §3 table) | see §3 |
+| Real turbine install quotes | CapEx is currently a power-law model, not vendor quotes | Direct vendor RFQ (CINK, Canyon Hydro, Rentricity) | `inquiry_url` column in turbine CSV |
+| Plant-specific electricity tariff + demand charges | Currently use the state industrial average only | Utility tariff sheets; EIA-861 | https://www.eia.gov/electricity/data/eia861/ |
+| Receiving-stream flow / tailwater level | Tailwater varies head; backwater can negate low-head sites | NHDPlus `EromExtension.Q0001E` | https://www.epa.gov/waterdata/nhdplus-national-data |
+| DOE/FERC ground-truth installed micro-hydro | Needed to train / validate the Phase 5 ML model | DOE HydroSource (ORNL); FERC conduit exemptions | https://hydrosource.ornl.gov ; https://www.ferc.gov |
+
+### 2. Energy and savings methodology — real data vs assumptions
+
+The physics is the standard hydropower equation `P = η · ρ · g · Q · H`, integrated over the flow-duration curve (trapezoidal rule) with a 10,000-iteration Monte Carlo in Phase 2. The equation is sound; the accuracy depends on each input:
+
+| Input | Real or assumed | Detail |
+|---|---|---|
+| Flow `Q` | **REAL** for ~70% of sites (the `dmr` tier) | DMR measured monthly, parameter 50050, FY2009–2024. The rest are synthetic: `actual_avg_only` (one scalar) or `design_only` (= design flow × 0.75 guess) |
+| Head `H` | **Mostly derived / assumed** | ~57–63% from 3DEP elevation difference (facility − outfall); ~40% from a literature triangular distribution by archetype (small 3 m / medium 5 m / large 8 m). No measured head anywhere |
+| Head loss | **Assumed flat 15%** | `head_loss_fraction = 0.15` applied to every site; no pipe geometry data |
+| Efficiency `η` | **Assumed** | Phase 2 triangular(0.70, 0.82, 0.90); Phase 3 empirical part-load curves fit to manufacturer hill charts — not site test data |
+| Availability | **Assumed** | triangular(0.90, 0.95, 0.98) |
+| CapEx | **Modeled, not quoted** | Power-law `$/kW = A · kW^B` (DOE/ORNL) + tiered interconnection ($50k–$200k) + tiered permitting ($25k–$150k). No vendor quotes |
+| OpEx | **Assumed** | 1.5–3% of CapEx/yr by turbine type |
+| "Energy savings" / revenue | **Assumed rate** | `energy_kWh × (state industrial $/kWh + $0.01 REC)`. This is NOT the plant's real bill offset — it assumes all generation is valued at the state-average industrial rate, with no demand-charge or behind-the-meter modeling |
+
+**Bottom line:** flow is real for the good-quality tier; head, efficiency, cost, and electricity price are assumptions or models. Head and electricity price are the weakest, highest-leverage assumptions. Reported figures (GWh/yr, payback years) are screening estimates, not measured outcomes.
+
+### 3. Per-pipe discharge volume and pump energy
+
+**Per-pipe discharge volume — YES, we have it.** DMR parameter `50050` is monthly average flow per outfall (`PERM_FEATURE_NMBR`), in MGD. That is exactly how much water each outfall pipe discharges. The pipeline already parses it, selects the primary outfall, and builds the flow-duration curve. This is the strongest dataset we own.
+
+**Pump energy / energy the site uses to move water — NO.** Nothing in ECHO / DMR / ICIS contains energy consumption. DMR is discharge monitoring (flow + pollutant concentration), not electricity. There is zero pump-energy data in any current dataset.
+
+Where to get plant / pump energy (no single public per-plant national WWTP energy database exists):
+
+| Source | What it provides | Link |
+|---|---|---|
+| EPRI — Electricity Use & Management in Water/Wastewater Industries | Benchmark kWh/MG-treated by plant size + process | https://www.epri.com (report 3002001433, 2013) |
+| EPA — Energy Efficiency for Water Utilities | WWTP energy-intensity benchmarks + tools | https://www.epa.gov/sustainable-water-infrastructure/energy-efficiency-water-utilities |
+| ENERGY STAR Portfolio Manager (WWTP) | Per-plant benchmarking where the utility is enrolled (not bulk public) | https://www.energystar.gov/buildings/benchmark |
+| NYSERDA / CA CEC WWTP energy studies | State-level per-plant energy-intensity datasets | https://www.nyserda.ny.gov ; https://www.energy.ca.gov |
+| DOE Better Plants / Water-Energy | Pump energy benchmarks | https://betterbuildingssolutioncenter.energy.gov |
+| Water Research Foundation | Energy-intensity studies | https://www.waterrf.org |
+
+**Practical method given what we already have:** WWTP treatment energy is roughly 1,200–1,900 kWh per million gallons (EPRI benchmark). Multiply our measured DMR flow (MGD → MG/yr) by that factor to estimate each plant's annual energy use, then divide our generated kWh by that to get the real percentage of the plant's power bill offset. This converts "energy savings" from an abstract revenue number into "covers N% of the plant's electricity use" — a far stronger pitch — using flow data we already own plus one public benchmark factor.
+
+### Summary for the director
+
+- **Strong:** measured per-outfall flow (16 years of DMR), national scale, outfall coordinates, a working 5-phase pipeline.
+- **Weak / assumed:** head (40% guessed, 15% loss flat), turbine efficiency, CapEx (modeled, not quoted), electricity value (state average, not plant tariff).
+- **Biggest missing items for credibility:** (1) real head via NHDPlus stream-snap (data already on the SSD, just not wired in), (2) a plant energy-use benchmark to express savings as a percentage of the bill, (3) pipe diameter from permit Form 2A.
+
+### Session: 2026-05-30
+
+**What was done:**
+- Read-only audit of the existing V0 (POTW) pipeline source (`config/settings.yaml`, `src/phase1/filter_potw.py`, `src/phase1/dmr_timeseries.py`, `src/phase1/flow_features.py`, `src/phase2/energy_physics.py`, `src/phase3/head_estimation.py`, `src/phase3/turbine_selection.py`, `src/phase4/cost_models.py`, `src/phase4/financials.py`, `src/phase4/revenue.py`, `src/phase4/run.py`) to produce a director-requested report on data inventory, energy-calculation methodology, and per-pipe/pump-energy data availability.
+- Confirmed the data inventory against on-disk state (`data/processed/phase1..4`, SSD symlinks `data/raw/dmr` and `data/raw/npdes_downloads`, `data/turbines/turbine_manufacturers.csv`, `config/electricity_rates/state_rates.yaml`).
+- Documented which energy-model inputs are measured (flow, for the `dmr` tier) vs assumed (head, head loss, efficiency, availability, CapEx, OpEx, electricity rate).
+- Established that per-outfall discharge volume IS available (DMR parameter 50050) but plant/pump energy use is NOT, and listed external sources + a practical EPRI-benchmark estimation method to fill that gap.
+
+**Files modified / created:**
+- `WOWERS_PROJECT_JOURNAL.md` — appended this "Data Inventory, Energy Methodology & Data Gaps Report" section + this session-log entry.
+
+**Resources used:**
+- Source inspection of `src/phase{1..4}/` and `config/settings.yaml`.
+- Live `ls -R data/processed` + `ls -la data/raw` to confirm on-disk inventory.
+
+**Next steps after this session:**
+1. Decide with the team whether to (a) build the WWTP energy-offset estimator (DMR flow × EPRI kWh/MG benchmark) to express savings as a percentage of the plant bill, and/or (b) wire NHDPlus stream-snap for real head.
+2. Hold the pivot decision pending the director's review of this report.
+
+---
