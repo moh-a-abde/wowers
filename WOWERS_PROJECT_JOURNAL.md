@@ -4,6 +4,15 @@
 
 ## ⚠️ INSTRUCTION FOR AI AGENTS — READ THIS FIRST BEFORE DOING ANYTHING
 
+**RULE 0 — IDENTIFY WHO IS WORKING (DO THIS BEFORE LOGGING):**
+Before writing any session entry, determine which teammate you are working for and tag the session title with their name (`— Tom` or `— Mohamed`). Identify them by the current git branch:
+- Branch `tom` → the author is **Tom**.
+- Branch `mohamed` → the author is **Mohamed**.
+
+Check with `git rev-parse --abbrev-ref HEAD` (or `git branch --show-current`). Tom works on the `tom` branch; Mohamed works on the `mohamed` branch. If the branch is something else (e.g. `main` or a feature branch) or is ambiguous, ask the user whether they are Tom or Mohamed before logging — do not guess.
+
+**If you are not 100% sure who is working — for any reason — STOP and ask "Is this Tom or Mohamed?" before you write the session entry. Never assume or guess the author.** Every session title MUST end with `— Tom` or `— Mohamed`.
+
 **RULE 1 — READ BEFORE YOU RESPOND:**
 Read this entire file from top to bottom before responding to anything. The session log at the bottom tells you exactly what has been done and what comes next. Do not skip this step.
 
@@ -17,7 +26,7 @@ Previous session log entries are permanent records. You cannot go back and chang
 At the end of every conversation where work was done, you MUST append a new session entry to the bottom of the "Session Log" section. Follow this exact structure:
 
 ```
-### Session: YYYY-MM-DD
+### Session: YYYY-MM-DD — <Tom|Mohamed>
 
 **What was done:**
 - [bullet list of everything accomplished this session]
@@ -193,7 +202,7 @@ Build a structured turbine database so WOWERS can recommend specific commerciall
 
 ---
 
-### Session: 2026-05-17
+### Session: 2026-05-17 — Tom
 
 **What was done:**
 - Reviewed all existing project files: WOWERS.docx (original concept), Fowler feedback doc, follow-up pitch strategy doc, ARCHITECTURE.md, PHASE1_REPORT.md, PHASE2_REPORT.md, WOWERS_Capital_and_Funding_Research.md, and project codebase (all src/ files, config/settings.yaml, pyproject.toml, tests/)
@@ -229,7 +238,7 @@ Build a structured turbine database so WOWERS can recommend specific commerciall
 
 ---
 
-## Session Log — May 17, 2026 (Cursor Agent)
+## Session Log — May 17, 2026 (Cursor Agent) — Tom
 
 **Session goal:** Fix two known baseline bugs, then fully implement Phase 3 (Turbine Sizing via USGS 3DEP).
 
@@ -302,7 +311,7 @@ All files syntax-validated. Follow existing project patterns (polars, `src.commo
 
 ---
 
-## Session Log — May 17, 2026 (Cursor Agent — Phase 3 Bug-Fix Pass)
+## Session Log — May 17, 2026 (Cursor Agent — Phase 3 Bug-Fix Pass) — Tom
 
 **Trigger:** Post-implementation code review (external reviewer) identified 2 critical bugs, 1 performance issue, several logic/test gaps. All fixed this session. 64/64 tests pass.
 
@@ -379,7 +388,7 @@ Fix: `fdc_lookup = dict(zip(df["npdes_id"], df["flow_duration_curve"]))` built o
 
 ---
 
-## Session — 2026-05-17 (Phase 2 Recreation + Phase 4 Implementation)
+## Session — 2026-05-17 (Phase 2 Recreation + Phase 4 Implementation) — Tom
 
 **Goal:** Recreate missing `src/phase2/` and implement `src/phase4/` from scratch per `ARCHITECTURE.md` spec.
 
@@ -424,7 +433,7 @@ Fix: `fdc_lookup = dict(zip(df["npdes_id"], df["flow_duration_curve"]))` built o
 
 ---
 
-## Session: 2026-05-17 — Two-Round Code Review & Bug-Fix
+## Session: 2026-05-17 — Two-Round Code Review & Bug-Fix — Tom
 
 **Session type:** Code review → fix → re-review → fix → final documentation
 
@@ -480,7 +489,7 @@ Two rounds of agent code review were conducted on the Phase 2 and Phase 4 code i
 
 ---
 
-### Session: 2026-05-17 — Test Bug-Fix Pass (204/204)
+### Session: 2026-05-17 — Test Bug-Fix Pass (204/204) — Tom
 
 **What was done:**
 - Reviewed WOWERS_PROJECT_JOURNAL.md and full codebase to understand current project state
@@ -506,7 +515,7 @@ Two rounds of agent code review were conducted on the Phase 2 and Phase 4 code i
 
 ---
 
-### Session: 2026-05-17 — External Code Review of Bug-Fix Pass
+### Session: 2026-05-17 — External Code Review of Bug-Fix Pass — Tom
 
 **Session type:** External code review of the two changes from the previous session.
 
@@ -545,7 +554,7 @@ Two rounds of agent code review were conducted on the Phase 2 and Phase 4 code i
 
 ---
 
-### Session: 2026-05-18
+### Session: 2026-05-18 — Tom
 
 **What was done:**
 - Read full journal to establish prior session state
@@ -575,7 +584,7 @@ Two rounds of agent code review were conducted on the Phase 2 and Phase 4 code i
 
 ---
 
-### Session: 2026-05-18 — Local Data Setup (Tom's machine only)
+### Session: 2026-05-18 — Local Data Setup (Tom's machine only) — Tom
 
 **What was done:**
 - Reviewed full project state: 204/204 tests passing, Phases 1–4 implemented and reviewed, no raw data locally
@@ -644,7 +653,7 @@ cat logs/runs/phase1_*.log | tail -50
 
 ---
 
-### Session: 2026-05-18 — Phase 2 Top-10 Summary Logger Bug Fix
+### Session: 2026-05-18 — Phase 2 Top-10 Summary Logger Bug Fix — Tom
 
 **What was done:**
 - Reviewed full journal to establish project state
@@ -673,7 +682,7 @@ cat logs/runs/phase1_*.log | tail -50
 
 ---
 
-### Session: 2026-05-18 — Multi-Phase Bug Fix & Data Quality Hardening
+### Session: 2026-05-18 — Multi-Phase Bug Fix & Data Quality Hardening — Tom
 
 **Background:**
 After investigating the Phase 2 Top-10 display bug (fixed in prior session), a deeper audit revealed three additional issues: (1) grossly inflated national energy estimate (14,450 GWh/yr vs. DOE expected 500–5,000 GWh/yr), (2) 3,690 Phase 3 "unknown" turbine types, and (3) the Phase 3 pre-filter using a non-existent file path.
@@ -768,7 +777,7 @@ Top-5 viable sites by annual energy:
 
 ---
 
-### Session: 2026-05-19 — Phase 2 Head Columns + Full Pipeline Re-run
+### Session: 2026-05-19 — Phase 2 Head Columns + Full Pipeline Re-run — Tom
 
 **What was done:**
 - Diagnosed Issue 1 from prior session: Phase 3 head estimation was 100% `design_fallback` (hardcoded 5m gross → 4.25m net) because `energy_yield_estimates.parquet` had no `head_m_p50` column for Phase 3 to use as a literature-bound seed
@@ -1520,7 +1529,7 @@ This is a real correction, not an artifact — Crossflow (Ossberger/CINK) runner
 
 ---
 
-### Session: 2026-05-20 — Round 5 Audit: F2/F3/F4/W14 Test Coverage + IRR Sentinel Block
+### Session: 2026-05-20 — Round 5 Audit: F2/F3/F4/W14 Test Coverage + IRR Sentinel Block — Tom
 
 **What was done:**
 
@@ -1694,7 +1703,7 @@ print(f'F4 physical sensitivity: hs={hs:.0f}, fs={fs:.0f}, dominant={r[\"dominan
 
 ---
 
-## Session: 2026-05-20 — F1 Trade-off Resolution (Pre-Pipeline Re-run)
+## Session: 2026-05-20 — F1 Trade-off Resolution (Pre-Pipeline Re-run) — Tom
 
 ### What was done
 
@@ -1869,7 +1878,7 @@ W7, W8, W10, W13, W17, F3-NHD — Phase 5 scope. No change.
 
 ---
 
-## Session: 2026-05-20 — W13 Small-POTW Filter Implementation
+## Session: 2026-05-20 — W13 Small-POTW Filter Implementation — Tom
 
 ### What was done
 
@@ -2258,7 +2267,7 @@ The dmr-null-FDC fix is working correctly — **0 dmr-tier sites with null FDC**
 
 ---
 
-### Session: 2026-05-20
+### Session: 2026-05-20 — Tom
 
 **What was done:**
 - Implemented **F4-INTERCON** (grid interconnection cost model): tier-based lookup by `rated_power_kw` returning $50k / $100k / $150k / $200k for the ≤10 / ≤50 / ≤250 / >250 kW buckets. New function `interconnection_cost(rated_kw)` in `src/phase4/cost_models.py`, fully config-driven via `cost_model.interconnection.tiers` in `settings.yaml` with hard-coded defaults as fallback.
@@ -2503,7 +2512,7 @@ The gradient is exactly the expected shape: economics scale strongly with projec
 
 Decide between **W15-MIN-RATED-KW** (recommended: clean fix at the input boundary, makes Phase 4 viability rate map to industry benchmarks) versus accepting the current `permitting_tier`-segmented output as the final headline. If choosing W15, the proposed filter is `rated_power_kw >= 5.0` in Phase 3, dropping ~75 % of the current Phase 4 input but raising headline viability rate from 10.4 % → ~30–40 %.
 
-### Session: 2026-05-20 (continued)
+### Session: 2026-05-20 (continued) — Tom
 
 **What was done:**
 - Implemented **F4-PERMIT-TIER**: replaced the single-step $150k-or-$0 model in `src/phase4/cost_models.py` with a 3-tier lookup (`qualified_facility` $25k / `small_ferc` $75k / `full_nepa` $150k), fully config-driven via `cost_model.permitting.tiers` with hard-coded fallback defaults.
@@ -3913,7 +3922,7 @@ Add `vertical: str` column to every Phase 1+ parquet so Phase 5 ML can train acr
 
 ---
 
-### Session: 2026-05-22
+### Session: 2026-05-22 — Tom
 
 **What was done:**
 - Migrated all WOWERS data from the prior 256 GB external drive to a new 1 TB SANDISK SSD (`/Volumes/SANDISK/`).
@@ -4090,7 +4099,7 @@ Two concrete impacts on the planned `src/ingest/*.py` modules:
 1. **`src/ingest/industrial.py` (V2)** must implement a **live URL discovery** step for TRI Basic Plus rather than hard-coding the per-year paths. Single most fragile data source in V2.
 2. **`src/ingest/mining.py` (V3)** filter for drainage CFR sections in `Violations.csv` must include both **`57.11001`** and **`57.14130`** — easy to miss if only the morning inventory is referenced.
 
-### Session: 2026-05-22 (evening)
+### Session: 2026-05-22 (evening) — Tom
 
 **What was done:**
 - Completed pivot-data downloads for all four verticals to `/Volumes/SANDISK/WOWERS_Pivot_Data/`. Final on-disk total ~25 GB (vs ~31 GB planned in the morning).
@@ -4202,7 +4211,7 @@ Lives at the repo root in `pivot file download/` (with the space — matches the
 - Add `discover_tri_urls.py` — scrapes the live TRI Basic Plus download page to detect EPA's annual URL drift and emits an updated URL list. Required for the V2 ingest module per the prior "Pipeline-integration implications" note.
 - Add `manual_download_checklist.md` — concrete step-by-step for the four manual datasets (USGS mrdata / USBR RISE / USDA NASS / CA DWR), consolidating instructions that currently live in per-folder `*_instructions.txt` files on the SSD.
 
-### Session: 2026-05-22 (evening, continued)
+### Session: 2026-05-22 (evening, continued) — Tom
 
 **What was done:**
 - Added the `pivot file download/` folder at the repo root.
@@ -4369,7 +4378,7 @@ src/
 
 **Recommended first action: scaffold `src/ingest/pws.py` for V1** — it's the highest-leverage technical move per all prior analysis, all data is available, and successfully shipping it proves the modular ingest pattern that the other three verticals depend on.
 
-### Session: 2026-05-23
+### Session: 2026-05-23 — Tom
 
 **What was done:**
 - Audited `/Volumes/SANDISK/WOWERS_Pivot_Data/` post-extraction; discovered actual disk usage is **~226 GB**, not the ~25 GB documented in the May-22 PM entry (every ZIP has been auto-extracted to a sibling folder, so the raw + unpacked forms both occupy disk).
@@ -4468,7 +4477,7 @@ Where to get plant / pump energy (no single public per-plant national WWTP energ
 - **Weak / assumed:** head (40% guessed, 15% loss flat), turbine efficiency, CapEx (modeled, not quoted), electricity value (state average, not plant tariff).
 - **Biggest missing items for credibility:** (1) real head via NHDPlus stream-snap (data already on the SSD, just not wired in), (2) a plant energy-use benchmark to express savings as a percentage of the bill, (3) pipe diameter from permit Form 2A.
 
-### Session: 2026-05-30
+### Session: 2026-05-30 — Tom
 
 **What was done:**
 - Read-only audit of the existing V0 (POTW) pipeline source (`config/settings.yaml`, `src/phase1/filter_potw.py`, `src/phase1/dmr_timeseries.py`, `src/phase1/flow_features.py`, `src/phase2/energy_physics.py`, `src/phase3/head_estimation.py`, `src/phase3/turbine_selection.py`, `src/phase4/cost_models.py`, `src/phase4/financials.py`, `src/phase4/revenue.py`, `src/phase4/run.py`) to produce a director-requested report on data inventory, energy-calculation methodology, and per-pipe/pump-energy data availability.
