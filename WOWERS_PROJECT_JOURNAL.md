@@ -4604,4 +4604,34 @@ The cross-check drove a real, measurable correction: one config line eliminated 
 
 - `config/settings.yaml` — Crossflow `max_per_kw: 7500 → 6000` (F4-VENDORBAND).
 
+### Small-site economics — what actually kills the 3,280 micro sites (professor's question)
+
+Prompt: the deep cost work so far only matters for the ~359 viable sites; the professor asked us to check the *rest* — the hypothesis being that small sites get a smaller/cheaper turbine, so the economics story might be different (better) than we report. Investigated the full 3,783 scored set by permitting-tier size class.
+
+**Per-tier economics (medians) from `financial_scorecards.parquet`:**
+
+| Tier (size proxy) | n | viable | rated kW | equipment $ | interconnect $ | permit $ | total CapEx $ | revenue $/yr |
+|---|---|---|---|---|---|---|---|---|
+| qualified_facility | 3,280 | 25 (0.8 %) | 3.2 | 17,929 | 50,000 | 25,000 | 92,929 | 1,912 |
+| small_ferc | 461 | 292 (63.3 %) | 51.5 | — | 150,000 | 75,000 | 348,885 | 31,294 |
+| full_nepa | 42 | 42 (100 %) | 481.4 | — | 200,000 | 150,000 | 898,507 | 326,147 |
+
+**Finding — the professor is half right, and the other half is the real insight:**
+
+- **Right:** for the 3,280 small sites (median **3.2 kW**), the *turbine is* cheap — median equipment CapEx **$17,929**. Turbine cost scales down with size exactly as he expected.
+- **But that doesn't rescue them.** The balance-of-system costs are **flat tiers that do NOT scale down**: interconnection **$50,000** + permitting **$25,000** = **$75,000 fixed**, which is **4.2× the turbine cost**. Combined with tiny revenue (median **$1,912/yr**), median payback is effectively infinite. Only 25 of 3,280 (0.8 %) clear the viability gate.
+- This is **why today's equipment vendor-band fix did not move viability** (still 359): small sites were never dying on turbine cost — they die on fixed interconnection + permitting overhead plus low revenue.
+
+**The genuine opening (professor's instinct, made precise):** the fixed BOS costs have the **same provenance weakness we just exposed on equipment** — flat, unverified tiers — and they are likely **overstated for micro / behind-the-meter sites**:
+
+1. A ~3 kW **behind-the-meter** turbine may need **no utility interconnection at all** (no grid tie) → the $50k tier may be ~$0 for these sites.
+2. A micro conduit turbine likely qualifies for a **FERC conduit exemption**, which is far cheaper / near-free, not the $25k modeled.
+
+If those two fixed assumptions are wrong for micro sites, the small-site viability story changes materially — exactly the professor's point. This is the next high-leverage check: apply the same provenance + sanity treatment to `cost_model.interconnection` and `cost_model.permitting` (behind-the-meter $0 interconnection branch; real FERC conduit-exemption cost) and re-run to see how many of the 3,280 small sites flip viable.
+
+**Next steps after this finding:**
+1. Verify real interconnection cost for behind-the-meter micro hydro (likely $0 when no grid export) and add a behind-the-meter branch to the interconnection model.
+2. Verify real FERC conduit-exemption permitting cost for ≤ ~25 kW vs the modeled $25k.
+3. Re-run Phase 4; report how many of the 3,280 qualified_facility sites become viable once fixed BOS costs are corrected for micro scale.
+
 ---
