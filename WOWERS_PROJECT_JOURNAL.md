@@ -4588,4 +4588,20 @@ Implemented the "fastest credibility win" from this morning's cost-provenance au
 2. Optionally replace the power law entirely with the vendor low–high midpoint per turbine type as the equipment CapEx (the journal's "fastest credibility win" follow-on), and document the economics delta.
 3. Build the cost-assumption provenance table (still open from the morning audit).
 
+### Follow-on fix — Crossflow clamp recalibration (same session)
+
+Acted on next-step #1 immediately. Dropped the Crossflow per-type `max_per_kw` clamp from **$7,500 → $6,000** in `config/settings.yaml` to match the vendor ceiling (CINK/Ossberger max). Re-ran Phase 4:
+
+| Metric | Before | After |
+|---|---|---|
+| CapEx outside vendor band | 1,019 / 3,783 (26.9 %) | **30 / 3,783 (0.8 %)** |
+| Crossflow flagged | 989 | **0** |
+| Francis flagged | 30 | 30 (unchanged — these are *underpriced*, below vendor floor) |
+| Equipment portfolio CapEx | $169.2M | $168.3M |
+| Project viable | 359 | 359 (unchanged) |
+
+The cross-check drove a real, measurable correction: one config line eliminated all 989 over-priced Crossflow sites with no change to viability. Remaining 30 Francis flags are the opposite problem (model below the $1,800 vendor floor) and are left for the recalibration pass — they don't over-state cost, so they don't inflate CapEx.
+
+- `config/settings.yaml` — Crossflow `max_per_kw: 7500 → 6000` (F4-VENDORBAND).
+
 ---

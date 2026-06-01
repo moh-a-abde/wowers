@@ -59,7 +59,7 @@ cost_model:
       A: 7500
       B: -0.28
       min_per_kw: 500
-      max_per_kw: 7500
+      max_per_kw: 6000     # F4-VENDORBAND: clamp to vendor ceiling (CINK/Ossberger max $6,000/kW); was 7500 → overpriced 989 small sites
   opex_pct_of_capex:
     Kaplan: 0.025
     Francis: 0.020
