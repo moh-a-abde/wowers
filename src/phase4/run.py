@@ -27,6 +27,7 @@ from src.common import config, io, logging_setup
 from src.phase4.cost_models import (
     annual_opex,
     capex_per_kw,
+    capex_vs_vendor_band,
     project_capex,
     total_capex,  # noqa: F401  (kept for external callers / tests)
 )
@@ -127,6 +128,7 @@ def run(
         perm_tier    = str(capex_bd["permitting_tier"])
         cap_usd      = float(capex_bd["total_project_capex_usd"])
         cap_per_kw   = capex_per_kw(t_type, rated_kw)         # equipment $/kW (unchanged metric)
+        vendor_chk   = capex_vs_vendor_band(t_type, rated_kw)  # F4-VENDORBAND sanity cross-check
         opex_usd     = annual_opex(t_type, eq_capex)          # O&M on equipment only
         elec_rate    = electricity_rate(state_code)
         rev_usd      = annual_revenue(energy_kwh, state_code)
@@ -156,6 +158,9 @@ def run(
             "annual_energy_kwh":         energy_kwh,
             "capacity_factor":           row.get("capacity_factor"),
             "capex_per_kw":              cap_per_kw,         # equipment-only $/kW
+            "vendor_capex_per_kw_low":   vendor_chk["vendor_capex_per_kw_low"],   # F4-VENDORBAND
+            "vendor_capex_per_kw_high":  vendor_chk["vendor_capex_per_kw_high"],  # F4-VENDORBAND
+            "capex_outside_vendor_band": vendor_chk["capex_outside_vendor_band"], # F4-VENDORBAND flag
             "equipment_capex_usd":       eq_capex,           # F4: breakdown
             "interconnection_capex_usd": intc_capex,         # F4-INTERCON
             "permitting_capex_usd":      perm_capex,         # F4-PERMIT-TIER ($)
@@ -328,6 +333,25 @@ def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
     if "annual_revenue_usd" in df.columns:
         total_rev = df["annual_revenue_usd"].sum() / 1e6
         log.info(f"  Total portfolio revenue: ${total_rev:,.1f}M/yr")
+
+    # F4-VENDORBAND: how often the power-law equipment $/kW falls outside the
+    # vendor-published band for its turbine type.  High count = the modeled
+    # CapEx diverges from real manufacturer pricing and needs recalibration.
+    if "capex_outside_vendor_band" in df.columns:
+        flagged = df.filter(pl.col("capex_outside_vendor_band") == True)  # noqa: E712
+        n_flag = len(flagged)
+        log.info(
+            f"  CapEx outside vendor band: {n_flag:,}/{total:,} "
+            f"({n_flag/max(total,1)*100:.1f}%)"
+        )
+        if n_flag > 0 and "turbine_type" in df.columns:
+            by_type = (
+                flagged.group_by("turbine_type")
+                .agg(pl.len().alias("n"))
+                .sort("n", descending=True)
+            )
+            for row in by_type.to_dicts():
+                log.info(f"    {row['turbine_type']:>20}: {row['n']:>5,} flagged")
 
     log.info(f"  Runtime:                 {elapsed:.1f}s")
     log.info(f"  Output: {OUTPUT_DIR / 'financial_scorecards.parquet'}")

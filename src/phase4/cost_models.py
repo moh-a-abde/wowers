@@ -31,6 +31,10 @@ DOE/EERE permitting / environmental review cost benchmarks for small hydro
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import polars as pl
+
 from src.common import config
 
 # ── Load cost model config ────────────────────────────────────────────────────
@@ -249,6 +253,91 @@ def permitting_tier_label(rated_power_kw: float) -> str:
     segmentation downstream.
     """
     return str(_lookup_permit_tier(rated_power_kw)["label"])
+
+
+# ── F4-VENDORBAND: vendor $/kW sanity cross-check ─────────────────────────────
+# The equipment power law (capex_per_kw) uses literature-anchored A/B
+# coefficients that have never been fit to or validated against real installs.
+# data/turbines/turbine_manufacturers.csv carries vendor-published
+# capex_usd_per_kw_low/high ranges per turbine type (data_source =
+# manufacturer_website) — a more trustable anchor.  This cross-check loads those
+# ranges and flags any site whose power-law $/kW falls outside the vendor band
+# for its turbine type, so we can quantify how often the model mis-prices using
+# data we already own.  Read-only: does NOT change the CapEx fed to financials.
+
+_TURBINE_DB_PATH: Path = config.project_root() / config.get(
+    "phase3.turbine_db_path", "data/turbines/turbine_manufacturers.csv"
+)
+
+# Per-type vendor band: turbine_type -> (low_usd_per_kw, high_usd_per_kw).
+# low = min of capex_usd_per_kw_low across manufacturers of that type;
+# high = max of capex_usd_per_kw_high.  Widest defensible envelope.
+_VENDOR_BAND: dict[str, tuple[float, float]] = {}
+
+
+def _load_vendor_bands() -> dict[str, tuple[float, float]]:
+    if not _TURBINE_DB_PATH.exists():
+        return {}
+    df = pl.read_csv(_TURBINE_DB_PATH)
+    needed = {"turbine_type", "capex_usd_per_kw_low", "capex_usd_per_kw_high"}
+    if not needed.issubset(df.columns):
+        return {}
+    agg = (
+        df.group_by("turbine_type")
+        .agg(
+            pl.col("capex_usd_per_kw_low").min().alias("low"),
+            pl.col("capex_usd_per_kw_high").max().alias("high"),
+        )
+    )
+    bands: dict[str, tuple[float, float]] = {}
+    for r in agg.to_dicts():
+        lo, hi = r["low"], r["high"]
+        if lo is not None and hi is not None:
+            bands[str(r["turbine_type"])] = (float(lo), float(hi))
+    return bands
+
+
+_VENDOR_BAND = _load_vendor_bands()
+
+
+def vendor_capex_band(turbine_type: str) -> tuple[float, float] | None:
+    """Vendor-published equipment $/kW band for ``turbine_type``.
+
+    Returns (low, high) in USD/kW aggregated across manufacturers, or None if
+    the turbine type has no vendor data on file.
+    """
+    return _VENDOR_BAND.get(turbine_type)
+
+
+def capex_vs_vendor_band(turbine_type: str, rated_power_kw: float) -> dict:
+    """Cross-check power-law equipment $/kW against the vendor band — F4-VENDORBAND.
+
+    Returns:
+        Dict with keys:
+            ``model_capex_per_kw``        — power-law equipment $/kW (the model)
+            ``vendor_capex_per_kw_low``   — vendor band low (or None)
+            ``vendor_capex_per_kw_high``  — vendor band high (or None)
+            ``capex_outside_vendor_band`` — True if model $/kW outside [low, high].
+                                            False when no vendor band exists
+                                            (cannot judge), so the flag only ever
+                                            marks confirmed divergence.
+    """
+    model_per_kw = capex_per_kw(turbine_type, rated_power_kw)
+    band = vendor_capex_band(turbine_type)
+    if band is None:
+        return {
+            "model_capex_per_kw":        model_per_kw,
+            "vendor_capex_per_kw_low":   None,
+            "vendor_capex_per_kw_high":  None,
+            "capex_outside_vendor_band": False,
+        }
+    lo, hi = band
+    return {
+        "model_capex_per_kw":        model_per_kw,
+        "vendor_capex_per_kw_low":   lo,
+        "vendor_capex_per_kw_high":  hi,
+        "capex_outside_vendor_band": bool(model_per_kw < lo or model_per_kw > hi),
+    }
 
 
 # ── Project CapEx aggregation ─────────────────────────────────────────────────

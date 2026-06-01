@@ -4547,3 +4547,45 @@ Focused follow-up on the director's cost question: are the per-site installation
 3. Verify the DOE/ORNL/NREL citations actually support the current A/B coefficients; recalibrate if not.
 
 ---
+
+## Vendor CapEx-Band Cross-Check (F4-VENDORBAND) — Jun 01 2026 — Tom
+
+Implemented the "fastest credibility win" from this morning's cost-provenance audit: cross-check the unverified power-law equipment `$/kW` against the vendor-published `capex_usd_per_kw_low/high` ranges already sitting in `data/turbines/turbine_manufacturers.csv`, and flag every site the model mis-prices. Read-only cross-check — it does **not** change the CapEx fed into NPV/IRR; it only quantifies divergence so the director can see how off the cost model is using data we already own.
+
+### What was built
+
+- **`src/phase4/cost_models.py`** — added F4-VENDORBAND block:
+  - `_load_vendor_bands()` reads the turbine CSV and aggregates, per `turbine_type`, the widest defensible envelope: `low = min(capex_usd_per_kw_low)`, `high = max(capex_usd_per_kw_high)` across manufacturers. Loaded once at import.
+  - `vendor_capex_band(turbine_type)` → `(low, high)` or `None` if no vendor data.
+  - `capex_vs_vendor_band(turbine_type, rated_power_kw)` → dict with `model_capex_per_kw`, `vendor_capex_per_kw_low/high`, and `capex_outside_vendor_band` (bool). Flag is **False when no vendor band exists** (can't judge) so it only ever marks confirmed divergence.
+- **`src/phase4/run.py`** — call the cross-check per site; emit three new columns into `financial_scorecards.parquet`: `vendor_capex_per_kw_low`, `vendor_capex_per_kw_high`, `capex_outside_vendor_band`. Added a flagged-site count (total + per-turbine-type breakdown) to the Phase 4 summary log.
+
+### Result — first run (3,783 scored sites)
+
+| Metric | Value |
+|---|---|
+| **CapEx outside vendor band** | **1,019 / 3,783 (26.9 %)** |
+| Direction | 989 over the vendor ceiling, 30 under the floor |
+| Crossflow flagged | 989 — model median **$6,670/kW** vs vendor band **$2,000–6,000** (overpriced) |
+| Francis flagged | 30 — model **$1,521/kW** vs vendor band **$1,800–8,000** (underpriced) |
+
+**Interpretation:** the power-law **overprices small Crossflow sites** — `A=7500, B=−0.28` drives `$/kW` toward the $7,500 per-type clamp on low-kW sites, above the real vendor ceiling of $6,000. Most of these are small `qualified_facility`-tier sites. A smaller set of Francis sites fall just below the vendor floor (underpriced). Net: ~27 % of the portfolio is priced outside what manufacturers actually quote — concrete evidence the equipment CapEx coefficients need recalibration, exactly the credibility question the director raised.
+
+### Files modified / created
+- `src/phase4/cost_models.py` — F4-VENDORBAND loader + `vendor_capex_band()` + `capex_vs_vendor_band()`.
+- `src/phase4/run.py` — wired cross-check into the scoring loop (3 new columns) + flagged-count summary logging.
+- `WOWERS_PROJECT_JOURNAL.md` — this section + session entry.
+
+### Session: 2026-06-01 (PM) — Tom
+
+**What was done:**
+- Built the vendor CapEx-band sanity cross-check end-to-end (cost_models loader + cross-check fns, run.py wiring, summary logging) per the morning audit's fastest-win recommendation.
+- Ran Phase 4: **26.9 % of sites (1,019/3,783) are priced outside the vendor band** — 989 Crossflow overpriced (model $6,670 vs vendor ≤$6,000/kW), 30 Francis underpriced.
+- Confirmed no linter errors; cross-check is read-only and does not alter the CapEx used in NPV/IRR.
+
+**Next steps after this session:**
+1. Recalibrate the Crossflow power-law `A/B` (or lower the per-type `max_per_kw` clamp toward the $6,000 vendor ceiling) so small Crossflow sites stop over-pricing; re-run and confirm the flagged count drops.
+2. Optionally replace the power law entirely with the vendor low–high midpoint per turbine type as the equipment CapEx (the journal's "fastest credibility win" follow-on), and document the economics delta.
+3. Build the cost-assumption provenance table (still open from the morning audit).
+
+---
