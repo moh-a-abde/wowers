@@ -4497,3 +4497,53 @@ Where to get plant / pump energy (no single public per-plant national WWTP energ
 2. Hold the pivot decision pending the director's review of this report.
 
 ---
+
+## Installation Cost Provenance Audit — Jun 01 2026 — Tom
+
+Focused follow-up on the director's cost question: are the per-site installation costs we report **trustable sourced numbers**, or **estimates**? Read-only audit of the cost model. Conclusion up front: the cost *structure* (physics-form power law + tiered interconnection/permitting) is industry-standard, but the actual dollar coefficients are **literature-anchored assumptions, never fit to or validated against real installed projects, and not from vendor quotes.** They are screening estimates, not quotes.
+
+### Provenance of every cost number
+
+| Cost piece | Where it lives | Claimed source | Real or estimate? |
+|---|---|---|---|
+| Equipment power-law `A`, `B` (`$/kW = A · kW^B`) | `config/settings.yaml` → `cost_model.types` | "DOE Hydropower Vision 2016 / ORNL TM-2014/525" (code comment) | **Form legit, coefficients NOT traceable.** No fit, dataset, or derivation in repo. Citation is real; the exact A/B values are unverified picks |
+| min/max `$/kW` clamps | same | same | Round-number guardrails, not from a source |
+| Interconnection tiers ($50k / $100k / $200k) | `cost_model.interconnection` | "FERC small-hydro surveys / NREL DG handbook" | Band plausible; tier cutoffs + exact dollars are chosen midpoints, not site-specific |
+| Permitting tiers ($25k / $75k / $150k) | `cost_model.permitting` | "FERC small-hydro practice" | Plausible band, picked numbers. (Originally a flat $150k guess; later split into 3 tiers to remove a cost cliff) |
+| OpEx (1.5–3% of CapEx/yr) | `cost_model.opex_pct_of_capex` | industry rule-of-thumb | Estimate |
+
+### Key finding — we already own better cost data, and it's unused
+
+`data/turbines/turbine_manufacturers.csv` carries real per-manufacturer `capex_usd_per_kw_low` / `capex_usd_per_kw_high` columns with `data_source = manufacturer_website` (e.g. CINK Crossflow 2500–6000, Andritz Kaplan 800–3000, Rentricity Francis 3000–8000, LucidEnergy in-conduit 4000–12000). These vendor-site ranges are **more trustable than the power-law**, but `src/phase4/cost_models.py` never reads them — it only uses the `settings.yaml` power law. `src/phase3/turbine_selection.py` reads `capex_usd_per_kw_low` only to *rank* manufacturers, never to set CapEx. So real anchors exist on disk but do not feed the financials.
+
+### This week's plan to make install cost defensible
+
+1. **Provenance table** — one row per cost assumption: value, file:line, claimed source, link, verified Y/N. Forces honesty.
+2. **Verify each citation** — pull DOE Hydropower Vision Ch.3, ORNL TM-2014/525 cost tables, NREL ATB hydro; find the actual $/kW curve and confirm or replace our A/B.
+3. **Gather real anchors** — three independent sources: vendor $/kW already in the turbine CSV; DOE **HydroSource** (ORNL) actual installed small-hydro project costs (https://hydrosource.ornl.gov); NREL **ATB** hydropower CapEx (https://atb.nrel.gov); FERC conduit-exemption filings for real interconnect/permit costs (https://www.ferc.gov).
+4. **Validate** — run 5–10 known real micro-hydro installs (known kW + known $) through the model, plot model $/kW vs actual, quantify error.
+5. **Recalibrate + document** — refit A/B to real points, or at minimum replace per-type clamps with the vendor low–high band; log assumptions + error bars.
+
+**Fastest credibility win:** wire the CSV vendor `capex_usd_per_kw_low/high` into `cost_models.py` as a sanity band and flag any site whose power-law $/kW falls outside the vendor range for its turbine type. Cheap, uses data we already own, immediately exposes where the model is off.
+
+### Session: 2026-06-01 — Tom
+
+**What was done:**
+- Audited the installation-cost provenance end-to-end: traced every cost coefficient from `src/phase4/cost_models.py` back to `config/settings.yaml` and its claimed sources, and classified each as sourced vs estimate.
+- Confirmed the equipment CapEx power law (`$/kW = A · kW^B`) and the tiered interconnection/permitting costs are industry-standard in *form* but their dollar coefficients are literature-anchored assumptions with no in-repo fit, dataset, or validation against real installs — i.e. screening estimates, not vendor quotes.
+- Discovered that `data/turbines/turbine_manufacturers.csv` already holds vendor-sourced `capex_usd_per_kw_low/high` columns that are more trustable than the power law but are **not** used by `cost_models.py` (only used for manufacturer ranking in `turbine_selection.py`).
+- Produced a 5-step plan to ground-truth install cost (provenance table, citation verification, real anchors from DOE HydroSource / NREL ATB / FERC, validation against known installs, recalibration) plus a fastest-win cross-check.
+
+**Files modified / created:**
+- `WOWERS_PROJECT_JOURNAL.md` — appended this "Installation Cost Provenance Audit" section + this session-log entry.
+
+**Resources used:**
+- Source inspection of `src/phase4/cost_models.py`, `src/phase4/run.py`, `src/phase3/turbine_selection.py`, `config/settings.yaml`, `data/turbines/turbine_manufacturers.csv`.
+- Candidate ground-truth sources: DOE HydroSource (https://hydrosource.ornl.gov), NREL ATB (https://atb.nrel.gov), FERC (https://www.ferc.gov).
+
+**Next steps after this session:**
+1. Build the cost-assumption provenance table (value + file:line + source + link + verified flag).
+2. Wire the vendor `capex_usd_per_kw_low/high` band into `cost_models.py` as a sanity cross-check against the power-law output.
+3. Verify the DOE/ORNL/NREL citations actually support the current A/B coefficients; recalibrate if not.
+
+---
