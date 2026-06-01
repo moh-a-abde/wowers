@@ -105,6 +105,20 @@ else:
 # Sort ascending by max_kw so lookup is deterministic.
 _INTERCON_TIERS.sort(key=lambda t: t["max_kw"])
 
+# F4-BTM (2026-06-01): behind-the-meter self-consumption branch.
+# Micro hydro at a WWTP outfall offsets the plant's own load behind the facility
+# meter (no grid export), so it avoids the utility distribution-tie cost the
+# tiers above assume.  For sites at or below ``max_kw`` the interconnection cost
+# collapses to a small non-export-relay + disconnect + utility-notification cost.
+# Disabled (None) if the YAML block is absent, preserving prior tier-only behavior.
+_INTERCON_BTM_RAW = config.get("cost_model.interconnection.behind_the_meter")
+if _INTERCON_BTM_RAW:
+    _INTERCON_BTM_MAX_KW: float | None = float(_INTERCON_BTM_RAW["max_kw"])
+    _INTERCON_BTM_COST:   float | None = float(_INTERCON_BTM_RAW["cost_usd"])
+else:
+    _INTERCON_BTM_MAX_KW = None
+    _INTERCON_BTM_COST   = None
+
 
 # ── F4-PERMIT (tiered, F4-PERMIT-TIER 2026-05-20) ─────────────────────────────
 # Permitting / environmental review cost as a 3-tier step function of rated
@@ -113,14 +127,15 @@ _INTERCON_TIERS.sort(key=lambda t: t["max_kw"])
 # unviable in the first Phase 4 calibration run.
 #
 # Tier semantics (matches FERC small-hydro practice):
-#   - qualified_facility (≤ 25 kW): conduit-exemption / qualifying-facility
-#     filing, minimal NEPA review.  Typical industry cost $10k–$30k.
+#   - qualified_facility (≤ 25 kW): qualifying conduit hydropower facility —
+#     FERC Notice of Intent only (18 CFR 4.401), no license/fee, no exhibits;
+#     cost is NOI legal/prep + state water-quality coordination (F4-CONDUIT $5k).
 #   - small_ferc (25 < kW ≤ 250):  abbreviated FERC review, state water-quality
 #     cert, light environmental survey.  Typical $50k–$100k.
 #   - full_nepa  (kW > 250):       full FERC licensing or major exemption with
 #     formal NEPA EA/EIS.  Typical $100k–$200k.
 _PERMIT_DEFAULT_TIERS: list[dict] = [
-    {"max_kw":        25.0, "cost_usd":  25_000.0, "label": "qualified_facility"},
+    {"max_kw":        25.0, "cost_usd":   5_000.0, "label": "qualified_facility"},  # F4-CONDUIT
     {"max_kw":       250.0, "cost_usd":  75_000.0, "label": "small_ferc"},
     {"max_kw": 1_000_000.0, "cost_usd": 150_000.0, "label": "full_nepa"},  # catch-all
 ]
@@ -198,6 +213,10 @@ def interconnection_cost(rated_power_kw: float) -> float:
     protection relays, switchgear, and revenue-grade metering for a typical
     distribution-tie small / micro hydro project.
 
+    F4-BTM: sites at or below ``behind_the_meter.max_kw`` (when configured) are
+    treated as behind-the-meter self-consumption (no grid export) and return the
+    small ``behind_the_meter.cost_usd`` instead of a distribution-tie tier cost.
+
     Args:
         rated_power_kw: Nameplate power (kW).  Must be > 0; non-positive
             inputs return the lowest tier cost as a safety floor.
@@ -207,6 +226,9 @@ def interconnection_cost(rated_power_kw: float) -> float:
     """
     if rated_power_kw <= 0:
         return float(_INTERCON_TIERS[0]["cost_usd"])
+    # F4-BTM: behind-the-meter micro sites skip the distribution-tie cost.
+    if _INTERCON_BTM_MAX_KW is not None and rated_power_kw <= _INTERCON_BTM_MAX_KW:
+        return float(_INTERCON_BTM_COST)
     for tier in _INTERCON_TIERS:
         if rated_power_kw <= tier["max_kw"]:
             return float(tier["cost_usd"])
@@ -231,8 +253,8 @@ def permitting_cost(rated_power_kw: float) -> float:
     """Permitting / environmental review cost (USD) — F4-PERMIT (tiered).
 
     Tier lookup by rated power.  Replaces the original single-step model.
-    Default tiers:
-        ≤  25 kW  →  $25,000  (qualified_facility / conduit exemption)
+    Default tiers (qualified_facility recalibrated 2026-06-01, F4-CONDUIT):
+        ≤  25 kW  →   $5,000  (qualifying conduit facility — FERC NOI, no fee)
         ≤ 250 kW  →  $75,000  (abbreviated FERC review)
         >  250 kW → $150,000  (full FERC licensing + NEPA review)
 

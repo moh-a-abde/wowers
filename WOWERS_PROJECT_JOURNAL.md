@@ -4635,3 +4635,69 @@ If those two fixed assumptions are wrong for micro sites, the small-site viabili
 3. Re-run Phase 4; report how many of the 3,280 qualified_facility sites become viable once fixed BOS costs are corrected for micro scale.
 
 ---
+
+## Micro-Site BOS Cost Correction (F4-BTM + F4-CONDUIT) — Jun 01 2026 — Tom
+
+Acted on the small-site next steps: verified the two fixed balance-of-system (BOS) costs that were suspected of being overstated for micro sites, recalibrated both with sourced numbers, and re-ran Phase 4. **Headline twist: correcting the fixed costs slashed portfolio CapEx by $236M but did NOT move viability — because the binding constraint on the 3,280 micro sites is the $20k/yr minimum-revenue floor, not CapEx.**
+
+### What was verified (sources)
+
+- **FERC conduit-exemption permit (F4-CONDUIT).** A WWTP outfall is a non-federal man-made municipal water conduit, so a micro turbine on it is a **"qualifying conduit hydropower facility"** under the Hydropower Regulatory Efficiency Act of 2013 (installed capacity ≤ 40 MW). FERC requires **no license and no exemption** — only a *Notice of Intent to Construct a Qualifying Conduit Hydropower Facility* (18 CFR 4.400/4.401), which has **no application fee and requires no exhibits**. Real cost is NOI legal/prep + state water-quality coordination only — conservatively **$5,000**, not the modeled **$25,000**.
+  - Sources: ferc.gov "How to File a Notice of Intent to Construct a Qualifying Conduit Hydropower Facility"; 18 CFR 4.400/4.401; Federal Register 90 FR 185 (Sep 26 2025), FERC-505 collection.
+- **Behind-the-meter interconnection (F4-BTM).** Micro hydro at a WWTP outfall offsets the plant's *own* electric load behind the facility meter (self-consumption, no grid export). With no export there is **no utility distribution tie, export PPA, or export-grade metering** — the cost drivers behind the $50k–$200k tiers. Only a non-export protection relay, disconnect, and utility notification remain — conservatively **$5,000** (kept non-zero because utility approval for non-export operation is still typical). Applies to sites ≤ 25 kW, matching the qualifying-conduit cohort.
+  - Sources: utility no-export interconnection practice; IEEE 1547-2018 export-control provisions; NREL DG interconnection cost literature.
+
+### What changed (code)
+
+- **`config/settings.yaml`** — `cost_model.interconnection.behind_the_meter: {max_kw: 25, cost_usd: 5000}` (new F4-BTM branch); `cost_model.permitting` qualified_facility tier `25000 → 5000` (F4-CONDUIT), with sourced rationale comments.
+- **`src/phase4/cost_models.py`** — `interconnection_cost()` now returns the behind-the-meter cost for `0 < rated_kw ≤ 25` before falling through to the distribution-tie tiers; default permit tier fallback + docstrings updated to the new values.
+- **`tests/test_phase4/test_cost_models.py`** — updated assertions to the new spec (BTM ≤25 kW → $5k interconnect; conduit ≤25 kW → $5k permit) and added a dedicated behind-the-meter test. All 35 cost-model tests pass; full Phase 4 + integration suite green (117 passed, 1 skipped).
+
+### Result — re-run Phase 4 (3,783 scored sites)
+
+| Metric | Before | After |
+|---|---|---|
+| Project viable (national) | 359 (9.5 %) | **359 (9.5 %)** — unchanged |
+| qualified_facility viable | 25 / 3,280 (0.8 %) | **25 / 3,280 (0.8 %)** — unchanged |
+| qualified_facility median total CapEx | $92,929 | **$27,929** (−70 %) |
+| Total portfolio CapEx | $544.6M | **$308.4M** (−$236M) |
+| Interconnection / Permitting portfolio | — | $82.8M / $57.3M |
+| MINREV-only kills (floor = $20k/yr) | (not captured) | **1,026** |
+
+### The real finding — the revenue floor is the gate, not CapEx
+
+The BOS correction worked exactly as intended at the cost level: qualified_facility median all-in CapEx fell **$92,929 → $27,929** (the −$65k is precisely the $45k interconnect cut + $20k permit cut), and portfolio CapEx dropped $236M. **But micro-site viability did not move at all**, because:
+
+- Only **25 of 3,280** qualified_facility sites earn ≥ the **$20,000/yr** `min_annual_revenue_usd` floor (median micro revenue is **$1,912/yr**).
+- **1,026** qualified_facility sites now pass NPV > 0 **and** payback ≤ 20 yr **and** a real IRR, and are killed **only** by the MINREV floor. Their median payback is **3.5 yr** — economically attractive on pure cash-flow terms.
+- If the MINREV floor were removed, **1,051** qualified_facility sites would be viable (vs 25) — a **~42×** swing.
+
+So the professor's instinct was directionally right — the fixed BOS costs *were* overstated for micro scale, and fixing them makes the micro cash-flow story genuinely attractive (3.5 yr payback, 1,051 sites cash-flow-positive). But the *reported viability count* is now gated by a **policy assumption** (the $20k/yr minimum-revenue floor, F4-MINREV), not by physics or CapEx. That floor exists to cover small-project soft costs (insurance, accounting, periodic inspection) carried by a standalone project SPV. For **behind-the-meter self-consumed micro at a WWTP** — where the "customer" is the plant itself and there is no separate SPV carrying those soft costs — that floor is plausibly overstated for this cohort, exactly like the BOS costs were. **That is the next high-leverage lever**, and it is a team/director judgment call (lowering a viability gate), not something to change unilaterally.
+
+### Files modified / created
+- `config/settings.yaml` — F4-BTM behind-the-meter interconnection branch; F4-CONDUIT qualified_facility permit $25k → $5k.
+- `src/phase4/cost_models.py` — behind-the-meter interconnection branch + docstring/default updates.
+- `tests/test_phase4/test_cost_models.py` — assertions updated to new spec + behind-the-meter test.
+- `WOWERS_PROJECT_JOURNAL.md` — this section + session entry.
+
+### Session: 2026-06-01 (PM, continued) — Tom
+
+**What was done:**
+- Verified with primary sources that (a) a WWTP-outfall micro turbine is a FERC "qualifying conduit hydropower facility" needing only a no-fee Notice of Intent (not a $25k permit), and (b) behind-the-meter self-consumed micro hydro avoids the $50k+ distribution-tie interconnection cost.
+- Implemented F4-BTM (behind-the-meter interconnection branch, ≤25 kW → $5k) and F4-CONDUIT (qualified_facility permit $25k → $5k) in `settings.yaml` + `cost_models.py`; updated tests (35 cost-model tests pass; 117 passed / 1 skipped across Phase 4 + integration).
+- Re-ran Phase 4: qualified_facility median CapEx fell $92,929 → $27,929 and portfolio CapEx fell $544.6M → $308.4M, **but national viability stayed at 359 and micro viability stayed at 25/3,280.**
+- Root-caused the non-movement: the binding constraint on micro sites is the **$20k/yr F4-MINREV revenue floor**, not CapEx. 1,026 micro sites now pass NPV/payback/IRR and are killed only by the floor; 1,051 would be viable (vs 25) if the floor were removed; their median payback is 3.5 yr.
+
+**Files modified / created:**
+- `config/settings.yaml`, `src/phase4/cost_models.py`, `tests/test_phase4/test_cost_models.py`, `WOWERS_PROJECT_JOURNAL.md` (this section + entry).
+
+**Resources used:**
+- ferc.gov qualifying-conduit NOI guidance; 18 CFR 4.400/4.401; Federal Register 90 FR 185 (2025-09-26); IEEE 1547-2018 export-control / NREL DG interconnection literature.
+- `financial_scorecards.parquet` before/after diff via polars.
+
+**Next steps after this session:**
+1. **Team/director decision:** revisit the $20k/yr `min_annual_revenue_usd` (F4-MINREV) floor for the behind-the-meter micro cohort — it is now the sole gate keeping 1,026 cash-flow-positive (3.5 yr payback) micro sites non-viable, and like the BOS costs it may be overstated for self-consumed sites with no project SPV. Do NOT change unilaterally.
+2. Recalibrate the Francis power-law `A/B` — 30 sites still priced below the vendor floor (carryover from the vendor-band cross-check).
+3. Build the cost-assumption provenance table (value + file:line + source + link + verified flag) — still open from the morning audit.
+
+---

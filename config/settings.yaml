@@ -71,6 +71,18 @@ cost_model:
   # Tier lookup by rated_power_kw upper bound (inclusive).
   # Range: $50k–$200k per FERC small-hydro / NREL distributed-generation surveys.
   interconnection:
+    # F4-BTM (2026-06-01): behind-the-meter self-consumption branch.
+    # Micro hydro at a WWTP outfall offsets the plant's own electric load behind
+    # the facility meter — no grid export, so NO utility distribution tie, export
+    # PPA, or export-grade metering is required (the $50k+ tiers below assume a
+    # distribution tie). Only a non-export protection relay, disconnect, and
+    # utility notification remain — conservatively $5k (not $0; utility approval
+    # for non-export operation is still typical). Applies to sites ≤ max_kw, which
+    # matches the ≤25 kW qualified_facility / conduit-exemption regulatory cohort.
+    # Source: utility no-export interconnection practice; IEEE 1547 export control.
+    behind_the_meter:
+      max_kw: 25
+      cost_usd: 5000
     tiers:
       - {max_kw:      10, cost_usd:  50000}
       - {max_kw:      50, cost_usd: 100000}
@@ -85,7 +97,16 @@ cost_model:
   #   - full_nepa         ( >250 kW): full FERC licensing + NEPA EA/EIS
   permitting:
     tiers:
-      - {max_kw:      25, cost_usd:  25000, label: qualified_facility}
+      # F4-CONDUIT (2026-06-01): qualified_facility = ≤25 kW conduit exemption.
+      # A WWTP outfall is a non-federal man-made municipal water conduit, so a
+      # micro turbine on it is a "qualifying conduit hydropower facility" (HREA
+      # 2013, ≤40 MW). FERC requires NO license/exemption — only a Notice of
+      # Intent (18 CFR 4.401) with NO application fee and NO exhibits. Real cost
+      # is NOI legal/prep + state water-quality coordination only, conservatively
+      # $5k (was $25k — overstated; federal filing itself is free).
+      # Source: ferc.gov "Notice of Intent to Construct a Qualifying Conduit
+      # Hydropower Facility"; 18 CFR 4.400/4.401; Fed. Register 90 FR 185 (2025).
+      - {max_kw:      25, cost_usd:   5000, label: qualified_facility}
       - {max_kw:     250, cost_usd:  75000, label: small_ferc}
       - {max_kw: 1000000, cost_usd: 150000, label: full_nepa}
 

@@ -90,16 +90,21 @@ class TestAnnualOpex:
 # ── F4-INTERCON: grid interconnection cost ────────────────────────────────────
 
 class TestInterconnectionCost:
-    """F4-INTERCON: tier-based interconnection cost."""
+    """F4-INTERCON + F4-BTM: behind-the-meter branch then distribution-tie tiers.
 
-    def test_smallest_tier_returns_50k(self):
-        # Very small sites (< 10 kW) → $50k
-        assert interconnection_cost(5.0) == pytest.approx(50_000)
-        assert interconnection_cost(10.0) == pytest.approx(50_000)
+    F4-BTM (2026-06-01): sites ≤25 kW are behind-the-meter self-consumption
+    (no grid export) → $5k, not a distribution-tie tier.  Tiers apply >25 kW.
+    """
+
+    def test_behind_the_meter_micro_returns_5k(self):
+        # F4-BTM: ≤25 kW self-consumed behind the WWTP meter, no grid export → $5k
+        assert interconnection_cost(5.0) == pytest.approx(5_000)
+        assert interconnection_cost(11.0) == pytest.approx(5_000)
+        assert interconnection_cost(25.0) == pytest.approx(5_000)
 
     def test_micro_tier_returns_100k(self):
-        # 10 < kw <= 50 → $100k
-        assert interconnection_cost(11.0) == pytest.approx(100_000)
+        # 25 < kw <= 50 → $100k (grid distribution tie required)
+        assert interconnection_cost(26.0) == pytest.approx(100_000)
         assert interconnection_cost(50.0) == pytest.approx(100_000)
 
     def test_small_tier_returns_150k(self):
@@ -114,12 +119,14 @@ class TestInterconnectionCost:
 
     def test_monotonically_non_decreasing(self):
         prev = -1.0
-        for kw in (1, 10, 11, 50, 51, 100, 250, 251, 500, 1_000):
+        for kw in (1, 10, 25, 26, 50, 51, 100, 250, 251, 500, 1_000):
             cur = interconnection_cost(float(kw))
             assert cur >= prev, f"intercon cost dropped at {kw} kW"
             prev = cur
 
     def test_zero_or_negative_returns_lowest_tier(self):
+        # Non-positive input is a safety floor → lowest distribution tier (BTM
+        # branch only triggers for positive rated power).
         assert interconnection_cost(0.0) == pytest.approx(50_000)
         assert interconnection_cost(-5.0) == pytest.approx(50_000)
 
@@ -129,16 +136,17 @@ class TestInterconnectionCost:
 class TestPermittingCost:
     """F4-PERMIT-TIER: tier lookup by rated power.
 
-    Defaults:
-        ≤ 25 kW  → $25k  (qualified_facility)
+    Defaults (qualified_facility recalibrated 2026-06-01, F4-CONDUIT):
+        ≤ 25 kW  →  $5k  (qualifying conduit facility — FERC NOI, no fee)
         ≤ 250 kW → $75k  (small_ferc)
         > 250 kW → $150k (full_nepa)
     """
 
     def test_qualified_facility_tier(self):
-        assert permitting_cost(1.0)   == pytest.approx(25_000)
-        assert permitting_cost(10.0)  == pytest.approx(25_000)
-        assert permitting_cost(25.0)  == pytest.approx(25_000)
+        # F4-CONDUIT: ≤25 kW = qualifying conduit facility (FERC NOI, no fee) → $5k
+        assert permitting_cost(1.0)   == pytest.approx(5_000)
+        assert permitting_cost(10.0)  == pytest.approx(5_000)
+        assert permitting_cost(25.0)  == pytest.approx(5_000)
 
     def test_small_ferc_tier(self):
         # 25 < kw <= 250 → $75k
@@ -160,8 +168,8 @@ class TestPermittingCost:
             prev = cur
 
     def test_zero_returns_lowest_tier(self):
-        assert permitting_cost(0.0)   == pytest.approx(25_000)
-        assert permitting_cost(-5.0)  == pytest.approx(25_000)
+        assert permitting_cost(0.0)   == pytest.approx(5_000)
+        assert permitting_cost(-5.0)  == pytest.approx(5_000)
 
     def test_all_tiers_strictly_positive(self):
         # F4-PERMIT-TIER replaces the old $0-for-large-sites model — every
@@ -193,7 +201,7 @@ class TestPermittingTierLabel:
     def test_label_and_cost_consistent(self):
         # Sanity: same tier → same label across all queried values
         label_to_cost = {
-            "qualified_facility": 25_000,
+            "qualified_facility":  5_000,
             "small_ferc":         75_000,
             "full_nepa":         150_000,
         }
@@ -231,11 +239,11 @@ class TestProjectCapex:
                 assert bd["total_project_capex_usd"] == pytest.approx(expected)
 
     def test_micro_site_qualified_facility_tier(self):
-        # 20 kW: qualified_facility permit + middle intercon tier
+        # 20 kW: F4-CONDUIT permit ($5k) + F4-BTM behind-the-meter intercon ($5k)
         bd = project_capex("Crossflow", 20.0)
-        assert bd["permitting_capex_usd"] == pytest.approx(25_000)
+        assert bd["permitting_capex_usd"] == pytest.approx(5_000)
         assert bd["permitting_tier"] == "qualified_facility"
-        assert bd["interconnection_capex_usd"] == pytest.approx(100_000)
+        assert bd["interconnection_capex_usd"] == pytest.approx(5_000)
 
     def test_small_ferc_tier_site(self):
         # 100 kW: small_ferc permit + 150k intercon tier
