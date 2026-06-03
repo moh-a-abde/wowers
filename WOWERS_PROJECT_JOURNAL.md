@@ -4695,7 +4695,7 @@ So the professor's instinct was directionally right — the fixed BOS costs *wer
 - ferc.gov qualifying-conduit NOI guidance; 18 CFR 4.400/4.401; Federal Register 90 FR 185 (2025-09-26); IEEE 1547-2018 export-control / NREL DG interconnection literature.
 - `financial_scorecards.parquet` before/after diff via polars.
 
-**Next steps after this session:**
+**Next steps after this session for the rest of the week:**
 1. **Team/director decision:** revisit the $20k/yr `min_annual_revenue_usd` (F4-MINREV) floor for the behind-the-meter micro cohort — it is now the sole gate keeping 1,026 cash-flow-positive (3.5 yr payback) micro sites non-viable, and like the BOS costs it may be overstated for self-consumed sites with no project SPV. Do NOT change unilaterally.
 2. Recalibrate the Francis power-law `A/B` — 30 sites still priced below the vendor floor (carryover from the vendor-band cross-check).
 3. Build the cost-assumption provenance table (value + file:line + source + link + verified flag) — still open from the morning audit.
