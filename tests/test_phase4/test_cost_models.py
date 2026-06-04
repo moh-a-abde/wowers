@@ -56,6 +56,13 @@ class TestCapexPerKw:
             c = capex_per_kw(t, 100.0)
             assert 500 <= c <= 20_000, f"{t}: capex/kW={c} out of plausible range"
 
+    def test_francis_clamped_to_vendor_floor_at_large_power(self):
+        # F4-VENDORBAND: large Francis sites previously priced below the vendor
+        # floor ($1,800/kW, Canyon/Gilkes min). min_per_kw clamp now lifts them
+        # to the floor so the model never quotes under real manufacturer pricing.
+        assert capex_per_kw("Francis", 1_000.0) == pytest.approx(1_800)
+        assert capex_per_kw("Francis", 5_000.0) == pytest.approx(1_800)
+
 
 class TestTotalCapex:
     def test_total_equals_per_kw_times_power(self):

@@ -43,7 +43,7 @@ cost_model:
     Francis:
       A: 8500
       B: -0.32
-      min_per_kw: 700
+      min_per_kw: 1800     # F4-VENDORBAND: clamp to vendor floor (Canyon/Gilkes min $1,800/kW); was 700 → underpriced 30 large sites below real vendor quotes
       max_per_kw: 9000
     Pelton:
       A: 7000

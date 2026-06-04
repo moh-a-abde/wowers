@@ -4701,3 +4701,112 @@ So the professor's instinct was directionally right — the fixed BOS costs *wer
 3. Build the cost-assumption provenance table (value + file:line + source + link + verified flag) — still open from the morning audit.
 
 ---
+
+## Cost-Assumption Provenance Table + Francis Vendor-Floor Fix — Jun 04 2026 — Tom
+
+Closed two of the three open next-steps from Jun 01: (#2) recalibrated the Francis equipment cost so it stops pricing below real vendor quotes, and (#3) built the full cost-assumption provenance table the director asked for. The remaining open item (#1, the $20k/yr F4-MINREV floor) is deliberately untouched — it is a team/director judgment call, not a unilateral code change.
+
+### Part A — Francis power-law vendor-floor fix (F4-VENDORBAND, next-step #2)
+
+The Jun 01 vendor-band cross-check left 30 Francis sites flagged as **underpriced** — the power law quoted below the real vendor floor. Confirmed against `financial_scorecards.parquet` before changing anything: all 30 flagged sites are Francis, model `$/kW` spanned **$805–$1,784** (median $1,521), rated power **131–1,579 kW**, and all 30 were already `project_viable`. They underprice because above ~128 kW the Francis power law (`A=8500, B=−0.32`) drops below the vendor floor and the old `min_per_kw=700` clamp let it keep sinking.
+
+**Fix (mirror of the Jun 01 Crossflow ceiling fix):** raised the Francis `min_per_kw` clamp **700 → 1,800** to match the vendor floor (Canyon/Gilkes minimum `capex_usd_per_kw_low = 1,800`). One config line, the symmetric counterpart to the Crossflow `max_per_kw 7500 → 6000` change.
+
+| Metric | Before | After |
+|---|---|---|
+| **CapEx outside vendor band** | 30 / 3,783 (0.8 %) | **0 / 3,783 (0.0 %)** |
+| Francis flagged | 30 | **0** |
+| Project viable (national) | 359 (9.5 %) | 359 (9.5 %) — unchanged |
+| Portfolio CapEx | $308.4M | **$315.6M** (+$7.2M) |
+| Equipment portfolio CapEx | $168.3M | **$175.5M** (+$7.2M) |
+| Median payback (viable) | — | 7.8 yr |
+
+The +$7.2M is exactly the honest correction: 30 large Francis sites were under-costed against real manufacturer pricing, so all-in CapEx was understated. Viability is unchanged (these sites have large revenue and stay viable at the higher, truthful cost). **Both turbine-type mispricing problems are now closed — the model no longer quotes any site outside what manufacturers actually charge.** Tests: added `test_francis_clamped_to_vendor_floor_at_large_power`; 36 cost-model tests pass, 101 Phase 4 + 17 integration (1 skipped) green; no lint.
+
+### Part B — Cost-assumption provenance table (next-step #3)
+
+One row per cost assumption: current value, where it lives (`file:line`), the claimed source, and an honest verified flag. **Verified semantics:** `Y` = number is traceable to a primary source or to the vendor CSV we own; `Form` = the structural form is industry-standard but the exact dollar figure is a chosen pick within a plausible band; `N` = literature-anchored assumption with no in-repo fit, dataset, or primary-source derivation.
+
+**Equipment CapEx power law** — `CapEx/kW = clamp(A · kW^B, min, max)`, in `config/settings.yaml` `cost_model.types` (lines 37–62), consumed by `src/phase4/cost_models.py:64-71`:
+
+| Param | Value | settings.yaml line | Claimed source | Verified |
+|---|---|---|---|---|
+| Global fallback A / B | 9500 / −0.35 | 32–33 | DOE Hydropower Vision 2016 Ch.3; ORNL TM-2014/525 | **N** (form only; coefficients are unverified picks) |
+| Global min / max $/kW | 800 / 10,000 | 34–35 | round-number guardrails | **N** |
+| Kaplan A / B | 9500 / −0.35 | 39–40 | DOE/ORNL (as above) | **N** |
+| Kaplan min / max | 800 / 10,000 | 41–42 | guardrails | **N** |
+| Francis A / B | 8500 / −0.32 | 44–45 | DOE/ORNL | **N** |
+| Francis min / max | **1,800** / 9,000 | 46–47 | min = vendor floor (Canyon/Gilkes `capex_usd_per_kw_low`), F4-VENDORBAND, Jun 04 | min **Y** (vendor CSV); max **N** |
+| Pelton A / B | 7000 / −0.30 | 49–50 | DOE/ORNL | **N** |
+| Pelton min / max | 600 / 8,000 | 51–52 | guardrails | **N** |
+| in_conduit_micro A / B | 12,000 / −0.25 | 54–55 | DOE/ORNL | **N** |
+| in_conduit_micro min / max | 2,000 / 15,000 | 56–57 | guardrails | **N** |
+| Crossflow A / B | 7500 / −0.28 | 59–60 | DOE/ORNL | **N** |
+| Crossflow min / max | 500 / **6,000** | 61–62 | max = vendor ceiling (CINK/Ossberger `capex_usd_per_kw_high`), F4-VENDORBAND, Jun 01 | max **Y** (vendor CSV); min **N** |
+
+**OpEx** — annual O&M as % of equipment CapEx, `cost_model.opex_pct_of_capex` (lines 63–68), consumed by `cost_models.py:74-80`:
+
+| Type | % of CapEx/yr | line | Source | Verified |
+|---|---|---|---|---|
+| Kaplan | 2.5 % | 64 | industry rule-of-thumb | **N** |
+| Francis | 2.0 % | 65 | industry rule-of-thumb | **N** |
+| Pelton | 1.5 % | 66 | industry rule-of-thumb | **N** |
+| in_conduit_micro | 3.0 % | 67 | industry rule-of-thumb | **N** |
+| Crossflow | 2.0 % | 68 | industry rule-of-thumb | **N** |
+
+**Balance-of-system (interconnection + permitting)** — `cost_model.interconnection`/`permitting` (lines 73–111), consumed by `cost_models.py:89-157`, `interconnection_cost()`/`permitting_cost()`:
+
+| Item | Value | line | Source | Verified |
+|---|---|---|---|---|
+| Behind-the-meter interconnect (≤25 kW) | $5,000 | 83–85 | no-export utility practice; IEEE 1547-2018 export-control; NREL DG cost lit (F4-BTM, Jun 01) | **Y** (sourced reasoning) |
+| Interconnect tier ≤10 kW | $50,000 | 87 | FERC small-hydro / NREL DG surveys | **Form** (band real; cutoff/figure picked) |
+| Interconnect tier ≤50 kW | $100,000 | 88 | same | **Form** |
+| Interconnect tier ≤250 kW | $150,000 | 89 | same | **Form** |
+| Interconnect catch-all | $200,000 | 90 | same | **Form** |
+| Permit `qualified_facility` (≤25 kW) | $5,000 | 109 | FERC qualifying-conduit NOI, 18 CFR 4.400/4.401 (no fee/exhibits), Fed. Reg. 90 FR 185 (2025) — F4-CONDUIT, Jun 01 | **Y** (primary source) |
+| Permit `small_ferc` (≤250 kW) | $75,000 | 110 | FERC abbreviated-review practice | **Form** |
+| Permit `full_nepa` (>250 kW) | $150,000 | 111 | FERC full licensing + NEPA practice | **Form** |
+
+**Financial parameters** — `financials` block (lines 113–127), consumed by `src/phase4/financials.py`:
+
+| Param | Value | line | Source | Verified |
+|---|---|---|---|---|
+| Discount rate | 6 % | 115 | municipal/infra standard | **Form** (standard value) |
+| Project lifetime | 30 yr | 116 | hydro asset-life standard | **Form** |
+| Degradation rate | 0.2 %/yr | 117 | hydro degradation standard | **Form** |
+| REC value | $0.01/kWh | 118 | conservative REC market estimate | **N** |
+| **F4-MINREV revenue floor** | **$20,000/yr** | 119–127 | policy assumption; midpoint of $15k–25k "small-project soft-cost" band from May 20 review | **N** (judgment; **open team decision — next-step #1**) |
+
+**Vendor anchors actually verified (`data/turbines/turbine_manufacturers.csv`, `data_source = manufacturer_website`):** Crossflow $2,000–6,000 (CINK/Canyon/Ossberger), Kaplan $800–7,000 (CINK/Natel/Andritz), Francis $1,800–8,000 (CINK/Canyon/Rentricity/Gilkes), Pelton $1,500–4,000 (Canyon/Gilkes), in_conduit_micro $3,500–15,000 (Lucid/Turbulent/Emrgy). The F4-VENDORBAND cross-check (`capex_vs_vendor_band`, `cost_models.py:334`) flags any model `$/kW` outside these per-type envelopes; after the Crossflow (Jun 01) + Francis (Jun 04) clamp fixes, **0 of 3,783 sites** fall outside.
+
+### Honest headline for the director
+
+The cost model's **structure is defensible** (physics-form power law + tiered BOS + standard finance), and the two pieces we could anchor to real vendor data now are (equipment `$/kW` ceilings/floors, conduit-NOI permit, behind-the-meter interconnect) **are anchored and verified**. What remains **unverified (`N`)** are the power-law `A/B` coefficients (form real, exact values never fit to installs), the OpEx percentages, the REC value, and — most consequentially — the **$20k/yr F4-MINREV floor**, which is the sole gate keeping 1,026 cash-flow-positive micro sites non-viable and is the open team decision.
+
+### Files modified / created
+- `config/settings.yaml` — Francis `min_per_kw 700 → 1800` (F4-VENDORBAND).
+- `src/phase4/cost_models.py` — Francis fallback default min `700 → 1800` to match config.
+- `tests/test_phase4/test_cost_models.py` — added `test_francis_clamped_to_vendor_floor_at_large_power`.
+- `WOWERS_PROJECT_JOURNAL.md` — this section + session entry.
+
+### Session: 2026-06-04 — Tom
+
+**What was done:**
+- Closed next-step #2 (Francis recalibration): confirmed all 30 vendor-band flags were underpriced Francis sites (model $805–1,784/kW vs vendor floor $1,800), raised Francis `min_per_kw 700 → 1800` in `settings.yaml` + `cost_models.py` fallback, added a lock test. Re-ran Phase 4: **CapEx-outside-vendor-band dropped 30 → 0**; viability unchanged at 359; portfolio CapEx rose $308.4M → $315.6M (+$7.2M honest correction). Both Crossflow (over) and Francis (under) mispricing problems are now fully closed.
+- Closed next-step #3 (provenance table): built the full cost-assumption provenance table — every coefficient with value, `file:line`, claimed source, and an honest verified flag (Y / Form / N). Documented which numbers are vendor- or primary-source-anchored vs unverified literature picks, and called out the $20k MINREV floor as the most consequential unverified assumption.
+- All tests green: 36 cost-model, 101 Phase 4, 17 integration (1 skipped); no lint errors.
+
+**Files modified / created:**
+- `config/settings.yaml`, `src/phase4/cost_models.py`, `tests/test_phase4/test_cost_models.py`, `WOWERS_PROJECT_JOURNAL.md` (this section + entry).
+
+**Resources used:**
+- `data/processed/phase4/financial_scorecards.parquet` before/after diff via polars.
+- `data/turbines/turbine_manufacturers.csv` vendor `capex_usd_per_kw_low/high` ranges.
+- Source inspection of `config/settings.yaml`, `src/phase4/cost_models.py`, `src/phase4/run.py`.
+
+**Next steps after this session:**
+1. **Team/director decision (open, do NOT change unilaterally):** the $20k/yr `min_annual_revenue_usd` (F4-MINREV) floor — sole gate on 1,026 cash-flow-positive (3.5 yr payback) micro sites; ~42× viability swing if relaxed for the behind-the-meter cohort.
+2. Optional: verify/recalibrate the power-law `A/B` coefficients against DOE HydroSource / NREL ATB real installs (the remaining `N` items in the provenance table) — would upgrade the equipment cost from "form-defensible" to "data-validated."
+3. Phase 5 (ML model on DOE/FERC ground truth) — still not started.
+
+---
