@@ -4810,3 +4810,81 @@ The cost model's **structure is defensible** (physics-form power law + tiered BO
 3. Phase 5 (ML model on DOE/FERC ground truth) — still not started.
 
 ---
+
+## Site Exclusion Funnel + Three-Tier Energy Reframe — Jun 05 2026 — Tom
+
+Director/mentor feedback: the team is currently presenting only the ~300–400 financeable sites, but stakeholders want to know **how the rest were excluded** — and whether we are wrongly "abandoning" smaller sites instead of reporting how much energy a right-sized turbine could generate at each location. This section documents a read-only funnel audit and a proposed reporting reframe. **No code changes yet** — analysis and plan only.
+
+### The question in plain terms
+
+1. **"How did you exclude the rest?"** — Need a transparent, stage-by-stage funnel from 17,158 POTWs down to 359 `project_viable` sites, with the *reason* at each drop (data gap vs physics vs economics).
+2. **"Don't abandon the small sites."** — Different turbine tiers (Crossflow, Kaplan, Francis, in-conduit, etc.) already size to each site's flow and head. We should report energy potential across tiers, not only the subset that clears a single financial gate.
+
+### Exclusion funnel (current pipeline, on-disk parquet counts)
+
+| Stage | Sites | Cumulative drop | Primary exclusion reason |
+|---|---|---|---|
+| Phase 1 — ranked POTWs | 17,158 | — | All active POTWs with ranking score |
+| Phase 2 — retained | 5,468 | −11,690 | **No usable flow data** (`excluded=True` in `energy_yield_estimates.parquet`; DMR gaps, not "bad site") |
+| Phase 3 — head estimated | 5,468 | 0 | All Phase 2-retained sites enter Phase 3 |
+| Phase 3 — `head_valid` | 4,864 | −604 | **No valid net head** (elevation/outfall data gap) |
+| Phase 3 — `turbine_viable` | 3,783 | −1,081 | **Rated power < 1 kW** (physics floor in `turbine_selection.py`) |
+| Phase 4 — scored | 3,783 | 0 | All turbine-viable sites scored financially |
+| Phase 4 — `project_viable` | **359** | −3,424 | **Economics** (NPV ≤ 0, payback > 20 yr, IRR sentinel, or F4-MINREV $20k/yr floor) |
+
+**Key insight for the director:** the two largest cuts (11,690 + 604 = **12,294 sites**, 72 % of the national POTW list) are **missing-data exclusions**, not economic rejections. Only the final 3,424 drop is a finance gate on sites that already have a sized turbine and computed annual energy.
+
+### Energy we are not currently leading with
+
+| Cohort | Sites | Annual energy (GWh/yr) | Notes |
+|---|---|---|---|
+| Turbine-viable (Phase 3) | 3,783 | **514.7** | Physical ceiling — every site has `turbine_type`, `rated_power_kw`, `annual_energy_mwh` |
+| `project_viable` (Phase 4) | 359 | **357.3** | 69 % of turbine-viable energy in 9.5 % of sites |
+| Scored but not financeable | 3,424 | **157.4** | Sized turbine + energy computed; failed NPV/payback/MINREV |
+| MINREV-only kills | 1,026 | **72.5** | NPV > 0, payback ≤ 20 yr, real IRR — killed **only** by $20k/yr revenue floor |
+| Not turbine-viable (Phase 3) | 1,685 | **5.7** | Mostly sub-1 kW or invalid head; small energy tail |
+
+We are **already computing** best-fit turbine and `annual_energy_mwh` for every turbine-viable site via `src/phase3/turbine_selection.py` (manufacturer DB match on flow, head, pipe diameter). The gap is **reporting and framing**, not missing physics.
+
+### Proposed three-tier reframe (replace binary "viable / abandoned")
+
+Instead of presenting only 359 sites as "the answer," segment the turbine-viable cohort into three tiers:
+
+| Tier | Label | Criteria (proposed) | Sites (current) | Energy (GWh/yr) | Audience |
+|---|---|---|---|---|---|
+| **A** | Investment-ready | `project_viable == True` | 359 | 357.3 | Municipalities, investors, pilot selection |
+| **B** | Cash-flow positive, sub-scale | NPV > 0, payback ≤ 20 yr, real IRR, but below MINREV floor | 1,026 | 72.5 | Portfolio / aggregation / EaaS plays |
+| **C** | Technical potential | `turbine_viable == True` (all sized sites) | 3,783 | 514.7 | National impact headline, policy, grant narrative |
+
+Tier B is the direct answer to "don't abandon small sites" — these sites have positive economics on pure cash flow (median payback ~3.5 yr for the MINREV-killed micro cohort) but fail a **policy assumption** (standalone SPV soft-cost floor), not physics or turbine fit.
+
+### Proposed implementation (not started — agreed direction)
+
+1. **Exclusion funnel report** — standalone markdown (e.g. `EXCLUSION_FUNNEL_REPORT.md`) with stage counts, reasons, and energy at each step; answers "how did we exclude the rest" for director review.
+2. **Three-tier column in Phase 4 output** — add `site_tier` (`A` / `B` / `C`) to `financial_scorecards.parquet` and per-tier count + GWh in the Phase 4 summary log. Tier C can be implied for all scored rows (all are turbine-viable); Tier A/B derived from existing scorecard fields + MINREV logic in `financials.py`.
+
+### Session: 2026-06-05 — Tom
+
+**What was done:**
+- Read-only funnel audit across Phase 1–4 parquet outputs to answer director question: how 17,158 POTWs narrow to 359 financeable sites.
+- Documented that 72 % of exclusions (12,294 sites) are missing flow or head data, not economic rejection; only 3,424 turbine-sized sites fail the finance gate.
+- Quantified "abandoned" energy: 157.4 GWh/yr on scored-but-not-financeable sites, including 72.5 GWh/yr on 1,026 MINREV-only kills.
+- Proposed three-tier reporting reframe (Investment-ready / Cash-flow positive sub-scale / Technical potential) so smaller turbine tiers are reported, not dropped from the narrative.
+- Agreed next build (not started this session): exclusion funnel report + `site_tier` column in Phase 4 output.
+
+**Files modified / created:**
+- `WOWERS_PROJECT_JOURNAL.md` — this section + session entry only (no pipeline code changes).
+
+**Resources used:**
+- `data/processed/phase1/ranked_candidates.parquet` (17,158 rows).
+- `data/processed/phase2/energy_yield_estimates.parquet` (5,468 retained / 11,690 excluded).
+- `data/processed/phase3/turbine_sizing.parquet` (3,783 turbine-viable / 1,685 not).
+- `data/processed/phase4/financial_scorecards.parquet` (359 project-viable).
+- Source inspection of `src/phase3/turbine_selection.py`, `src/phase3/run.py`, `src/phase4/financials.py`.
+
+**Next steps after this session:**
+1. Build `EXCLUSION_FUNNEL_REPORT.md` (director-facing funnel + energy table).
+2. Add `site_tier` (A/B/C) to Phase 4 output and summary logging.
+3. Hold F4-MINREV floor decision for team/director — Tier B size depends on whether MINREV is relaxed for behind-the-meter cohort.
+
+---
