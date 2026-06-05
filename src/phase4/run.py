@@ -18,6 +18,7 @@ Output: data/processed/phase4/financial_scorecards.parquet
 from __future__ import annotations
 
 import argparse
+import math
 import time
 from pathlib import Path
 
@@ -43,6 +44,31 @@ log = logging_setup.get("wowers.phase4")
 OUTPUT_DIR: Path = config.processed_dir() / "phase4"
 _PHASE1_OUTPUT: Path = config.processed_dir() / "phase1" / "ranked_candidates.parquet"
 _PHASE3_OUTPUT: Path = config.processed_dir() / "phase3" / "turbine_sizing.parquet"
+
+
+def derive_site_tier(row: dict) -> str:
+    """Assign investment tier A/B/C for a scored turbine-viable site.
+
+    Tier A — investment-ready (passes full ``project_viable`` gate).
+    Tier B — cash-flow positive on NPV/payback/IRR but below F4-MINREV floor.
+    Tier C — turbine-viable but uneconomic on cash-flow terms.
+    """
+    if row.get("project_viable"):
+        return "A"
+    irr = row.get("irr")
+    irr_real = (
+        irr is not None
+        and not math.isnan(irr)
+        and irr > -0.99
+        and irr < 3.0
+    )
+    if (
+        row.get("npv_usd", 0) > 0
+        and row.get("payback_years", math.inf) <= 20.0
+        and irr_real
+    ):
+        return "B"
+    return "C"
 
 
 def run(
@@ -182,6 +208,9 @@ def run(
             fr.get("project_viable") and (fr.get("data_quality_tier", 3) <= 1)
         )
 
+    for fr in financial_rows:
+        fr["site_tier"] = derive_site_tier(fr)
+
     log.info(f"  Scored {len(financial_rows):,} facilities")
 
     # ── Step 3: Sensitivity analysis ──────────────────────────────────────────
@@ -292,6 +321,20 @@ def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
                 f"    {tier:>20}: {len(cohort):>5,} sites, "
                 f"{v:>4,} viable ({v/len(cohort)*100:5.1f}%)"
             )
+
+    if "site_tier" in df.columns and "annual_energy_kwh" in df.columns:
+        log.info("  Energy by site tier:")
+        _SITE_TIER_LABELS = (
+            ("A", "Tier A (investment-ready):       "),
+            ("B", "Tier B (cash-flow+, sub-scale):  "),
+            ("C", "Tier C (technical potential):    "),
+        )
+        for tier_code, label in _SITE_TIER_LABELS:
+            cohort = df.filter(pl.col("site_tier") == tier_code)
+            if len(cohort) == 0:
+                continue
+            gwh = cohort["annual_energy_kwh"].sum() / 1e6  # kWh → GWh
+            log.info(f"  {label}{len(cohort):>5,} sites, {gwh:>7.1f} GWh/yr")
 
     # MINREV-only kill count: sites that pass NPV / payback / IRR but fail
     # the F4-MINREV revenue floor.  Tracks whether MINREV is doing meaningful

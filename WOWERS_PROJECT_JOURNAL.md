@@ -4888,3 +4888,59 @@ Tier B is the direct answer to "don't abandon small sites" — these sites have 
 3. Hold F4-MINREV floor decision for team/director — Tier B size depends on whether MINREV is relaxed for behind-the-meter cohort.
 
 ---
+
+## site_tier (A/B/C) + CapEx A/B Recalibration Attempt — Jun 05 2026 — Tom
+
+### Task 1 — `site_tier` column (complete)
+
+Added `derive_site_tier()` in `src/phase4/run.py` and `site_tier` column to `financial_scorecards.parquet`:
+
+| Tier | Criteria | Sites | Energy (GWh/yr) |
+|---|---|---|---|
+| **A** | `project_viable == True` | 355 | 356.3 |
+| **B** | NPV>0, payback≤20yr, real IRR, but fails MINREV | 1,019 | 71.9 |
+| **C** | Everything else (uneconomic on cash flow) | 2,409 | 86.5 |
+| **Total** | all turbine-viable scored | 3,783 | **514.7** |
+
+Per-tier GWh logged in Phase 4 summary (`annual_energy_kwh` sum / 1e6). Tests: `tests/test_phase4/test_site_tier.py` (7 cases, incl. NaN IRR + missing `irr` key) + integration smoke assert on `site_tier` column.
+
+### Task 2 — CapEx A/B recalibration (partial)
+
+Attempted log-log polyfit against real installed-cost data:
+
+| Source | Data | Fit result |
+|---|---|---|
+| ORNL municipal conduit projects | 14 ICH installs, OSTI 3002705 Table 1 (2020$/kW) | A=48,398, B=−0.34, R²=0.48 (high scatter; outliers >$12k/kW) |
+| ORNL BCM canal/conduit equation | TM-2014/525 ICC = 11,277,566·P^0.819·H^−0.177 sampled at 44 (kW, head) points | A=20,283, B=−0.18, R²=0.89 |
+| NREL ATB 2023 NSD anchors | $6,244–$7,973/kW at 1–30 MW | added to aggregate fit |
+
+**Decision:** aggregate ORNL+NSD fit applied to Kaplan/Francis/Pelton/Crossflow would push **775+ sites outside vendor bands** — rejected. **Only `in_conduit_micro` updated** (A 12,000→20,283, B −0.25→−0.181); vendor-band violations remain **0/3,783**. Kaplan, Francis, Pelton, Crossflow A/B **unchanged** (vendor clamps bind; no type-specific install data with ≥3 points per type).
+
+Post-recalibration Phase 4: `project_viable` **355** (was 359, within ±50); `capex_outside_vendor_band` **0**; portfolio CapEx **$321.7M** (+$6.1M from higher in-conduit equipment cost on 196 sites).
+
+### Session: 2026-06-05 (PM) — Tom
+
+**What was done:**
+- Implemented `site_tier` (A/B/C) in Phase 4 output + per-tier GWh summary logging; added unit + integration tests (313 passed, 1 skipped).
+- Attempted CapEx power-law A/B recalibration from ORNL BCM + municipal conduit + NREL ATB data; updated only `in_conduit_micro` A/B (passes vendor-band guard); retained Kaplan/Francis/Pelton/Crossflow coefficients with documented rejection reason.
+- Post-review fixes: reverted premature journal entry, added `test_tier_c_nan_irr_blocks_tier_b` and `test_tier_c_missing_irr_key`, then re-logged this session.
+
+**Files modified / created:**
+- `src/phase4/run.py` — `derive_site_tier()`, tier assignment loop, per-tier GWh logging.
+- `config/settings.yaml` — `in_conduit_micro` A/B recalibrated.
+- `src/phase4/cost_models.py` — matching in_conduit fallback defaults.
+- `tests/test_phase4/test_site_tier.py` — new (7 tests).
+- `tests/integration/test_pipeline_smoke.py` — `site_tier` column assert.
+- `WOWERS_PROJECT_JOURNAL.md` — this section + entry.
+
+**Resources used:**
+- ORNL TM-2014/525 BCM canal/conduit ICC equation; OSTI 3002705 (14 municipal conduit project costs).
+- NREL ATB 2023 NSD OCC range ($6,244–$7,973/kW).
+- `data/processed/phase4/financial_scorecards.parquet` validation runs.
+
+**Next steps after this session:**
+1. Build `EXCLUSION_FUNNEL_REPORT.md` (director-facing; still open from Jun 05 AM).
+2. Team/director decision on F4-MINREV floor (1,019 Tier B sites).
+3. Per-turbine-type A/B validation needs more type-split install data (HydroSource EHA) — aggregate ORNL curve incompatible with vendor bands for Kaplan/Francis/Crossflow.
+
+---

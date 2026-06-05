@@ -396,6 +396,10 @@ class TestPhase4HighConfidence:
         assert "project_viable_high_confidence" in out_df.columns, (
             "project_viable_high_confidence column missing from Phase 4 output"
         )
+        assert "site_tier" in out_df.columns, (
+            "site_tier column missing from Phase 4 output"
+        )
+        assert set(out_df["site_tier"].unique().to_list()).issubset({"A", "B", "C"})
 
         # Pull rows by id
         by_id = {r["npdes_id"]: r for r in out_df.iter_rows(named=True)}

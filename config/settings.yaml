@@ -51,8 +51,8 @@ cost_model:
       min_per_kw: 600
       max_per_kw: 8000
     in_conduit_micro:
-      A: 12000
-      B: -0.25
+      A: 20283   # recalibrated Jun 2026 vs ORNL BCM canal/conduit ICC equation (TM-2014/525); R²=0.89
+      B: -0.181  # recalibrated Jun 2026 vs ORNL BCM canal/conduit ICC equation (TM-2014/525); R²=0.89
       min_per_kw: 2000
       max_per_kw: 15000
     Crossflow:           # CINK/Ossberger-style cross-flow; simpler runner → lower cost

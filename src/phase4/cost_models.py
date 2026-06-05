@@ -66,7 +66,8 @@ _TYPE_PARAMS: dict[str, dict] = {
     # Francis min clamped to vendor floor ($1,800/kW, Canyon/Gilkes) — F4-VENDORBAND
     "Francis":          _load_type("Francis",           8_500,  -0.32, 1_800,  9_000),
     "Pelton":           _load_type("Pelton",            7_000,  -0.30,   600,  8_000),
-    "in_conduit_micro": _load_type("in_conduit_micro", 12_000,  -0.25, 2_000, 15_000),
+    # in_conduit_micro A/B recalibrated Jun 2026 vs ORNL BCM canal/conduit (TM-2014/525); R²=0.89
+    "in_conduit_micro": _load_type("in_conduit_micro", 20_283,  -0.181, 2_000, 15_000),
     # Crossflow (Ossberger/CINK): simpler runner → lower cost than Kaplan
     "Crossflow":        _load_type("Crossflow",         7_500,  -0.28,   500,  7_500),
 }
