@@ -4944,3 +4944,51 @@ Post-recalibration Phase 4: `project_viable` **355** (was 359, within ±50); `ca
 3. Per-turbine-type A/B validation needs more type-split install data (HydroSource EHA) — aggregate ORNL curve incompatible with vendor bands for Kaplan/Francis/Crossflow.
 
 ---
+
+### Session: 2026-06-07 — Tom
+
+**What was done:**
+- Built `EXCLUSION_FUNNEL_REPORT.md` (repo root) — director-facing markdown answering "how did you exclude the rest?" with a stage-by-stage funnel, exclusion-reason rollup, energy-by-cohort table, and the open MINREV decision.
+- Recomputed all funnel counts and energy totals from parquet (phase1–4). All site-count figures match journal references exactly. One rounding difference: non-viable (B+C) energy = 158.4 GWh/yr (journal showed "~157 GWh").
+- **Flagged discrepancy:** Journal records Tier B median payback as "~3.5 yr". Parquet (`payback_years` column, 1,019 Tier B sites) yields median **9.73 yr** (range 3.9–13.6 yr). Report uses parquet-derived figure; journal reference requires correction.
+- Ran `pytest -q`: 313 passed, 1 skipped — no regressions (no code modified).
+
+**Files modified / created:**
+- `EXCLUSION_FUNNEL_REPORT.md` — new file (created).
+- `WOWERS_PROJECT_JOURNAL.md` — this section appended.
+
+**Resources used:**
+- `data/processed/phase1/ranked_candidates.parquet`
+- `data/processed/phase2/energy_yield_estimates.parquet`
+- `data/processed/phase3/turbine_sizing.parquet`
+- `data/processed/phase4/financial_scorecards.parquet`
+- `/opt/miniconda3/bin/python` with `polars` for recomputation.
+
+**Next steps after this session:**
+1. Director/team decision on F4-MINREV floor (1,019 Tier B sites, 71.9 GWh/yr, median payback 9.73 yr).
+2. Correct journal "~3.5 yr" Tier B median payback → 9.73 yr (data error, not a pipeline bug).
+3. Per-turbine-type A/B validation (HydroSource EHA data) — still open from Jun 05 PM.
+
+---
+
+### Session: 2026-06-07 (post-review) — Tom
+
+**What was done:**
+- Applied two factual corrections to `EXCLUSION_FUNNEL_REPORT.md` identified during review (no code or data changed):
+  1. Fixed fabricated file path: `src/phase4/financial_model.py` → `src/phase4/financials.py` (with correct line refs: constant line 55, floor logic line 287).
+  2. Fixed fabricated config key: `MINREV_USD_PER_YR` → `min_annual_revenue_usd` (`config/settings.yaml:127`).
+- Review also confirmed: "42×" viability swing figure from earlier Wednesday brief is unsupported; correct figure is **3.9×** (355→1,374 sites). Report already used 3.9×; journal note added for record.
+
+**Files modified / created:**
+- `EXCLUSION_FUNNEL_REPORT.md` — two corrections in "The One Open Decision" section.
+- `WOWERS_PROJECT_JOURNAL.md` — this addendum appended.
+
+**Resources used:**
+- Peer review of `EXCLUSION_FUNNEL_REPORT.md` against parquet + source files.
+
+**Next steps after this session:**
+1. (Unchanged from above session) Director/team decision on MINREV floor.
+2. Drop "42×" from any Wednesday pitch materials; use 3.9× or "+1,019 sites / +71.9 GWh."
+3. Journal "~3.5 yr" correction still needed.
+
+---
