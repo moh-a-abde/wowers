@@ -4992,3 +4992,81 @@ Post-recalibration Phase 4: `project_viable` **355** (was 359, within ±50); `ca
 3. Journal "~3.5 yr" correction still needed.
 
 ---
+
+### Session: 2026-06-09 — F4-OFFSET: Plant Consumption + Energy Offset % — Tom
+
+**What was done:**
+
+Wired the teammate's pre-built energy-intensity estimator (Steps 1–6, frozen) into Phase 4 production output as six additive columns. No existing column, the MINREV floor, `compute_scorecard`, or `derive_site_tier` were changed. `project_viable` count confirmed unchanged at **355** before and after.
+
+**New module — `src/phase4/plant_consumption.py`:**
+- Loads `config/energy_intensity.yaml` once at import (mirrors `cost_models.py` loader pattern).
+- `observed_intensity(flow_mgd)` — verbatim port of the Table 5-1 band lookup from `scripts/validate_energy_intensity.py` (strict `flow < max_mgd`, null band is catch-all for ≥ 100 MGD).
+- `intensity(treatment_type, flow_mgd)` — verbatim port of the log-linear interpolation + edge clamp from the same validation script.
+- `consumption_and_offset(mean_flow_mgd, annual_energy_kwh)` — returns 6 keys:
+  - `est_plant_consumption_kwh_yr` — point estimate: `flow × 365 × observed_intensity(flow)`
+  - `est_plant_consumption_low_kwh_yr` — TF curve (`sensitivity_low`)
+  - `est_plant_consumption_high_kwh_yr` — advanced+N curve (`sensitivity_high`)
+  - `energy_offset_pct` — turbine output / point consumption × 100
+  - `energy_offset_pct_low` — energy / HIGH consumption × 100 (treatment-type sensitivity low bound)
+  - `energy_offset_pct_high` — energy / LOW consumption × 100 (treatment-type sensitivity high bound)
+  - Null/zero guard: `mean_flow_mgd` None or ≤ 0 → all 6 keys None, no divide-by-zero.
+- `_SENS_LOW` / `_SENS_HIGH` read from `treatment_assignment` in YAML, not hardcoded.
+
+**Important finding documented in docstring:** The EPRI Table 5-1 observed intensities exceed the Table 5-4 advanced+N curve at every flow (the YAML itself notes "WEF Table 5-4 values run lower than observed values"). The guaranteed invariant is `offset_pct_low <= offset_pct_high` (TF always cheaper than advanced+N). The point estimate is NOT bracketed by the Table 5-4 band — it is a separately validated curve. The low/high band represents treatment-type uncertainty, not error bars around the point.
+
+**`src/phase4/run.py` changes (additive only):**
+- Import `consumption_and_offset` from new module.
+- After `energy_kwh` is computed in the scoring loop, call `consumption_and_offset(row.get("mean_flow_mgd"), energy_kwh)` and merge its 6 keys into the `financial_rows` dict with `**offset_cols`.
+- One-line summary log: median `energy_offset_pct` across all scored rows.
+
+**New script — `scripts/minrev_whatif.py`** (read-only, no parquet writes):
+- Reads `data/processed/phase4/financial_scorecards.parquet` after re-run.
+- Scenario 0 — current (`project_viable == True`): **355 sites, 356.3 GWh/yr**
+- Scenario 1 — floor removed (Tier A + B): **1,374 sites, 428.2 GWh/yr**
+- Scenario 2 — offset-based gate (Tier A + Tier B with offset ≥ threshold):
+  - ≥ 1%: 1,230 sites, 423.0 GWh/yr
+  - ≥ 2%: 677 sites, 388.0 GWh/yr
+  - ≥ 5%: 383 sites, 359.3 GWh/yr
+- Tier B offset distribution: median 1.48%, p90 3.32%, max 6.59%
+- National sanity: 21.5 TWh/yr (scored sites); median offset 1.10% (low single-digit ✓)
+
+**Tests:**
+- `tests/test_phase4/test_plant_consumption.py` — new, 47 tests:
+  - `TestObservedIntensity` (10): band boundaries, catch-all, monotonicity
+  - `TestIntensityLogLinear` (7): edge clamp, log-linear geometric midpoint, monotonicity, TF < advanced+N
+  - `TestConsumptionAndOffset` (6): exact formula checks for all 6 keys; offset inversion verified
+  - `TestBandOrderingInvariants` (16): TF ≤ advanced+N, offset_pct_low ≤ offset_pct_high, all offsets positive; documents the non-bracketing of point
+  - `TestNullAndZeroGuard` (5): None, 0, negative flow, no crash
+  - `TestSensitivityLabels` (2): YAML-sourced label constants
+- `tests/integration/test_pipeline_smoke.py` — added `test_f4_offset_columns_present`: runs `phase4.run.run()` on a 2-row synthetic corpus (OFF1 flow=5 MGD, OFF2 flow=None), asserts all 6 cols present, OFF1 non-null, OFF2 null, offset_pct_low ≤ offset_pct_high.
+
+**External review findings fixed:**
+- `src/phase4/plant_consumption.py` docstring corrected: removed false claim "guarantees offset_pct_low ≤ offset_pct ≤ offset_pct_high"; replaced with accurate description of the band as treatment-type uncertainty, not error bars around the point.
+- `tests/test_phase4/test_plant_consumption.py` module docstring corrected: removed false invariant listing; replaced with accurate description of what holds.
+
+**Test suite:** 361 passed, 1 skipped (was 313 + 1 skipped; +48 new tests). All green.
+
+**Files modified / created:**
+- `src/phase4/plant_consumption.py` — new module (F4-OFFSET)
+- `src/phase4/run.py` — import + scoring loop wiring + summary log (additive only)
+- `scripts/minrev_whatif.py` — new read-only what-if script
+- `tests/test_phase4/test_plant_consumption.py` — new (47 tests)
+- `tests/integration/test_pipeline_smoke.py` — added `test_f4_offset_columns_present`
+- `WOWERS_PROJECT_JOURNAL.md` — this session entry
+
+**Resources used:**
+- `config/energy_intensity.yaml` (frozen teammate deliverable — read only, not modified)
+- `scripts/validate_energy_intensity.py` (frozen reference implementation — verbatim port)
+- `ENERGY_CONSUMPTION_SOURCES.md` (frozen evidence log — not modified)
+- External agent code reviewer (one round — two doc-only findings, both fixed)
+
+**Correction from prior entry:** Tier B median payback was stated as "~3.5 yr" in the Jun 01 session. Parquet-verified figure is **9.73 yr** (range 3.9–13.6 yr). No pipeline bug — the earlier figure was an error in the journal entry.
+
+**Next steps after this session:**
+1. Director/team decision on F4-MINREV floor — this is the sole gate on 1,019 Tier B sites (median payback 9.73 yr, 71.9 GWh/yr). Use `scripts/minrev_whatif.py` output as the decision-support table.
+2. Drop "42×" from any pitch materials; correct figure is 3.9× (355 → 1,374 sites if floor removed).
+3. Per-turbine-type A/B coefficient validation against DOE HydroSource EHA real-install data — still open from Jun 05.
+4. Phase 5 ML model — not yet started.
+
+---

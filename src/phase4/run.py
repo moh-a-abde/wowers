@@ -37,6 +37,7 @@ from src.phase4.financials import (
 )
 from src.phase4.revenue import annual_revenue, electricity_rate
 from src.phase4.sensitivity import run_tornado
+from src.phase4.plant_consumption import consumption_and_offset  # F4-OFFSET
 
 logging_setup.setup_run_log("phase4")
 log = logging_setup.get("wowers.phase4")
@@ -168,6 +169,10 @@ def run(
             annual_revenue_usd=rev_usd,
         )
 
+        # F4-OFFSET: plant consumption estimate + turbine offset %.
+        # Additive — does not affect any scorecard column or viability gate.
+        offset_cols = consumption_and_offset(row.get("mean_flow_mgd"), energy_kwh)
+
         # data_quality_tier: numeric encoding for ML training
         #   0 = dmr (best: real measured discharge data)
         #   1 = dmr_limited (measured but sparse — <12 months)
@@ -198,6 +203,7 @@ def run(
             "data_quality":              row.get("data_quality"),
             "data_quality_tier":         dq_tier,
             **scorecard,
+            **offset_cols,  # F4-OFFSET: 6 additive columns (consumption + offset %)
         })
 
     # Add project_viable_high_confidence: viable AND backed by real measured data.
@@ -212,6 +218,20 @@ def run(
         fr["site_tier"] = derive_site_tier(fr)
 
     log.info(f"  Scored {len(financial_rows):,} facilities")
+
+    # F4-OFFSET: log median energy_offset_pct across all scored rows with data.
+    _offsets = [
+        fr["energy_offset_pct"]
+        for fr in financial_rows
+        if fr.get("energy_offset_pct") is not None
+    ]
+    if _offsets:
+        _offsets_sorted = sorted(_offsets)
+        _med_offset = _offsets_sorted[len(_offsets_sorted) // 2]
+        log.info(
+            f"  Median energy_offset_pct (turbine/plant consumption): "
+            f"{_med_offset:.2f}%  (n={len(_offsets):,})"
+        )
 
     # ── Step 3: Sensitivity analysis ──────────────────────────────────────────
     # Build a lookup for physical inputs (FDC + head + turbine params) so

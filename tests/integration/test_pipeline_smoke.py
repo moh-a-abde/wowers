@@ -430,3 +430,87 @@ class TestPhase4HighConfidence:
         if len(hc) == 0:
             return
         assert hc["project_viable"].all()
+
+    def test_f4_offset_columns_present(self, tmp_path):
+        """F4-OFFSET: the 6 plant-consumption / energy-offset columns must be
+        present in the Phase 4 run.run() output parquet.  Uses the same tiny
+        synthetic corpus as test_run_emits_high_confidence_column."""
+        import polars as pl
+        from src.phase4.run import run as phase4_run
+
+        p3_rows = [
+            dict(npdes_id="OFF1", turbine_type="Kaplan", rated_power_kw=50.0,
+                 annual_energy_mwh=200.0, capacity_factor=0.5,
+                 turbine_viable=True, state_code="CA", data_quality="dmr",
+                 mean_flow_mgd=5.0,
+                 head_net_m=6.0, q_design_m3s=0.5, q_rated_m3s=0.5,
+                 flow_duration_curve=None),
+            dict(npdes_id="OFF2", turbine_type="Francis", rated_power_kw=200.0,
+                 annual_energy_mwh=800.0, capacity_factor=0.5,
+                 turbine_viable=True, state_code="TX", data_quality="design_only",
+                 mean_flow_mgd=None,  # null flow → offset cols must all be None
+                 head_net_m=10.0, q_design_m3s=2.0, q_rated_m3s=2.0,
+                 flow_duration_curve=None),
+        ]
+        p3_df = pl.DataFrame(p3_rows)
+        p1_df = pl.DataFrame({
+            "npdes_id":   ["OFF1", "OFF2"],
+            "state_code": ["CA",   "TX"],
+        })
+
+        p3_path = tmp_path / "turbine_sizing.parquet"
+        p1_path = tmp_path / "ranked_candidates.parquet"
+        p3_df.write_parquet(p3_path)
+        p1_df.write_parquet(p1_path)
+
+        from src.phase4 import run as phase4_module
+        original_output = phase4_module.OUTPUT_DIR
+        phase4_module.OUTPUT_DIR = tmp_path / "phase4_offset_out"
+        try:
+            out_path = phase4_run(
+                phase3_input=p3_path,
+                phase1_input=p1_path,
+                run_sensitivity=False,
+            )
+        finally:
+            phase4_module.OUTPUT_DIR = original_output
+
+        out_df = pl.read_parquet(out_path)
+
+        # All 6 F4-OFFSET columns must be present  (F4-OFFSET)
+        _OFFSET_COLS = [
+            "est_plant_consumption_kwh_yr",
+            "est_plant_consumption_low_kwh_yr",
+            "est_plant_consumption_high_kwh_yr",
+            "energy_offset_pct",
+            "energy_offset_pct_low",
+            "energy_offset_pct_high",
+        ]
+        for col in _OFFSET_COLS:
+            assert col in out_df.columns, f"F4-OFFSET column missing: {col}"
+
+        # OFF1 has a real flow → all 6 should be non-null
+        off1 = out_df.filter(pl.col("npdes_id") == "OFF1")
+        if len(off1) > 0:
+            for col in _OFFSET_COLS:
+                assert off1[col][0] is not None, (
+                    f"OFF1 (flow=5.0 MGD) should have non-null {col}"
+                )
+            # Sensitivity band ordering: TF (low) <= advanced+N (high).
+            # (The point estimate from Table 5-1 observed can exceed the high
+            # treatment-type bound, so we only assert the band width, not
+            # that point is bracketed.  See test_plant_consumption.py.)
+            r = off1.to_dicts()[0]
+            assert r["energy_offset_pct_low"] <= r["energy_offset_pct_high"] + 1e-9
+            # All three offsets must be positive
+            assert r["energy_offset_pct"]      > 0
+            assert r["energy_offset_pct_low"]  > 0
+            assert r["energy_offset_pct_high"] > 0
+
+        # OFF2 has null flow → all 6 offset cols must be None
+        off2 = out_df.filter(pl.col("npdes_id") == "OFF2")
+        if len(off2) > 0:
+            for col in _OFFSET_COLS:
+                assert off2[col][0] is None, (
+                    f"OFF2 (flow=None) should have None for {col}"
+                )
