@@ -12,8 +12,15 @@ estimated_consumption_kwh_yr = mean_flow_mgd × 365 × energy_intensity_kwh_per_
 ```
 
 **Owner:** Mohamed
-**Status:** Not started
-**Target completion:** ___________
+**Status:** Steps 1–6 complete (research + config + validation). Step 7 (Phase 4 production code) pending.
+**Completed:** 2026-06-08
+
+> **Key validation finding:** the WEF Table 5-4 treatment×size grid (the originally
+> planned basis) under-estimates by ~2× nationally and ~40% on large plants. The
+> point estimate was switched to EPRI Table 5-1 **observed** flow-band averages,
+> which validate to within 18% nationally and −6% on MWRA Deer Island. Table 5-4
+> curves are retained for the low/high sensitivity band. See
+> `ENERGY_CONSUMPTION_SOURCES.md` → Validation Results.
 
 ---
 
