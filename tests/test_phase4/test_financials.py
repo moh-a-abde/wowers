@@ -347,49 +347,46 @@ class TestMinRevenueGate:
         assert sc_strict["project_viable"] is False
 
 
-# ── F4-MINREV-RAISE: $5k → $20k floor regression ─────────────────────────────
+# ── F4-MINREV-REMOVE: floor disabled 2026-06 (was raised to $20k 2026-05-20) ──
 
 class TestMinRevenueRaisedFloor:
-    """F4-MINREV-RAISE: default floor moved from $5,000 → $20,000 on 2026-05-20.
+    """F4-MINREV-REMOVE: floor set to $0 (disabled) per director decision 2026-06.
 
-    These tests pin the new default so an accidental config rollback would
-    be caught immediately, and document the *meaningful-kill* scenario that
-    motivated the raise (a site that passes NPV / payback / IRR but would
-    be filtered out at $20k while sneaking through at $5k).
+    project_viable is now NPV>0 AND payback≤20yr AND IRR real — no revenue gate.
+    The revenue_above_floor term remains in compute_scorecard but is a no-op
+    (0 <= any_non_negative_revenue is always True).
+
+    History preserved: tests that use explicit min_annual_revenue_usd override
+    still verify the gate mechanism is intact and reversible.
     """
 
-    def test_default_floor_is_20k(self):
-        # Module-level constant reflects the raised default.
-        assert MIN_ANNUAL_REVENUE_USD == pytest.approx(20_000.0)
+    def test_default_floor_is_0_disabled(self):
+        # F4-MINREV-REMOVE: default floor is now 0 (no-op).
+        assert MIN_ANNUAL_REVENUE_USD == pytest.approx(0.0)
 
-    def test_default_floor_blocks_revenue_between_5k_and_20k(self):
-        """Site with $12k/yr revenue, positive NPV — must fail at default $20k floor.
+    def test_floor_disabled_site_with_small_revenue_is_now_viable(self):
+        """With floor=0, a $12k-revenue site that clears NPV/payback/IRR is viable.
 
-        This is exactly the kind of site that slipped through the old $5k
-        floor.  The MINREV-RAISE fix is meant to catch it.
+        This same site was blocked under the $20k floor (F4-MINREV-RAISE).
+        F4-MINREV-REMOVE lifts that restriction — pure economics now decide.
         """
-        # Tiny CapEx → positive NPV at $12k/yr revenue
         sc = compute_scorecard(
             annual_energy_kwh=120_000.0,   # 120 MWh/yr
             elec_rate_per_kwh=0.10,
             annual_opex_usd=300.0,
             total_capex_usd=30_000.0,
             annual_revenue_usd=12_000.0,
-            # Pull the default $20k floor — do NOT override.
+            # default floor = 0
         )
         assert sc["npv_usd"] > 0
         assert sc["payback_years"] <= 20.0
         assert -0.99 < sc["irr"] < 3.0
-        assert sc["project_viable"] is False, (
-            "Site with $12k revenue must be blocked by the raised $20k MINREV floor"
+        assert sc["project_viable"] is True, (
+            "Floor disabled (0): site must be viable on pure NPV/payback/IRR"
         )
 
-    def test_old_5k_floor_would_have_passed_same_site(self):
-        """Same site as above — explicitly setting floor to $5k flips the verdict.
-
-        Demonstrates that the raised floor is doing genuine work, not just
-        redundant double-counting of the NPV gate.
-        """
+    def test_explicit_floor_still_blocks_when_overridden(self):
+        """Gate mechanism is intact — passing explicit floor still works."""
         common = dict(
             annual_energy_kwh=120_000.0,
             elec_rate_per_kwh=0.10,
@@ -399,18 +396,21 @@ class TestMinRevenueRaisedFloor:
         )
         sc_5k  = compute_scorecard(**common, min_annual_revenue_usd=5_000.0)
         sc_20k = compute_scorecard(**common, min_annual_revenue_usd=20_000.0)
-        assert sc_5k["project_viable"] is True
-        assert sc_20k["project_viable"] is False
+        assert sc_5k["project_viable"] is True   # $12k >= $5k → passes
+        assert sc_20k["project_viable"] is False  # $12k < $20k → blocked
 
-    def test_revenue_at_or_above_20k_default_still_viable(self):
-        """Boundary check — a $20k-revenue site that clears all other gates passes."""
+    def test_any_positive_revenue_passes_default_floor(self):
+        """With floor=0, any positive revenue satisfies the gate."""
         sc = compute_scorecard(
             annual_energy_kwh=200_000.0,
             elec_rate_per_kwh=0.10,
             annual_opex_usd=500.0,
             total_capex_usd=50_000.0,
-            annual_revenue_usd=20_000.0,
-            # default floor
+            annual_revenue_usd=1.0,  # $1/yr — trivially above $0 floor
+            # default floor = 0
         )
-        if sc["npv_usd"] > 0 and sc["payback_years"] <= 20:
+        # MINREV gate does NOT block (revenue $1 >= $0).
+        # Other gates (NPV/payback) may or may not pass — don't assert viable,
+        # just verify the floor itself is not the reason for failure.
+        if sc["npv_usd"] > 0 and sc["payback_years"] <= 20 and -0.99 < sc["irr"] < 3.0:
             assert sc["project_viable"] is True

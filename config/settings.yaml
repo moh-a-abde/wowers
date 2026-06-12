@@ -116,15 +116,13 @@ financials:
   project_lifetime_years: 30
   degradation_rate: 0.002
   rec_value_per_kwh: 0.01
-  # F4-MINREV: minimum annual revenue floor (USD/yr) for ``project_viable``.
-  # Below this floor the site cannot absorb fixed soft costs (insurance,
-  # accounting, periodic inspection) even with positive NPV/IRR.
-  # Raised 2026-05-20 from $5,000 → $20,000 (F4-MINREV-RAISE):
-  #   - At $5k the floor never killed a site that NPV didn't already kill
-  #     (0 unique kills out of 3,783 in the prior Phase 4 run).
-  #   - $20k is the midpoint of the $15k–$25k "small project soft-cost
-  #     absorption" band discussed in the May 20 calibration review.
-  min_annual_revenue_usd: 20000
+  # F4-MINREV-REMOVE (2026-06): director decision — floor removed.
+  # project_viable now = NPV>0 AND payback≤20yr AND IRR real, no revenue floor.
+  # Set to 0 so revenue_above_floor = (revenue >= 0) is always True — the gate
+  # term is a documented no-op while the lever stays reversible in code.
+  # History: raised from $5k → $20k on 2026-05-20 (F4-MINREV-RAISE);
+  # removed 2026-06 after director review of Scenario 1 (what-if analysis).
+  min_annual_revenue_usd: 0
 
 # ── Phase 1: Ranking weights ──────────────────────────────────────────────────
 ranking:

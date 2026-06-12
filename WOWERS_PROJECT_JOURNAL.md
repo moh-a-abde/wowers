@@ -5070,3 +5070,75 @@ Wired the teammate's pre-built energy-intensity estimator (Steps 1–6, frozen) 
 4. Phase 5 ML model — not yet started.
 
 ---
+
+## F4-MINREV-REMOVE + Three-Metric Economic Categorization — Jun 12 2026 — Tom
+
+Director decision (meeting a few days prior): **do not cap viability at the $20k/yr revenue floor — remove it, score every site on pure economics, and categorize sites by profitability.** Implemented via a coding-agent prompt + review-agent round; this entry logs the verified result. The long-recurring open item ("Director/team decision on F4-MINREV floor", carried in every session since Jun 01) is now **closed**.
+
+### Task 1 — Floor removed (F4-MINREV-REMOVE)
+
+- `config/settings.yaml:127` — `min_annual_revenue_usd: 20000 → 0`. The `revenue_above_floor = (annual_revenue_usd >= 0)` term in `compute_scorecard` (`financials.py:287`) is now an always-True **no-op**. The key, the `MIN_ANNUAL_REVENUE_USD` constant, and the gate logic are **kept** — set to 0 so the lever stays documented and reversible (set the config back to a positive value to re-enable; no code change needed).
+- `src/phase4/financials.py` — default constant `20_000.0 → 0.0`; docstrings updated to record the floor disabled per director decision.
+- **New viability gate:** `project_viable = NPV>0 AND payback≤20yr AND IRR real` (no revenue floor).
+
+### Task 2 — Three independent economic-category columns (F4-ECON-CAT)
+
+Added three **additive** columns to `financial_scorecards.parquet` (existing `site_tier` A/B/C left untouched). All 3,783 scored sites are categorized, not just viable ones. Functions in `src/phase4/run.py` next to `derive_site_tier`; degenerate inputs (None/inf/NaN/sentinel) → worst band.
+
+| Column | Bands (cutoffs) |
+|---|---|
+| `econ_cat_payback` | excellent ≤5yr / good 5–10 / marginal 10–20 / uneconomic >20 or not viable |
+| `econ_cat_npv` | high ≥$500k / medium $100k–500k / low $0–100k / negative ≤0 |
+| `econ_cat_irr` | strong ≥15% / moderate 8–15% / weak 0–8% / none (<0 or non-real sentinel) |
+
+IRR is stored as a fraction (0.15 = 15%); cutoffs confirmed against live parquet (median viable IRR 0.123).
+
+### Task 3 — Summary logging updated
+
+`_print_summary` (`run.py`): removed the now-always-zero MINREV-only-kills block (and its `MIN_ANNUAL_REVENUE_USD` import); fixed the `project_viable` summary line text ("revenue≥floor" dropped); added three `econ_cat_*` breakdown blocks (count + GWh/yr per band).
+
+### Re-run results (Phase 4, 3,783 scored sites)
+
+| Metric | Before (floor=$20k) | After (floor removed) |
+|---|---|---|
+| **project_viable** | 355 | **1,374 (36.3%)** |
+| Viable energy | 356.3 GWh/yr | **428.2 GWh/yr** |
+| Median payback (viable) | 9.7 yr | **9.4 yr** |
+| Portfolio CapEx | $321.7M | $321.7M (unchanged — gate change only) |
+
+**econ_cat breakdowns (verified from parquet):**
+
+- **Payback** — excellent 133 (210.8 GWh) · good 661 (148.6) · marginal 580 (68.7) · uneconomic 2,409 (86.5)
+- **NPV** — high 107 (245.3 GWh) · medium 175 (74.6) · low 1,092 (108.2) · negative 2,409 (86.5)
+- **IRR** — strong 266 (264.0 GWh) · moderate 697 (119.1) · weak 2,165 (121.2) · none 655 (10.4)
+
+Note: NPV>0 count (1,374) equals `project_viable` in this run — every positive-NPV site also clears payback + real-IRR. The three category dimensions are intentionally independent and do not sum to the viable count the same way (e.g. IRR "weak" includes positive-IRR-but-negative-NPV sites).
+
+### Review (passed)
+
+Reviewed against actual code, parquet, and test run (not the review-prompt text, which had copy-paste garble). Verified: floor=0 no-op correct; band logic matches spec exactly (payback gates on `project_viable` first, so NPV≤0 ⇒ uneconomic); `site_tier`/`compute_scorecard`/F4-OFFSET untouched; boundary tests at every edge (5/10/20yr, 500k/100k/0, 15/8/0%, sentinels, None/NaN/inf, cross-metric NPV≤0). One non-blocking note: the integration smoke test checks column presence + valid-label subset only; band correctness is covered by the 38 unit tests.
+
+**Tests:** 399 passed, 1 skipped (was 361 + 1; +38 new). All green.
+
+### Files modified / created
+- `config/settings.yaml` — `min_annual_revenue_usd 20000 → 0` + comment block (F4-MINREV-REMOVE).
+- `src/phase4/financials.py` — default constant → 0.0; docstrings updated.
+- `src/phase4/run.py` — `derive_econ_cat_payback/npv/irr` + scoring-loop wiring + summary-block rewrite; MINREV-kills block removed.
+- `tests/test_phase4/test_econ_cat.py` — new (38 tests).
+- `tests/test_phase4/test_financials.py` — `TestMinRevenueRaisedFloor` assertions flipped to floor-disabled behavior; explicit-override tests retained to prove the gate mechanism is intact.
+- `tests/integration/test_pipeline_smoke.py` — added `test_f4_econ_cat_columns_present`.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+### Resources used
+- Director decision (in-person meeting, ~Jun 9–11 2026).
+- `scripts/minrev_whatif.py` Scenario 1 (predicted 1,374 viable — confirmed).
+- `data/processed/phase4/financial_scorecards.parquet` (post-re-run verification via polars).
+- Coding agent (implementation) + review round (this session).
+
+### Next steps after this session
+1. **Update director-facing materials** to the new framing: headline is now **1,374 viable / 428.2 GWh/yr** (not 355), plus the profit gradient (payback / NPV / IRR categories). Refresh `EXCLUSION_FUNNEL_REPORT.md` — its "359/355 viable" and Tier A/B/C framing is now superseded by the floor-removed counts + econ_cat columns.
+2. Drop "42×" from any pitch material (correct figure was 3.9×; with floor removed the swing is now realized, not hypothetical).
+3. Per-turbine-type CapEx A/B coefficient validation against DOE HydroSource EHA real-install data — still open from Jun 05.
+4. Phase 5 ML model — not yet started.
+
+---

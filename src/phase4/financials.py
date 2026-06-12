@@ -40,19 +40,16 @@ PROJECT_YEARS:        int   = int(  _FIN.get("project_lifetime_years",    30))
 DEGRADATION_RATE:     float = float(_FIN.get("degradation_rate",          0.002))
 REC_PER_KWH:          float = float(_FIN.get("rec_value_per_kwh",         0.01))
 
-# F4-MINREV: minimum annual revenue threshold for ``project_viable``.
-# Sites earning less than this floor are not bankable regardless of NPV/IRR
-# because fixed soft costs (insurance, accounting, asset management, periodic
-# inspections) consume too large a fraction of revenue.
+# F4-MINREV revenue floor — kept as a reversible lever, currently disabled.
 #
-# Default raised 2026-05-20 from $5,000 → $20,000 (F4-MINREV-RAISE).  At the
-# $5,000 floor the gate had **0 unique kills** in the Phase 4 run — every
-# sub-floor site already failed the NPV gate, so the floor was cosmetic.
-# $20,000 is the midpoint of the $15k–$25k "soft-cost absorption" band
-# identified in the May 20 calibration review.  Override via the
-# ``min_annual_revenue_usd`` key in ``config/settings.yaml`` under
-# ``financials``.
-MIN_ANNUAL_REVENUE_USD: float = float(_FIN.get("min_annual_revenue_usd", 20_000.0))
+# 2026-05-20 (F4-MINREV-RAISE): raised from $5,000 → $20,000.
+# 2026-06 (F4-MINREV-REMOVE): director decision — set to 0 in settings.yaml so
+#   revenue_above_floor = (revenue >= 0) is always True (no-op).
+#   project_viable is now NPV>0 AND payback≤20yr AND IRR real, no revenue gate.
+#
+# To re-enable: set ``min_annual_revenue_usd`` in config/settings.yaml to the
+# desired USD/yr threshold (e.g. 20000).  Code path is preserved.
+MIN_ANNUAL_REVENUE_USD: float = float(_FIN.get("min_annual_revenue_usd", 0.0))
 
 
 # ── Cash-flow helpers ─────────────────────────────────────────────────────────
@@ -239,10 +236,10 @@ def compute_scorecard(
     """Compute the full financial scorecard for one facility.
 
     Args:
-        min_annual_revenue_usd: F4-MINREV floor.  Sites with annual revenue
-            below this threshold are flagged ``project_viable = False`` even
-            if NPV / IRR / payback would otherwise pass — too small to
-            absorb fixed soft costs in practice.  Default from settings.yaml.
+        min_annual_revenue_usd: F4-MINREV floor (currently 0 — disabled per
+            director decision 2026-06).  With value 0 the gate is a no-op
+            (revenue >= 0 is always True).  Pass an explicit positive value
+            to re-enable without touching settings.yaml.
 
     Returns a flat dict suitable for building a Polars/pandas row.
     """

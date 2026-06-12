@@ -51,7 +51,8 @@ def derive_site_tier(row: dict) -> str:
     """Assign investment tier A/B/C for a scored turbine-viable site.
 
     Tier A — investment-ready (passes full ``project_viable`` gate).
-    Tier B — cash-flow positive on NPV/payback/IRR but below F4-MINREV floor.
+    Tier B — cash-flow positive on NPV/payback/IRR (F4-MINREV floor now 0,
+              so with floor disabled Tier B is empty; kept for reversibility).
     Tier C — turbine-viable but uneconomic on cash-flow terms.
     """
     if row.get("project_viable"):
@@ -70,6 +71,79 @@ def derive_site_tier(row: dict) -> str:
     ):
         return "B"
     return "C"
+
+
+# ── F4-ECON-CAT: three independent economic-category columns ──────────────────
+# These are ADDITIVE to site_tier; do not modify derive_site_tier.
+# All scored sites are categorised (not just viable ones).
+# Degenerate inputs (None, inf, NaN) → worst band for that metric.
+
+def derive_econ_cat_payback(row: dict) -> str:
+    """Payback-based category (F4-ECON-CAT).
+
+    ``excellent``  — project_viable AND payback_years ≤ 5
+    ``good``       — project_viable AND 5 < payback_years ≤ 10
+    ``marginal``   — project_viable AND 10 < payback_years ≤ 20
+    ``uneconomic`` — everything else (NPV≤0, payback>20, inf/NaN, non-real IRR)
+    """
+    if not row.get("project_viable"):
+        return "uneconomic"
+    pyb = row.get("payback_years")
+    if pyb is None or math.isnan(pyb) or math.isinf(pyb):
+        return "uneconomic"
+    if pyb <= 5.0:
+        return "excellent"
+    if pyb <= 10.0:
+        return "good"
+    if pyb <= 20.0:
+        return "marginal"
+    return "uneconomic"
+
+
+def derive_econ_cat_npv(row: dict) -> str:
+    """NPV-based category (F4-ECON-CAT).
+
+    ``high``     — npv_usd ≥ 500,000
+    ``medium``   — 100,000 ≤ npv_usd < 500,000
+    ``low``      — 0 < npv_usd < 100,000
+    ``negative`` — npv_usd ≤ 0 (or None/NaN)
+    """
+    npv = row.get("npv_usd")
+    if npv is None or math.isnan(npv):
+        return "negative"
+    if npv >= 500_000:
+        return "high"
+    if npv >= 100_000:
+        return "medium"
+    if npv > 0:
+        return "low"
+    return "negative"
+
+
+def derive_econ_cat_irr(row: dict) -> str:
+    """IRR-based category (F4-ECON-CAT). IRR stored as fraction (0.15 = 15%).
+
+    ``strong``   — real IRR AND irr ≥ 0.15
+    ``moderate`` — real IRR AND 0.08 ≤ irr < 0.15
+    ``weak``     — real IRR AND 0.0 ≤ irr < 0.08
+    ``none``     — IRR < 0, NaN, or non-real sentinel (±0.99 / 3.0 boundary)
+    """
+    irr = row.get("irr")
+    irr_real = (
+        irr is not None
+        and not math.isnan(irr)
+        and irr > -0.99
+        and irr < 3.0
+    )
+    if not irr_real:
+        return "none"
+    if irr >= 0.15:
+        return "strong"
+    if irr >= 0.08:
+        return "moderate"
+    if irr >= 0.0:
+        return "weak"
+    return "none"
 
 
 def run(
@@ -216,6 +290,10 @@ def run(
 
     for fr in financial_rows:
         fr["site_tier"] = derive_site_tier(fr)
+        # F4-ECON-CAT: three independent profitability dimensions (additive)
+        fr["econ_cat_payback"] = derive_econ_cat_payback(fr)
+        fr["econ_cat_npv"]     = derive_econ_cat_npv(fr)
+        fr["econ_cat_irr"]     = derive_econ_cat_irr(fr)
 
     log.info(f"  Scored {len(financial_rows):,} facilities")
 
@@ -320,7 +398,7 @@ def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
     log.info("Phase 4 Complete")
     log.info(f"  Total scored:            {total:,}")
     log.info(
-        f"  Project viable (NPV>0, payback≤20yr, IRR real, revenue≥floor): "
+        f"  Project viable (NPV>0, payback≤20yr, IRR real): "
         f"{n_viable:,} ({n_viable/max(total,1)*100:.1f}%)"
     )
 
@@ -356,24 +434,23 @@ def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
             gwh = cohort["annual_energy_kwh"].sum() / 1e6  # kWh → GWh
             log.info(f"  {label}{len(cohort):>5,} sites, {gwh:>7.1f} GWh/yr")
 
-    # MINREV-only kill count: sites that pass NPV / payback / IRR but fail
-    # the F4-MINREV revenue floor.  Tracks whether MINREV is doing meaningful
-    # work (target: > 0; redundant if 0).
-    if {"project_viable", "npv_usd", "payback_years", "irr",
-        "annual_revenue_usd"}.issubset(df.columns):
-        from src.phase4.financials import MIN_ANNUAL_REVENUE_USD as _MIN_REV
-        minrev_only = df.filter(
-            (pl.col("project_viable") == False)  # noqa: E712
-            & (pl.col("npv_usd") > 0)
-            & (pl.col("payback_years") <= 20.0)
-            & (pl.col("irr") > -0.99)
-            & (pl.col("irr") < 3.0)
-            & (pl.col("annual_revenue_usd") < _MIN_REV)
-        )
-        log.info(
-            f"  MINREV-only kills (floor=${_MIN_REV:,.0f}/yr): "
-            f"{len(minrev_only):,}"
-        )
+    # F4-ECON-CAT: three profitability dimension breakdowns (site count + GWh).
+    _ECON_CAT_SPECS = (
+        ("econ_cat_payback", "Payback category:",
+         ("excellent", "good", "marginal", "uneconomic")),
+        ("econ_cat_npv",     "NPV category:",
+         ("high", "medium", "low", "negative")),
+        ("econ_cat_irr",     "IRR category:",
+         ("strong", "moderate", "weak", "none")),
+    )
+    for col, label, bands in _ECON_CAT_SPECS:
+        if col not in df.columns or "annual_energy_kwh" not in df.columns:
+            continue
+        log.info(f"  {label}")
+        for band in bands:
+            cohort = df.filter(pl.col(col) == band)
+            gwh = cohort["annual_energy_kwh"].sum() / 1e6
+            log.info(f"    {band:>12}: {len(cohort):>5,} sites, {gwh:>7.1f} GWh/yr")
 
     if "payback_years" in df.columns and "project_viable" in df.columns:
         valid_payback = df.filter(pl.col("project_viable") == True)["payback_years"]  # noqa: E712

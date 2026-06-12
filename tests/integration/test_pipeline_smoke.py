@@ -514,3 +514,64 @@ class TestPhase4HighConfidence:
                 assert off2[col][0] is None, (
                     f"OFF2 (flow=None) should have None for {col}"
                 )
+
+    def test_f4_econ_cat_columns_present(self, tmp_path):
+        """F4-ECON-CAT: econ_cat_payback, econ_cat_npv, econ_cat_irr must be
+        present in Phase 4 output and contain only valid labels."""
+        import polars as pl
+        from src.phase4.run import run as phase4_run
+
+        p3_rows = [
+            dict(npdes_id="EC1", turbine_type="Kaplan", rated_power_kw=100.0,
+                 annual_energy_mwh=500.0, capacity_factor=0.5,
+                 turbine_viable=True, state_code="CA", data_quality="dmr",
+                 mean_flow_mgd=10.0,
+                 head_net_m=8.0, q_design_m3s=1.0, q_rated_m3s=1.0,
+                 flow_duration_curve=None),
+            dict(npdes_id="EC2", turbine_type="Crossflow", rated_power_kw=5.0,
+                 annual_energy_mwh=10.0, capacity_factor=0.25,
+                 turbine_viable=True, state_code="TX", data_quality="design_only",
+                 mean_flow_mgd=0.5,
+                 head_net_m=3.0, q_design_m3s=0.1, q_rated_m3s=0.1,
+                 flow_duration_curve=None),
+        ]
+        p3_df = pl.DataFrame(p3_rows)
+        p1_df = pl.DataFrame({
+            "npdes_id":   ["EC1", "EC2"],
+            "state_code": ["CA",  "TX"],
+        })
+
+        p3_path = tmp_path / "turbine_sizing_ec.parquet"
+        p1_path = tmp_path / "ranked_candidates_ec.parquet"
+        p3_df.write_parquet(p3_path)
+        p1_df.write_parquet(p1_path)
+
+        from src.phase4 import run as phase4_module
+        original_output = phase4_module.OUTPUT_DIR
+        phase4_module.OUTPUT_DIR = tmp_path / "phase4_econ_out"
+        try:
+            out_path = phase4_run(
+                phase3_input=p3_path,
+                phase1_input=p1_path,
+                run_sensitivity=False,
+            )
+        finally:
+            phase4_module.OUTPUT_DIR = original_output
+
+        out_df = pl.read_parquet(out_path)
+
+        # All three F4-ECON-CAT columns must be present
+        for col in ("econ_cat_payback", "econ_cat_npv", "econ_cat_irr"):
+            assert col in out_df.columns, f"F4-ECON-CAT column missing: {col}"
+
+        # Labels must be from valid sets only
+        _VALID = {
+            "econ_cat_payback": {"excellent", "good", "marginal", "uneconomic"},
+            "econ_cat_npv":     {"high", "medium", "low", "negative"},
+            "econ_cat_irr":     {"strong", "moderate", "weak", "none"},
+        }
+        for col, valid_set in _VALID.items():
+            labels = set(out_df[col].drop_nulls().to_list())
+            assert labels.issubset(valid_set), (
+                f"{col} has unexpected labels: {labels - valid_set}"
+            )
