@@ -5142,3 +5142,48 @@ Reviewed against actual code, parquet, and test run (not the review-prompt text,
 4. Phase 5 ML model — not yet started.
 
 ---
+
+### Session: 2026-06-12 — CapEx A/B Coefficient Validation (F4-CAPEX-CALIB) — Tom
+
+**What was done:**
+
+Attempted to validate / replace the unverified literature-form A/B coefficients for the four in-scope turbine types (Kaplan, Francis, Pelton, Crossflow) in `config/settings.yaml` and `src/phase4/cost_models.py`. The task required real, citable installed-cost data, a reproducible calibration script, and a hard vendor-band guard. Outcome: **all four types KEEP** — the honest finding is that no publicly available US equipment-only install-cost data provides ≥3 project-level points within the current vendor bands at WOWERS micro-hydro scale (1–3,000 kW).
+
+**Key findings documented:**
+
+- The only peer-reviewed per-type equipment-cost equations found at micro-hydro scale are from Ogayar & Vidal (2009) *Renewable Energy* 34(1):6-13 (DOI: 10.1016/j.renene.2008.03.015), based on Spanish small-hydro projects. Points derived from those equations are labeled "equipment_only" and are the basis for all fitting attempts.
+- US DOE/NREL/ORNL sources (NREL ATB 2023 NPD, ORNL TM-2014/525 ROR ICC equation) give **total installed capital cost** (civil works + equipment + E&I + contingency), which runs 2–5× the equipment-only cost at micro-hydro scale — these cannot be used to fit the equipment-only model and are included as context-only rows labeled "total_ICC".
+- **Francis (n=5):** Fitted A=4,444, B=−0.290, R²≈1.00. Vendor guard **FAILS**: 150/463 WOWERS Francis sites (P > ~22 kW) would fall below the $1,800/kW vendor floor (Canyon/Gilkes minimum). Root cause: Ogayar European equipment costs are below US commercial minimums at typical capacities.
+- **Kaplan (n=7):** Fitted A=17,632, B=−0.440, R²≈1.00. Vendor guard **FAILS**: 3/385 WOWERS Kaplan sites (large sites, P > ~1,100 kW) fall below the $800/kW Andritz floor.
+- **Pelton (n=5):** Fitted A=4,459, B=−0.337, R²≈1.00. Vendor guard technically passes (0 current WOWERS Pelton sites — trivial pass). **KEEP** by conservative policy: European data, no US validation sites.
+- **Crossflow (n=0):** No published equipment-cost equation at micro-hydro scale in named US sources. **KEEP**.
+- R²≈1.00 for fitted types is expected by construction — all data points derived from a single Ogayar power-law equation. This does NOT indicate real-world predictive accuracy.
+
+**No coefficients changed. No pipeline re-run was needed.** Phase 4 output is identical to pre-session state (1,374 viable, 428.2 GWh/yr, capex_outside_vendor_band = 0).
+
+**Files created:**
+- `data/cost_calibration/installed_costs.csv` — version-controlled reference cost dataset (21 rows: 17 equipment_only from Ogayar 2009, 4 total_ICC context from NREL ATB 2023 + ORNL TM-2014/525).
+- `scripts/calibrate_capex_ab.py` — reproducible calibration script. Loads CSV, fits per type where n≥3, checks vendor band across WOWERS Phase 3 sites, prints decision table. `--apply` flag would write accepted values to settings.yaml (not triggered since all KEEP).
+- `tests/test_phase4/test_capex_calibration.py` — 21 new tests: `fit_power_law` unit tests (exact recovery, R² behavior, ValueError guards), decision-logic tests, lock tests asserting current A/B stays within vendor band at min/max/median WOWERS site kW for Kaplan/Francis/Crossflow, and a live parquet guard asserting `capex_outside_vendor_band == 0`.
+
+**Test suite:** 420 passed, 1 skipped (+21 new tests over prior 399+1).
+
+**Deferred items identified:**
+
+- To upgrade Francis/Kaplan from "literature-form" to "US-data-validated" requires ≥3 real US project install costs for equipment-only at 1–500 kW scale. Best future sources: FERC conduit-exemption project filings (eLibrary), DOE HydroSource EHA installation records with detailed cost breakdowns, or direct vendor data-sharing agreement. The calibration script + CSV infrastructure is in place to accept new data without code changes.
+- Crossflow at micro-hydro scale has no published equipment-cost equation in any major US energy database. This is a genuine data gap in the literature.
+- Pelton: rerun when at least one WOWERS Pelton site appears in Phase 3 output (currently 0 sites; WOWERS rarely selects Pelton because the corpus is low-head).
+
+**Resources used:**
+- Ogayar B, Vidal PG. "Cost determination of the electro-mechanical equipment of a small hydro-power plant." *Renewable Energy*. 2009;34(1):6-13. DOI: 10.1016/j.renene.2008.03.015
+- NREL Annual Technology Baseline 2023, Hydropower — Non-Powered Dam. https://atb.nrel.gov/electricity/2023/hydropower
+- Oak Ridge National Laboratory, TM-2014/525. O'Connor et al. "New Stream-reach Development." https://doi.org/10.2172/1184563
+- `data/turbines/turbine_manufacturers.csv` (vendor band reference, not modified)
+- External agent review (one round — no blocking findings; data provenance audit clean)
+
+**Next steps after this session:**
+1. Phase 5 ML model — not yet started; this is the main remaining deliverable.
+2. Collect DOE HydroSource EHA installation-level cost records to eventually upgrade Kaplan/Francis A/B from literature-form to US-data-validated.
+3. Update director-facing materials if not already done (from prior session).
+
+---

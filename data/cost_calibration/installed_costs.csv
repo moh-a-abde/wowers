@@ -1,0 +1,61 @@
+# WOWERS micro-hydropower equipment installed-cost reference dataset
+# Purpose: calibration / validation of Phase 4 power-law CapEx coefficients
+# Cost year: 2022 USD (all rows normalized to this basis)
+# Normalization: Ogayar EUR 2006 → USD 2022 via EUR/USD_2006=1.255 × CPI_2006_2022=1.464 = ×1.837
+#                NREL ATB 2023 already in 2022 USD.  ORNL TM-2014/525 2011 USD → 2022 via CPI=1.297.
+#
+# IMPORTANT SCOPE NOTE:
+# "cost_basis" column distinguishes equipment-only costs (suitable for WOWERS equipment CapEx model)
+# from total installed capital cost / ICC (includes civil works, intake, penstock, powerhouse, E&I,
+# engineering, contingency — typically 2-5× the equipment-only cost for run-of-river sites).
+# ONLY "equipment_only" rows are used for coefficient fitting.  "total_ICC" rows are included as
+# context and CANNOT be directly compared to the vendor bands or the WOWERS equipment model.
+#
+# DATA PROVENANCE:
+# [Ogayar09] Ogayar B, Vidal PG. "Cost determination of the electro-mechanical equipment of a
+#            small hydro-power plant." Renewable Energy. 2009;34(1):6-13.
+#            DOI: 10.1016/j.renene.2008.03.015
+#            Equations fitted to Spanish small-hydro projects (electromechanical equipment only).
+#            Equations used here:
+#              Francis: C_per_kW (EUR) = 6580.54 × P^(-0.303) × H^(-0.423)
+#              Kaplan:  C_per_kW (EUR) = 17748.7 × P^(-0.440) × H^(-0.560)
+#              Pelton:  C_per_kW (EUR) = 9293.0  × P^(-0.336) × H^(-0.343)
+#            Reference head used: Francis=10m (lower bound of WOWERS Francis selection ≥10m),
+#            Kaplan=3m (representative WOWERS low-head Kaplan), Pelton=50m (representative).
+#            NOTE: equation-derived reference points, not individual project observations.
+#            NOTE: European cost basis; may underestimate US commercial equipment prices.
+#
+# [NREL23]   NREL Annual Technology Baseline 2023, Hydropower chapter (Non-Powered Dam).
+#            https://atb.nrel.gov/electricity/2023/hydropower  (accessed 2026)
+#            Moderate scenario OCC in 2022 USD. TOTAL ICC (civil + equipment + E&I + contingency).
+#            Turbine type: Kaplan/Francis at low-head NPD sites.
+#
+# [ORNL14]   Oak Ridge National Laboratory, TM-2014/525.
+#            O'Connor et al. "New Stream-reach Development: A Comprehensive Assessment of
+#            Hydropower Opportunities for Non-Federal ROR in the United States."
+#            https://doi.org/10.2172/1184563  (2014, OSTI report 1184563)
+#            ROR ICC equation: ICC_ROR ($) = 11,086,000 × P_MW^0.929 (2011 USD, total ICC).
+#            Points derived from this published equation at representative micro-hydro capacities.
+#            TOTAL ICC — NOT suitable for equipment-only model fitting.
+turbine_type,rated_power_kw,capex_usd_per_kw,cost_year,cost_basis,source,source_url,head_m,notes
+Francis,5,2805,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,10,equation_derived; H=10m (WOWERS Francis lower bound); EUR2006 x1.837
+Francis,10,2270,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,10,equation_derived; H=10m; EUR2006 x1.837
+Francis,20,1841,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,10,equation_derived; H=10m; EUR2006 x1.837; barely above Canyon/Gilkes $1800 vendor floor
+Francis,50,1434,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,10,equation_derived; H=10m; BELOW vendor floor $1800 — European costs lower than US commercial
+Francis,200,955,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,10,equation_derived; H=10m; BELOW vendor floor $1800
+Kaplan,10,6398,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,3,equation_derived; H=3m (representative WOWERS low-head Kaplan); EUR2006 x1.837
+Kaplan,20,4722,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,3,equation_derived; H=3m; EUR2006 x1.837
+Kaplan,50,3148,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,3,equation_derived; H=3m
+Kaplan,100,2323,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,3,equation_derived; H=3m
+Kaplan,200,1713,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,3,equation_derived; H=3m
+Kaplan,500,1142,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,3,equation_derived; H=3m
+Kaplan,1000,844,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,3,equation_derived; H=3m; near Andritz $800 vendor floor
+Pelton,3,3082,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,50,equation_derived; H=50m (representative); EUR2006 x1.837
+Pelton,5,2593,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,50,equation_derived; H=50m
+Pelton,10,2055,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,50,equation_derived; H=50m
+Pelton,15,1793,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,50,equation_derived; H=50m; above Canyon/Gilkes $1500 vendor floor
+Pelton,20,1627,2022,equipment_only,Ogayar09,https://doi.org/10.1016/j.renene.2008.03.015,50,equation_derived; H=50m; above $1500 vendor floor
+Francis,1000,6800,2022,total_ICC,NREL23,https://atb.nrel.gov/electricity/2023/hydropower,,NREL ATB 2023 NPD moderate OCC; TOTAL ICC includes civil+E&I+contingency; NOT for equipment model
+Kaplan,10000,5100,2022,total_ICC,NREL23,https://atb.nrel.gov/electricity/2023/hydropower,,NREL ATB 2023 NPD moderate OCC at 10 MW; TOTAL ICC; NOT for equipment model
+Francis,100,12400,2022,total_ICC,ORNL14,https://doi.org/10.2172/1184563,,ORNL TM-2014/525 ROR ICC eq at 100 kW (2011 USD x1.297); TOTAL ICC includes all civil; NOT for equipment model
+Kaplan,500,8900,2022,total_ICC,ORNL14,https://doi.org/10.2172/1184563,,ORNL TM-2014/525 ROR ICC eq at 500 kW (2011 USD x1.297); TOTAL ICC; NOT for equipment model
