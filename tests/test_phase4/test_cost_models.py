@@ -227,6 +227,7 @@ class TestProjectCapex:
         bd = project_capex("Kaplan", 100.0)
         required = {
             "equipment_capex_usd",
+            "installation_capex_usd",   # F4-INSTALL
             "interconnection_capex_usd",
             "permitting_capex_usd",
             "permitting_tier",
@@ -235,11 +236,13 @@ class TestProjectCapex:
         assert required == set(bd.keys())
 
     def test_total_equals_sum_of_components(self):
+        # F4-INSTALL: total is now a four-component sum.
         for t in TURBINE_TYPES:
             for kw in (5, 25, 100, 500):
                 bd = project_capex(t, float(kw))
                 expected = (
                     bd["equipment_capex_usd"]
+                    + bd["installation_capex_usd"]
                     + bd["interconnection_capex_usd"]
                     + bd["permitting_capex_usd"]
                 )
@@ -279,3 +282,89 @@ class TestProjectCapex:
                 assert bd["equipment_capex_usd"] == pytest.approx(
                     total_capex(t, float(kw))
                 )
+
+
+# ── F4-INSTALL: installation cost ────────────────────────────────────────────
+
+class TestInstallationCapex:
+    """F4-INSTALL: mechanical installation cost as a fraction of equipment CapEx.
+
+    Scope: mechanical install / labor ONLY — excludes civil works; does NOT
+    overlap interconnection or permitting.  One-time cost; not O&M-bearing.
+    Reversible lever: ``installation_pct_of_equipment = 0.0`` disables it.
+    """
+
+    ALL_TYPES = ("Kaplan", "Francis", "Pelton", "in_conduit_micro", "Crossflow")
+
+    def test_installation_capex_key_present(self):
+        """installation_capex_usd key must be present in project_capex output."""
+        bd = project_capex("Kaplan", 100.0)
+        assert "installation_capex_usd" in bd
+
+    def test_installation_equals_equipment_times_pct(self):
+        """installation_capex_usd == equipment_capex_usd × _INSTALL_PCT."""
+        import src.phase4.cost_models as cm
+        for t in self.ALL_TYPES:
+            for kw in (5.0, 50.0, 500.0):
+                bd = project_capex(t, kw)
+                expected = bd["equipment_capex_usd"] * cm._INSTALL_PCT
+                assert bd["installation_capex_usd"] == pytest.approx(expected, rel=1e-9), (
+                    f"{t} @ {kw} kW: install mismatch"
+                )
+
+    def test_total_is_four_component_sum(self):
+        """total = equipment + installation + interconnection + permitting."""
+        for t in self.ALL_TYPES:
+            for kw in (5.0, 50.0, 500.0):
+                bd = project_capex(t, kw)
+                expected = (
+                    bd["equipment_capex_usd"]
+                    + bd["installation_capex_usd"]
+                    + bd["interconnection_capex_usd"]
+                    + bd["permitting_capex_usd"]
+                )
+                assert bd["total_project_capex_usd"] == pytest.approx(expected, rel=1e-9), (
+                    f"{t} @ {kw} kW: total ≠ four-component sum"
+                )
+
+    def test_zero_pct_noop(self, monkeypatch):
+        """With install pct = 0.0, installation = 0 and total = 3-component sum."""
+        import src.phase4.cost_models as cm
+        monkeypatch.setattr(cm, "_INSTALL_PCT", 0.0)
+        bd = project_capex("Kaplan", 100.0)
+        assert bd["installation_capex_usd"] == pytest.approx(0.0)
+        expected_3 = (
+            bd["equipment_capex_usd"]
+            + bd["interconnection_capex_usd"]
+            + bd["permitting_capex_usd"]
+        )
+        assert bd["total_project_capex_usd"] == pytest.approx(expected_3, rel=1e-9)
+
+    def test_installation_non_negative(self):
+        """Installation cost must always be ≥ 0 (equipment is always ≥ 0)."""
+        for t in self.ALL_TYPES:
+            for kw in (1.0, 10.0, 100.0, 1_000.0):
+                bd = project_capex(t, kw)
+                assert bd["installation_capex_usd"] >= 0.0, (
+                    f"{t} @ {kw} kW: negative installation cost"
+                )
+
+    def test_opex_is_equipment_only_not_affected(self):
+        """annual_opex must not change when installation fraction is non-zero.
+
+        O&M is a % of *equipment* CapEx.  Installation is a one-time cost and
+        must not be O&M-bearing.  Verify by comparing opex at pct=0 vs pct>0.
+        """
+        import src.phase4.cost_models as cm
+        eq = total_capex("Kaplan", 100.0)
+        opex_baseline = annual_opex("Kaplan", eq)
+
+        # Temporarily raise install pct — opex must be unchanged
+        import unittest.mock as mock
+        with mock.patch.object(cm, "_INSTALL_PCT", 0.175):
+            bd = project_capex("Kaplan", 100.0)
+            opex_with_install = annual_opex("Kaplan", bd["equipment_capex_usd"])
+
+        assert opex_with_install == pytest.approx(opex_baseline, rel=1e-9), (
+            "OpEx changed when installation pct changed — install must NOT be O&M-bearing"
+        )

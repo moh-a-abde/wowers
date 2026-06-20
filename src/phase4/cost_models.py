@@ -10,11 +10,17 @@ Balance-of-system adders (F4-INTERCON, F4-PERMIT — added 2026-05):
     Interconnection_CapEx  = tier lookup by rated_kw   ($50k–$200k)
     Permitting_CapEx       = fixed adder if rated_kw < small_site_threshold
 
+Installation cost (F4-INSTALL): mechanical install / labor as a % of equipment
+CapEx. Scope: mechanical labor ONLY — excludes civil works; does NOT overlap
+interconnection or permitting (those are separate lines). One-time cost; not
+O&M-bearing. Reversible: set ``installation_pct_of_equipment = 0.0`` to disable.
+
 Project (all-in) CapEx for NPV/IRR:
-    Project_CapEx = Equipment_CapEx + Interconnection_CapEx + Permitting_CapEx
+    Project_CapEx = Equipment_CapEx + Installation_CapEx
+                  + Interconnection_CapEx + Permitting_CapEx
 
 OpEx: annual O&M as a fixed percentage of *equipment* CapEx (per turbine type).
-Interconnection and permitting are one-time costs, not O&M-bearing.
+Interconnection, installation, and permitting are one-time costs, not O&M-bearing.
 
 All parameters are read from ``config/settings.yaml`` under ``cost_model`` so
 they can be updated without touching source code.
@@ -80,6 +86,10 @@ for t in ("Kaplan", "Francis", "Pelton", "in_conduit_micro", "Crossflow"):
         pct = {"Kaplan": 0.025, "Francis": 0.020, "Pelton": 0.015,
                "in_conduit_micro": 0.030, "Crossflow": 0.020}[t]
     _OPEX_PCT[t] = float(pct)
+
+# F4-INSTALL: mechanical installation / labor cost fraction (of equipment CapEx).
+# Default 0.0 so that missing config key preserves prior behavior (backward-compat).
+_INSTALL_PCT: float = float(_CM.get("installation_pct_of_equipment", 0.0))
 
 
 # ── F4-INTERCON: grid interconnection cost tiers ──────────────────────────────
@@ -369,22 +379,33 @@ def capex_vs_vendor_band(turbine_type: str, rated_power_kw: float) -> dict:
 def project_capex(turbine_type: str, rated_power_kw: float) -> dict[str, float | str]:
     """Full project CapEx breakdown including all balance-of-system adders.
 
+    The power-law equipment cost is treated as *equipment-only* (clamped to
+    vendor equipment bands; see ``capex_vs_vendor_band``).  The installation
+    line sits on top of it and is NOT included in the vendor-band check.
+
     Returns:
         Dict with keys:
-            ``equipment_capex_usd``       — power-law turbine + BOP cost
+            ``equipment_capex_usd``       — power-law turbine equipment-only cost
+            ``installation_capex_usd``    — F4-INSTALL mechanical labor
+                                            (``_INSTALL_PCT`` × equipment; scope:
+                                            mechanical install/labor ONLY, excludes
+                                            civil works, interconnection, permitting)
             ``interconnection_capex_usd`` — F4-INTERCON tier lookup
             ``permitting_capex_usd``      — F4-PERMIT-TIER tier lookup
             ``permitting_tier``           — F4-PERMIT-TIER label (categorical)
-            ``total_project_capex_usd``   — sum of the three USD components
+            ``total_project_capex_usd``   — equipment + installation
+                                            + interconnection + permitting
     """
-    eq    = total_capex(turbine_type, rated_power_kw)
-    intc  = interconnection_cost(rated_power_kw)
-    perm  = permitting_cost(rated_power_kw)
-    label = permitting_tier_label(rated_power_kw)
+    eq      = total_capex(turbine_type, rated_power_kw)
+    install = eq * _INSTALL_PCT
+    intc    = interconnection_cost(rated_power_kw)
+    perm    = permitting_cost(rated_power_kw)
+    label   = permitting_tier_label(rated_power_kw)
     return {
         "equipment_capex_usd":       eq,
+        "installation_capex_usd":    install,
         "interconnection_capex_usd": intc,
         "permitting_capex_usd":      perm,
         "permitting_tier":           label,
-        "total_project_capex_usd":   eq + intc + perm,
+        "total_project_capex_usd":   eq + install + intc + perm,
     }

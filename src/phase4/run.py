@@ -221,13 +221,14 @@ def run(
         if rated_kw <= 0 or energy_kwh <= 0:
             continue  # skip non-viable rows that slipped through
 
-        # CapEx breakdown (F4-INTERCON + F4-PERMIT-TIER included)
+        # CapEx breakdown (F4-INTERCON + F4-PERMIT-TIER + F4-INSTALL included)
         capex_bd     = project_capex(t_type, rated_kw)
         eq_capex     = float(capex_bd["equipment_capex_usd"])
+        install_capex = float(capex_bd["installation_capex_usd"])   # F4-INSTALL
         intc_capex   = float(capex_bd["interconnection_capex_usd"])
         perm_capex   = float(capex_bd["permitting_capex_usd"])
         perm_tier    = str(capex_bd["permitting_tier"])
-        cap_usd      = float(capex_bd["total_project_capex_usd"])
+        cap_usd      = float(capex_bd["total_project_capex_usd"])   # includes installation
         cap_per_kw   = capex_per_kw(t_type, rated_kw)         # equipment $/kW (unchanged metric)
         vendor_chk   = capex_vs_vendor_band(t_type, rated_kw)  # F4-VENDORBAND sanity cross-check
         opex_usd     = annual_opex(t_type, eq_capex)          # O&M on equipment only
@@ -267,6 +268,7 @@ def run(
             "vendor_capex_per_kw_high":  vendor_chk["vendor_capex_per_kw_high"],  # F4-VENDORBAND
             "capex_outside_vendor_band": vendor_chk["capex_outside_vendor_band"], # F4-VENDORBAND flag
             "equipment_capex_usd":       eq_capex,           # F4: breakdown
+            "installation_capex_usd":    install_capex,      # F4-INSTALL
             "interconnection_capex_usd": intc_capex,         # F4-INTERCON
             "permitting_capex_usd":      perm_capex,         # F4-PERMIT-TIER ($)
             "permitting_tier":           perm_tier,          # F4-PERMIT-TIER label
@@ -461,11 +463,17 @@ def _print_summary(df: pl.DataFrame, elapsed: float) -> None:
         total_inv = df["total_capex_usd"].sum() / 1e6
         log.info(f"  Total portfolio CapEx:   ${total_inv:,.1f}M")
         if "equipment_capex_usd" in df.columns:
-            eq    = df["equipment_capex_usd"].sum()       / 1e6
-            intc  = df["interconnection_capex_usd"].sum() / 1e6
-            perm  = df["permitting_capex_usd"].sum()      / 1e6
+            eq      = df["equipment_capex_usd"].sum()       / 1e6
+            inst    = (
+                df["installation_capex_usd"].sum() / 1e6
+                if "installation_capex_usd" in df.columns
+                else 0.0
+            )
+            intc    = df["interconnection_capex_usd"].sum() / 1e6
+            perm    = df["permitting_capex_usd"].sum()      / 1e6
             log.info(
                 f"    Equipment:           ${eq:,.1f}M  |  "
+                f"Installation: ${inst:,.1f}M  |  "
                 f"Interconnection: ${intc:,.1f}M  |  "
                 f"Permitting: ${perm:,.1f}M"
             )

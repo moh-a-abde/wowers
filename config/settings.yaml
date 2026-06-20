@@ -67,6 +67,14 @@ cost_model:
     in_conduit_micro: 0.030
     Crossflow: 0.020     # simpler runner, lower maintenance than Kaplan
 
+  # F4-INSTALL (2026-06): mechanical installation / labor cost as a fraction of
+  # equipment-only CapEx. Director estimate 15–20% (government procurement
+  # opacity means real install cost is unobtainable; % of turbine cost is the
+  # agreed proxy). Scope: mechanical install / labor ONLY — excludes civil
+  # works; does NOT overlap interconnection or permitting (separate lines).
+  # Reversible lever: set 0.0 to disable (no-op, exact prior behavior).
+  installation_pct_of_equipment: 0.175
+
   # F4-INTERCON: grid interconnection cost tiers (USD)
   # Tier lookup by rated_power_kw upper bound (inclusive).
   # Range: $50k–$200k per FERC small-hydro / NREL distributed-generation surveys.

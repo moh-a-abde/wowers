@@ -515,6 +515,70 @@ class TestPhase4HighConfidence:
                     f"OFF2 (flow=None) should have None for {col}"
                 )
 
+    def test_f4_install_column_present_and_vendor_band_clean(self, tmp_path):
+        """F4-INSTALL: installation_capex_usd must be present, non-negative, and
+        capex_outside_vendor_band must remain all-False (install is on top of the
+        equipment-only cost; vendor band check uses equipment $/kW, unchanged)."""
+        import polars as pl
+        from src.phase4.run import run as phase4_run
+
+        p3_rows = [
+            dict(npdes_id="INS1", turbine_type="Kaplan", rated_power_kw=100.0,
+                 annual_energy_mwh=400.0, capacity_factor=0.5,
+                 turbine_viable=True, state_code="CA", data_quality="dmr",
+                 mean_flow_mgd=8.0,
+                 head_net_m=7.0, q_design_m3s=1.0, q_rated_m3s=1.0,
+                 flow_duration_curve=None),
+            dict(npdes_id="INS2", turbine_type="Crossflow", rated_power_kw=15.0,
+                 annual_energy_mwh=50.0, capacity_factor=0.38,
+                 turbine_viable=True, state_code="TX", data_quality="design_only",
+                 mean_flow_mgd=1.5,
+                 head_net_m=4.0, q_design_m3s=0.2, q_rated_m3s=0.2,
+                 flow_duration_curve=None),
+        ]
+        p3_df = pl.DataFrame(p3_rows)
+        p1_df = pl.DataFrame({
+            "npdes_id":   ["INS1", "INS2"],
+            "state_code": ["CA",   "TX"],
+        })
+
+        p3_path = tmp_path / "turbine_sizing_ins.parquet"
+        p1_path = tmp_path / "ranked_candidates_ins.parquet"
+        p3_df.write_parquet(p3_path)
+        p1_df.write_parquet(p1_path)
+
+        from src.phase4 import run as phase4_module
+        original_output = phase4_module.OUTPUT_DIR
+        phase4_module.OUTPUT_DIR = tmp_path / "phase4_install_out"
+        try:
+            out_path = phase4_run(
+                phase3_input=p3_path,
+                phase1_input=p1_path,
+                run_sensitivity=False,
+            )
+        finally:
+            phase4_module.OUTPUT_DIR = original_output
+
+        out_df = pl.read_parquet(out_path)
+
+        # F4-INSTALL: column must be present and non-negative for all rows
+        assert "installation_capex_usd" in out_df.columns, (
+            "F4-INSTALL: installation_capex_usd column missing from Phase 4 output"
+        )
+        assert (out_df["installation_capex_usd"] >= 0.0).all(), (
+            "F4-INSTALL: installation_capex_usd must be non-negative"
+        )
+
+        # F4-VENDORBAND guard: vendor band check is on equipment $/kW only;
+        # installation must NOT inflate the band-check $/kW.
+        assert "capex_outside_vendor_band" in out_df.columns, (
+            "capex_outside_vendor_band column missing"
+        )
+        n_flagged = out_df.filter(pl.col("capex_outside_vendor_band") == True).shape[0]  # noqa: E712
+        assert n_flagged == 0, (
+            f"F4-INSTALL broke vendor-band check: {n_flagged} sites flagged"
+        )
+
     def test_f4_econ_cat_columns_present(self, tmp_path):
         """F4-ECON-CAT: econ_cat_payback, econ_cat_npv, econ_cat_irr must be
         present in Phase 4 output and contain only valid labels."""

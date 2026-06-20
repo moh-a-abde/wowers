@@ -5187,3 +5187,77 @@ Attempted to validate / replace the unverified literature-form A/B coefficients 
 3. Update director-facing materials if not already done (from prior session).
 
 ---
+
+## Installation Cost Line Added to Phase 4 CapEx (F4-INSTALL) — Jun 20 2026 — Tom
+
+Director guidance: real turbine installation cost is unobtainable (government procurement opacity — vendors bid high on public contracts and never disclose true install cost), so model installation as a **percentage of equipment cost**, director estimate **15–20%**. Until now the cost model had **no installation/labor line at all** (`total = equipment + interconnection + permitting`), i.e. installation was implicitly $0. Implemented via coding-agent prompt + independent review round (this session). Reviewed against actual code + parquet — not the review-prompt text (which had copy-paste garble).
+
+### What changed (F4-INSTALL, additive + reversible)
+
+- **`config/settings.yaml:76`** — new lever `cost_model.installation_pct_of_equipment: 0.175` (midpoint of director's 15–20%). Set to `0.0` to disable (exact prior behavior). Scope documented in comment: **mechanical install / labor only** — excludes civil works; does **not** overlap interconnection or permitting (separate lines).
+- **`src/phase4/cost_models.py`** — `_INSTALL_PCT` loader (defaults 0.0 if key absent → backward-compatible no-op); `project_capex()` now returns `installation_capex_usd = equipment × _INSTALL_PCT` and `total_project_capex_usd = equipment + installation + interconnection + permitting`. Module + function docstrings updated. **`annual_opex()` untouched** — O&M stays a % of *equipment* CapEx; installation is one-time, not O&M-bearing.
+- **`src/phase4/run.py`** — captures `installation_capex_usd` into `financial_scorecards.parquet`; `cap_usd` (total, now incl. installation) flows into `compute_scorecard` automatically (no double-count); summary log gains an installation line.
+- **`scripts/install_cost_whatif.py`** — new read-only what-if (no parquet writes): viability + GWh at install 0 / 15 / 17.5 / 20 %.
+
+### Provenance note (scope boundary, for the record)
+
+Power-law equipment cost is treated as **equipment-only** (its vendor-band clamps are manufacturer turbine prices). Installation sits on top of it. The director's 15–20% is far below the literature "total installed = 2–5× equipment" multiplier (noted Jun 12) **because that multiplier bundles civil + E&I + contingency + interconnection + permitting** — interconnection and permitting are already modeled as separate lines here, and civil works is deliberately excluded. The 15–20% covers mechanical labor only; no overlap.
+
+### Re-run results (Phase 4, 3,783 scored sites; install = 17.5%)
+
+| Metric | Before (no install) | After (F4-INSTALL @ 0.175) |
+|---|---|---|
+| **project_viable** | 1,374 (36.3%) | **1,141 (30.2%)** |
+| Viable energy | 428.2 GWh/yr | **409.1 GWh/yr** |
+| Portfolio total CapEx | $321.7M | **$353.5M** |
+| — Equipment | $181.6M | $181.6M (unchanged — install is a separate line) |
+| — Installation | $0 | **$31.8M** (= $181.6M × 0.175) |
+| — Interconnection / Permitting | $82.8M / $57.3M | $82.8M / $57.3M (unchanged) |
+| capex_outside_vendor_band | 0 | **0** (vendor check is on equipment $/kW; install excluded) |
+
+**What-if band (`scripts/install_cost_whatif.py`):** 0% → 1,374 / 428.2 · 15% → 1,172 / 411.7 · 17.5% → 1,141 / 409.1 · 20% → 1,120 / 407.5 GWh/yr. Viability drop is the intended consequence of higher CapEx, not a logic change.
+
+### Review (passed — independently verified)
+
+Verified against live code + parquet, not the review prompt: `installation_capex_usd == equipment × 0.175` exact (max diff 0.0); `total == 4-component sum` exact; `pct=0` no-op test correct; OpEx unchanged when install pct varies (`run.py` still passes `eq_capex`); `capex_outside_vendor_band == 0/3,783`; no changes to `compute_scorecard`, MINREV floor, `site_tier`, `econ_cat_*`, or F4-OFFSET. **Tests: 427 passed, 1 skipped** (+7 over prior 420). One reporting nit in the agent's review text (cited stale before-equipment $175.5M; correct current equipment portfolio is $181.6M, unchanged by this change) — corrected in the table above; no code impact.
+
+### Files modified / created
+- `config/settings.yaml` — `installation_pct_of_equipment: 0.175` (F4-INSTALL lever).
+- `src/phase4/cost_models.py` — `_INSTALL_PCT` loader + `project_capex` installation line + docstrings.
+- `src/phase4/run.py` — `installation_capex_usd` column + summary log.
+- `scripts/install_cost_whatif.py` — new read-only what-if.
+- `tests/test_phase4/test_cost_models.py` — `TestInstallationCapex` (6 tests) + updated key/sum assertions.
+- `tests/integration/test_pipeline_smoke.py` — `test_f4_install_column_present_and_vendor_band_clean`.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+### Resources used
+- Director guidance (installation cost = 15–20% of equipment; gov procurement opacity makes real install cost unobtainable).
+- `data/processed/phase4/financial_scorecards.parquet` before/after via polars.
+- Coding agent (implementation) + independent review round (this session).
+
+### Next steps after this session
+1. **Director meeting Wed Jun 24** — bring the F4-INSTALL band table (0/15/17.5/20% → viability) as the decision slide; extract director's committed install % (default 0.175 pending his call) and confirm the scope (mechanical-only).
+2. Refresh `EXCLUSION_FUNNEL_REPORT.md` to the post-install framing (now **1,141 viable / 409.1 GWh/yr** at 17.5%) — its 355/Tier-A-B-C content is stale.
+3. **Phase 5 ML prep** — define ML target + DOE/FERC ground-truth source; leakage plan (viability is formula-derived, can't be both feature and target). Old blockers already clear: column rename done, `data_quality_tier` present (0=dmr best … 3=design_only), head fixed (3,780 usgs_3dep).
+4. Phase 5 ML model — main remaining deliverable, not started.
+
+### Session: 2026-06-20 — Tom
+
+**What was done:**
+- Added F4-INSTALL: installation/labor cost line to Phase 4 CapEx as a reversible config lever (`installation_pct_of_equipment: 0.175`, director's 15–20% midpoint), filling a gap where installation was implicitly $0. Scope = mechanical labor only, on top of equipment-only power-law cost; no overlap with interconnection/permitting/civil.
+- Wired `installation_capex_usd` into `project_capex`, the parquet, and the summary log; total CapEx now 4-component. OpEx left as equipment-only (install is one-time). Added read-only `install_cost_whatif.py`.
+- Re-ran Phase 4: viability 1,374 → **1,141**, energy 428.2 → **409.1 GWh/yr**, portfolio CapEx $321.7M → **$353.5M** ($31.8M new installation line); vendor-band violations stay 0.
+- Independently reviewed agent output against live code + parquet: all invariants exact, 427 passed / 1 skipped, no scope creep. Corrected one stale figure (before-equipment is $181.6M, not $175.5M).
+
+**Files modified / created:**
+- `config/settings.yaml`, `src/phase4/cost_models.py`, `src/phase4/run.py`, `scripts/install_cost_whatif.py`, `tests/test_phase4/test_cost_models.py`, `tests/integration/test_pipeline_smoke.py`, `WOWERS_PROJECT_JOURNAL.md` (this section + entry).
+
+**Resources used:**
+- Director guidance on installation cost; `financial_scorecards.parquet` before/after via polars; coding agent + review round.
+
+**Next steps after this session:**
+1. Director meeting Wed Jun 24 — present F4-INSTALL band table, confirm committed install % + scope.
+2. Refresh `EXCLUSION_FUNNEL_REPORT.md` to 1,141 viable / 409.1 GWh/yr framing.
+3. Phase 5 ML prep — define target + ground truth, leakage plan; then build the model.
+
+---
