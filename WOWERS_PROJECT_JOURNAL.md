@@ -5364,3 +5364,41 @@ Started Phase 5 (ML model). Confirmed the hard blocker (no labeled ground truth 
 4. Feature matrix + leakage lock, then LightGBM training (ARCHITECTURE §5.2–5.3).
 
 ---
+
+### Session: 2026-06-21 (PM #2) — Phase 5 EHA ingest review + director-brief weekly recap (P5-EHA) — Tom
+
+**What was done:**
+
+Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built by a coding agent run externally), fixed one nit, added a plain-English weekly recap to the director brief.
+
+**P5-EHA review (acted as reviewer against live code + real drive + test run, NOT the review-prompt text):** all 14 invariants verified —
+- Funnel exact: plant inventory 2,273 → CH_MW>0 filter 2,246 (−27 pumped-storage-only) → CF 2022 HY rows 1,321 → inner join → energy>0 → **1,269 plants, 227,560 GWh/yr (2022)**.
+- `ground_truth_source=="EHA"`; schema + dtypes identical to `CANONICAL_SCHEMA`; PS excluded via `ch_mw>0`; energy = `Net_Generation_MWh × 1000` (measured, not CF×cap×8760 proxy); MW→kW / MWh→kWh correct; year filter `2022 & type=="HY"`; `eha_pt_id` projected out; `source_plant_code`=EIA_PtID Int64 (1 null by design — plant with null EIA_PtID); head/flow null; EIA functions byte-identical; no Phase 1–4 files changed; **463 passed / 1 skipped (+24 EHA tests)**.
+- `run_eha()` writes `data/raw/ground_truth/eha_hydro_ground_truth.parquet` (gitignored) — 1,269 rows, 48 states, large-hydro NOTE logged.
+
+**Nit fixed (only finding worth acting on):** `_load_eha_cf` loaded a `capacity_mw` column never used in any computation (energy comes from `net_gen_mwh`). Removed the dead select + its docstring line. Tests still green (36 Phase 5), ingest unchanged (1,269 / 227,560 GWh).
+
+**Decisions accepted from the agent's design:** EIA_PtID as `source_plant_code` (EHA_PtID is a string, incompatible with the Int64 schema); measured `Net_Generation_MWh` over the `CH_MWh` plant-file column / 8760 proxy; 5 CF-only plants dropped by inner join; large-hydro bias documented (not gated), consistent with the EIA ingest. Note: EHA min installed_kw is 100 kW, so the "≥1 MW only" caveat is conservative, not literal.
+
+**Director brief — added "Quick Recap — What I Got Done Since Last Wednesday (Jun 17–21)"** in informal, non-technical language for `DIRECTOR_BRIEF_2026-06-24.md`: (1) added installation cost to make the model honest (decision slide), (2) refreshed the exclusion-funnel report to current numbers (1,141 viable / 409 GWh) + profitability gradient, (3) kicked off Phase 5 ML — checked for existing data, downloaded the DOE/EHA datasets, built two ingest tools (EIA ~1,308 + EHA ~1,269 labeled plants), with the honest large-hydro caveat.
+
+**Files modified / created:**
+- `src/phase5/ground_truth.py` — removed dead `capacity_mw` load from `_load_eha_cf` (the EHA ingest itself was authored in the external agent session; module docstring already covers both sources).
+- `config/settings.yaml` — `phase5.eha_data_dir` / `eha_year` (from the EHA session).
+- `tests/test_phase5/test_ground_truth.py` — +24 EHA tests (from the EHA session).
+- `DIRECTOR_BRIEF_2026-06-24.md` — added the plain-English weekly recap section.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- Live code review + `data/raw/ground_truth/eha_hydro_ground_truth.parquet` generation via polars.
+- EHA data on SANDISK `Phase5_ML_GroundTruth/EHA_HydroSource_ORNL/` (downloaded Jun 21).
+- Coding agent (EHA implementation, external session) + its review prompt (executed this session).
+
+**Next steps after this session:**
+1. `match_to_echo()` — spatial + fuzzy-name join of EIA + EHA labels to ECHO POTW sites (ARCHITECTURE §5.3); treat null `source_plant_code` as unmatchable.
+2. `combine_ground_truth()` — merge EIA + EHA parquets, dedupe by EIA plant code across sources.
+3. FERC conduit collection (manual) — the micro/WWTP-scale tail to fix the large-hydro bias.
+4. Feature matrix + leakage lock, then LightGBM training.
+5. Director meeting Wed Jun 24 — present brief (now includes weekly recap + F4-INSTALL decision slide).
+
+---

@@ -1,39 +1,52 @@
-"""Phase 5 ground-truth ingestion — EIA-860 + EIA-923 hydropower labels.
+"""Phase 5 ground-truth ingestion — EIA-860 + EIA-923 + DOE HydroSource EHA.
 
 Builds the labeled dataset the Phase 5 ML model trains against: real
 US hydropower plants with known installed capacity and annual energy output.
 See ``ARCHITECTURE.md`` §5.2–5.3 for the schema and the (later) spatial/fuzzy
 matching strategy to ECHO POTW plants.
 
-Source
-------
-EIA Form 860 (generator inventory) + EIA Form 923 (generation), both already
-on disk under the configured ``phase5.eia_data_dir``:
+Sources
+-------
+**EIA** (``ingest_eia_year``):
+  EIA Form 860 (generator inventory) + EIA Form 923 (generation), on disk
+  under ``phase5.eia_data_dir``:
+    EIA860_<year>/2___Plant_Y<year>.xlsx       plant lat/lon/name/state
+    EIA860_<year>/3_1_Generator_Y<year>.xlsx   per-generator nameplate + prime mover
+    EIA923_<year>/EIA923_Schedules_...xlsx     per-plant annual net generation
 
-  EIA860_<year>/2___Plant_Y<year>.xlsx        plant lat/lon/name/state
-  EIA860_<year>/3_1_Generator_Y<year>.xlsx    per-generator nameplate + prime mover
-  EIA923_<year>/EIA923_Schedules_2_3_4_5...xlsx  per-plant annual net generation
+  Three EIA gotchas handled:
+  1. Generator workbook first sheet is "Proposed"; we read "Operable".
+  2. EIA workbooks have title rows: Form-860 header is row 2, Form-923 row 6.
+  3. Form-923 has multiple rows per plant; filter to ``HY`` and sum.
 
-Three EIA gotchas this module handles:
-  1. The generator workbook's first sheet is "Proposed" (no nameplate). We read
-     the **"Operable"** sheet.
-  2. EIA workbooks have title rows above the header: Form-860 header is row 2,
-     Form-923 "Page 1" header is row 6.
-  3. Form-923 reports multiple rows per plant (one per prime mover / fuel). We
-     filter to ``Reported Prime Mover == HY`` and sum to plant level so the
-     energy label isolates hydro at mixed-technology plants.
+**DOE HydroSource EHA** (``ingest_eha``):
+  ORNL Existing Hydropower Assets (EHA) on disk under ``phase5.eha_data_dir``:
+    ORNL_EHAHydroPlant_PublicFY2024.xlsx   plant inventory (sheet "Operational")
+    EHA_Annual_CapacityFactor.xlsx          per-plant annual CF + net gen
+                                            (sheet "AnnualCapacityFactor")
 
-KNOWN BIAS — large hydro
-------------------------
-EIA-860 only inventories generators of roughly **>= 1 MW** nameplate, so this
-ground-truth set skews to utility-scale conventional hydro and is **not
-representative of the WWTP micro-scale** sites WOWERS targets (most < 1 MW).
-This is the ARCHITECTURE.md §risk row on label bias. Use it to train the
-physics-correction relationship energy = f(capacity, head, flow); supplement
-with FERC conduit / DOE HydroSource small-scale labels (downloaded to the
-external drive under Phase5_ML_GroundTruth/) before trusting micro-scale
-predictions. Future small-scale sources append to the same canonical schema
-via additional ingest functions — do not change the schema to fit one source.
+  EHA ingest notes:
+  - Pumped storage excluded via ``CH_MW > 0`` (conventional hydro capacity
+    column only; ``PS_MW`` rows are already absent from the HY-only CF file).
+  - Energy label: ``Net_Generation_MWh`` from the CF workbook, converted to kWh.
+    This is actual measured annual generation — preferred over the
+    ``CH_MWh`` plant-file column (stored as String, 15% nulls) and over
+    the CF × cap × 8760 proxy.
+  - Default year: 2022 (latest in the CF file, range 2005–2022).
+  - ``source_plant_code`` = ``EIA_PtID`` (Int64) from the plant file, enabling
+    later cross-source deduplication with EIA labels. EHA's native string key
+    ``EHA_PtID`` is preserved in the intermediate frame before schema projection;
+    it is NOT added to CANONICAL_SCHEMA.
+
+KNOWN BIAS — large hydro (both sources)
+----------------------------------------
+EIA-860 inventories generators ≥ ~1 MW; EHA covers plants ≥ 1 MW in the CF
+file. Both ground-truth sets skew to utility-scale conventional hydro and are
+**not representative of the WWTP micro-scale** sites WOWERS targets (< 1 MW).
+Use these to train the physics relationship energy = f(capacity, head, flow);
+supplement with FERC conduit exemption labels before trusting micro-scale
+predictions. Future sources append to the same canonical schema via additional
+ingest functions — do not change the schema to fit one source.
 """
 
 from __future__ import annotations
@@ -282,3 +295,271 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# P5-EHA: DOE HydroSource Existing Hydropower Assets ground-truth ingest
+# ══════════════════════════════════════════════════════════════════════════════
+
+EHA_DEFAULT_YEAR: int = 2022   # latest year in the AnnualCapacityFactor workbook
+EHA_OUTPUT_PATH: Path = config.raw_data_dir() / "ground_truth" / "eha_hydro_ground_truth.parquet"
+
+# Workbook / sheet names (inspected 2026-06-21; stable across EHA vintages)
+_EHA_PLANT_FILE  = "ORNL_EHAHydroPlant_PublicFY2024.xlsx"
+_EHA_CF_FILE     = "EHA_Annual_CapacityFactor.xlsx"
+_EHA_PLANT_SHEET = "Operational"
+_EHA_CF_SHEET    = "AnnualCapacityFactor"
+# Both workbooks use row 0 as the header (no title rows above the column names).
+_EHA_HEADER_ROW  = 0
+
+CONVENTIONAL_HYDRO_TYPE = "HY"   # CF workbook Type column; all 2022 rows are HY
+
+
+# ── IO layer (EHA) ────────────────────────────────────────────────────────────
+
+def _resolve_eha_dir() -> Path:
+    """Return the EHA data directory, raising FileNotFoundError if absent/unmounted."""
+    raw = config.get("phase5.eha_data_dir")
+    if not raw:
+        raise FileNotFoundError(
+            "config phase5.eha_data_dir is not set — cannot locate EHA ORNL data."
+        )
+    d = Path(raw)
+    if not d.is_dir():
+        raise FileNotFoundError(
+            f"EHA data dir not mounted/found: {d}. Connect the external drive or "
+            "override phase5.eha_data_dir in config/settings.yaml."
+        )
+    return d
+
+
+def _load_eha_plants(eha_dir: Path) -> pl.DataFrame:
+    """Read the EHA plant inventory (Operational sheet) into standardised columns.
+
+    Returns columns:
+        eha_pt_id        — str, EHA native plant identifier (e.g. "hc0124_p02")
+        eia_pt_id        — Int64, EIA plant code (→ source_plant_code in schema)
+        pt_name          — str, plant name
+        state_code       — str, 2-letter state
+        latitude         — Float64
+        longitude        — Float64
+        ch_mw            — Float64, conventional-hydro MW (null/0 = pumped-storage only)
+    """
+    path = eha_dir / _EHA_PLANT_FILE
+    if not path.exists():
+        raise FileNotFoundError(f"EHA plant file not found: {path}")
+    raw = _read_excel(path, sheet=_EHA_PLANT_SHEET, header_row=_EHA_HEADER_ROW)
+    cols = raw.columns
+    return raw.select(
+        pl.col(_find_col(cols, "eha_pt")).cast(pl.Utf8).alias("eha_pt_id"),
+        pl.col(_find_col(cols, "eia_pt")).cast(pl.Int64, strict=False).alias("eia_pt_id"),
+        pl.col(_find_col(cols, "ptname")).cast(pl.Utf8).alias("pt_name"),
+        pl.col(_find_col(cols, "state")).cast(pl.Utf8).alias("state_code"),
+        pl.col(_find_col(cols, "lat")).cast(pl.Float64, strict=False).alias("latitude"),
+        pl.col(_find_col(cols, "lon")).cast(pl.Float64, strict=False).alias("longitude"),
+        # CH_MW = conventional-hydro nameplate MW only (PS_MW is the pumped-storage column)
+        pl.col(_find_col(cols, "ch_mw")).cast(pl.Float64, strict=False).alias("ch_mw"),
+    )
+
+
+def _load_eha_cf(eha_dir: Path) -> pl.DataFrame:
+    """Read the EHA annual capacity-factor workbook (all years) into standardised columns.
+
+    Returns columns:
+        eha_pt_id         — str, EHA plant identifier (join key)
+        type              — str, turbine type ("HY" = conventional hydro)
+        year              — Int64
+        net_gen_mwh       — Float64, measured annual net generation (MWh)
+    """
+    path = eha_dir / _EHA_CF_FILE
+    if not path.exists():
+        raise FileNotFoundError(f"EHA capacity-factor file not found: {path}")
+    raw = _read_excel(path, sheet=_EHA_CF_SHEET, header_row=_EHA_HEADER_ROW)
+    cols = raw.columns
+    return raw.select(
+        pl.col(_find_col(cols, "eha_pt")).cast(pl.Utf8).alias("eha_pt_id"),
+        pl.col(_find_col(cols, "type")).cast(pl.Utf8).alias("type"),
+        pl.col(_find_col(cols, "year")).cast(pl.Int64, strict=False).alias("year"),
+        pl.col(_find_col(cols, "net_generation")).cast(pl.Float64, strict=False).alias("net_gen_mwh"),
+    )
+
+
+# ── Pure transforms (EHA, no IO — unit-tested on synthetic frames) ────────────
+# Operate on standardised columns produced by the IO layer above.
+
+def eha_filter_capacity(plants: pl.DataFrame) -> pl.DataFrame:
+    """Filter to conventional-hydro plants by keeping only ch_mw > 0.
+
+    Drops rows with null or zero CH_MW (pumped-storage-only sites have no
+    conventional-hydro capacity and must be excluded from the energy label).
+
+    Returns the input frame filtered; column set unchanged.
+    """
+    return plants.filter(pl.col("ch_mw").is_not_null() & (pl.col("ch_mw") > 0))
+
+
+def eha_capacity_kw(plants: pl.DataFrame) -> pl.DataFrame:
+    """Compute actual_installed_kw from ch_mw (conventional-hydro MW → kW).
+
+    Returns columns: eha_pt_id, eia_pt_id, pt_name, state_code, latitude,
+    longitude, actual_installed_kw.
+    """
+    return eha_filter_capacity(plants).with_columns(
+        (pl.col("ch_mw") * MW_TO_KW).alias("actual_installed_kw")
+    ).drop("ch_mw")
+
+
+def eha_energy_kwh(cf: pl.DataFrame, year: int) -> pl.DataFrame:
+    """Filter CF to conventional hydro for ``year`` and sum net generation → kWh.
+
+    Energy derivation: ``Net_Generation_MWh`` from the CF workbook (actual
+    measured annual generation), converted to kWh. This is the preferred path
+    over the CF × cap × 8760 proxy — the CF file has direct measurements.
+
+    Returns columns: eha_pt_id, actual_annual_energy_kwh.
+    """
+    return (
+        cf.filter(
+            (pl.col("year") == year)
+            & (pl.col("type") == CONVENTIONAL_HYDRO_TYPE)
+        )
+        .group_by("eha_pt_id")
+        .agg(
+            (pl.col("net_gen_mwh").cast(pl.Float64).sum() * MWH_TO_KWH)
+            .alias("actual_annual_energy_kwh")
+        )
+    )
+
+
+def assemble_eha_ground_truth(
+    plants: pl.DataFrame,
+    cf: pl.DataFrame,
+    year: int,
+) -> pl.DataFrame:
+    """Join EHA capacity + CF energy + metadata into CANONICAL_SCHEMA.
+
+    Join strategy:
+    - ``eha_capacity_kw(plants)`` gives installed_kw per EHA_PtID.
+    - ``eha_energy_kwh(cf, year)`` gives annual_energy_kwh per EHA_PtID
+      (inner join ⇒ plants absent from the CF file are dropped).
+    - Drops plants with zero/null capacity or zero/null energy.
+
+    source_plant_code = EIA_PtID (Int64) from the plant file, enabling later
+    cross-source joins with the EIA ground-truth set. EHA's native string key
+    ``eha_pt_id`` is used as the join key but is NOT projected into the canonical
+    schema (not in CANONICAL_SCHEMA); it can be recovered from the EHA parquet
+    via the EIA_PtID → EHA_PtID mapping in the source files if needed.
+
+    Returns a DataFrame with exactly CANONICAL_SCHEMA columns.
+    """
+    cap = eha_capacity_kw(plants)
+    gen = eha_energy_kwh(cf, year)
+
+    df = (
+        cap.join(gen, on="eha_pt_id", how="inner")
+        .filter(
+            (pl.col("actual_installed_kw") > 0)
+            & (pl.col("actual_annual_energy_kwh") > 0)
+        )
+        .with_columns(
+            pl.lit("EHA").alias("ground_truth_source"),
+            pl.col("pt_name").alias("facility_name"),
+            pl.lit(None, dtype=pl.Float64).alias("actual_head_m"),
+            pl.lit(None, dtype=pl.Float64).alias("actual_flow_m3s"),
+            pl.col("eia_pt_id").cast(pl.Int64, strict=False).alias("source_plant_code"),
+            pl.lit(year, dtype=pl.Int64).alias("source_year"),
+        )
+    )
+    # Project to canonical column order + dtypes (drops eha_pt_id in the process).
+    return df.select(
+        [
+            pl.col(name).cast(dtype).alias(name)
+            for name, dtype in CANONICAL_SCHEMA.items()
+        ]
+    )
+
+
+# ── EHA orchestrator ──────────────────────────────────────────────────────────
+
+def ingest_eha(year: int | None = None) -> pl.DataFrame:
+    """Load EHA plant + CF workbooks for ``year`` and return canonical ground truth.
+
+    Args:
+        year: CF year to use (default: ``EHA_DEFAULT_YEAR`` = 2022, the latest
+              available year in the EHA_Annual_CapacityFactor workbook).
+
+    Returns:
+        DataFrame with exactly CANONICAL_SCHEMA columns, ground_truth_source="EHA".
+    """
+    eha_dir = _resolve_eha_dir()
+    if year is None:
+        year = int(config.get("phase5.eha_year") or EHA_DEFAULT_YEAR)
+    log.info("Ingesting EHA hydro ground truth for year %d from %s", year, eha_dir)
+    plants = _load_eha_plants(eha_dir)
+    cf = _load_eha_cf(eha_dir)
+    return assemble_eha_ground_truth(plants, cf, year)
+
+
+# ── EHA runner ────────────────────────────────────────────────────────────────
+
+def _eha_summary(df: pl.DataFrame, n_plant_dropped: int, n_neg_energy: int) -> None:
+    """Log EHA ingest summary stats."""
+    n = df.height
+    log.info("EHA hydro ground-truth plants: %d", n)
+    if n_plant_dropped:
+        log.info("  Dropped (null/zero CH_MW, pumped-storage-only): %d", n_plant_dropped)
+    if n_neg_energy:
+        log.info("  Dropped (zero/negative net generation 2022): %d", n_neg_energy)
+    if n:
+        cap = df["actual_installed_kw"]
+        en  = df["actual_annual_energy_kwh"]
+        log.info("  installed_kw  range: %.0f – %.0f (median %.0f)",
+                 cap.min(), cap.max(), cap.median())
+        log.info("  annual_kwh    range: %.3g – %.3g (median %.3g)",
+                 en.min(), en.max(), en.median())
+        log.info("  total fleet GWh/yr: %.1f", en.sum() / 1e6)
+        log.info("  states covered: %d", df["state_code"].n_unique())
+    log.info("  NOTE: EHA/CF file covers plants >=1 MW — skews large-hydro. "
+             "Supplement with FERC conduit labels for micro-scale.")
+
+
+def run_eha(year: int | None = None) -> Path:
+    """Ingest EHA ground truth and write to ``EHA_OUTPUT_PATH``.
+
+    Returns:
+        Path to the written parquet file.
+    """
+    eha_dir = _resolve_eha_dir()
+    if year is None:
+        year = int(config.get("phase5.eha_year") or EHA_DEFAULT_YEAR)
+
+    plants_raw = _load_eha_plants(eha_dir)
+    cf_raw     = _load_eha_cf(eha_dir)
+
+    # Count drops for the summary log
+    n_total = plants_raw.height
+    plants_filtered = eha_filter_capacity(plants_raw)
+    n_plant_dropped = n_total - plants_filtered.height
+
+    gen = eha_energy_kwh(cf_raw, year)
+    # Negative/zero energy rows (drop happens inside assemble)
+    n_neg_energy = int(
+        gen.filter(pl.col("actual_annual_energy_kwh") <= 0).height
+    )
+
+    df = assemble_eha_ground_truth(plants_raw, cf_raw, year)
+
+    EHA_OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    io.write_parquet(df, EHA_OUTPUT_PATH)
+    _eha_summary(df, n_plant_dropped, n_neg_energy)
+    log.info("Wrote %s", EHA_OUTPUT_PATH)
+    return EHA_OUTPUT_PATH
+
+
+def main_eha() -> None:
+    """CLI entry for EHA ingest: ``python -m src.phase5.ground_truth --source eha``."""
+    ap = argparse.ArgumentParser(description="Phase 5 — ingest DOE HydroSource EHA ground truth.")
+    ap.add_argument("--year", type=int, default=None,
+                    help=f"EHA CF year (default: {EHA_DEFAULT_YEAR}, the latest available)")
+    args = ap.parse_args()
+    run_eha(args.year)
