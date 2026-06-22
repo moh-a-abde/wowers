@@ -5261,3 +5261,48 @@ Verified against live code + parquet, not the review prompt: `installation_capex
 3. Phase 5 ML prep — define target + ground truth, leakage plan; then build the model.
 
 ---
+
+### Session: 2026-06-21 — Director Meeting Prep (Jun 24) + Exclusion Funnel Refresh — Tom
+
+**What was done:**
+
+Closed two carried next-steps from the Jun 20 session (#1 director-meeting prep, #2 funnel-report refresh). Both are doc-only deliverables — **no pipeline code, config, or thresholds changed.** Every figure recomputed live from the post-F4-INSTALL parquet (`financial_scorecards.parquet`), not copied from journal text. Confirmed no existing deck/slide/meeting file in the repo before writing — no duplicate work.
+
+**Live-parquet verification (install = 17.5%, current production):**
+- Funnel: 17,158 → 5,468 (P2) → 4,864 head_valid → 3,783 turbine_viable → **1,141 project_viable** / 409.1 GWh/yr. Non-viable economics drop = **2,642** (was 3,428 at the old 355-viable framing).
+- Exclusion rollup: data-gap 12,294 (76.8%) · physics floor 1,081 (6.7%) · economics 2,642 (16.5%) of 16,017 total exclusions.
+- CapEx ($M): equipment 181.6 · installation 31.8 · interconnection 82.8 · permitting 57.3 · **total 353.5**. `capex_outside_vendor_band` = 0/3,783.
+- Median payback (viable) = **9.84 yr** live (prior entries cited 9.4 — minor; live figure used).
+- `install_cost_whatif.py` band reproduced exactly: 0%→1,374/428.2 · 15%→1,172/411.7 · 17.5%→1,141/409.1 · 20%→1,120/407.5.
+
+**Corrections vs prior journal/report framing (data-driven, not bugs):**
+- **Tier B is now empty.** With the MINREV floor removed (Jun 12), there are no "NPV>0 but fails MINREV" sites — all NPV-positive sites are now `project_viable` (Tier A). `site_tier` parquet shows only A (1,141) and C (2,642). The old A/B/C narrative is retired from the report.
+- **econ_cat band counts shifted** from the Jun 12 journal figures — those were pre-install (floor removed, install still $0). Report now uses post-install (17.5%) bands: payback excellent 94 / good 507 / marginal 540 / uneconomic 2,642; NPV high 103 / medium 155 / low 883 / negative 2,642; IRR strong 196 / moderate 578 / weak 2,181 / none 828.
+
+**Task 1 — Director meeting brief (`DIRECTOR_BRIEF_2026-06-24.md`, new):**
+- F4-INSTALL decision slide (install % → viability/energy/CapEx band table).
+- Two asks framed for the meeting: (a) commit installation % (default 0.175 stands otherwise); (b) confirm scope = mechanical/labor only, excludes civil works, interconnection, permitting (latter two already separate CapEx lines — why 15–20% sits below the literature 2–5× total-installed multiplier).
+- Talking points for anticipated questions + post-meeting capture checklist (the two items that can only be resolved live).
+
+**Task 2 — `EXCLUSION_FUNNEL_REPORT.md` refreshed (full rewrite):**
+- Title + headline → 1,141 viable / 409.1 GWh/yr at 17.5% install.
+- Funnel + rollup recomputed to floor-removed, post-install counts; viability gate text updated (NPV>0 AND payback≤20yr AND real IRR; floor=0 no-op).
+- Removed stale sections: Tier A/B/C cohort table, the "$20k MINREV — one open decision" section (closed Jun 12), and the ~3.5yr payback discrepancy note (resolved).
+- **Added econ_cat profit-gradient section** (3 tables: payback / NPV / IRR bands, live counts + GWh) per director's "categorize by profitability" direction.
+- Added portfolio cost-structure table, install-% open-lever section + what-if band, and rebuilt reproducibility footer to current columns/values.
+
+**Files modified / created:**
+- `DIRECTOR_BRIEF_2026-06-24.md` — new (meeting decision brief).
+- `EXCLUSION_FUNNEL_REPORT.md` — full rewrite to post-MINREV-removal + post-F4-INSTALL framing.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- `data/processed/phase{1,2,3,4}/*.parquet` recomputed via `/opt/miniconda3/bin/python` + polars.
+- `scripts/install_cost_whatif.py` (read-only band table).
+
+**Next steps after this session:**
+1. **Director meeting Wed Jun 24** — present `DIRECTOR_BRIEF_2026-06-24.md`; extract committed install % + scope confirmation; if % ≠ 0.175, update `settings.yaml`, re-run Phase 4, refresh the funnel report headline.
+2. Phase 5 ML prep — define ML target + DOE/FERC ground-truth source; leakage plan (viability is formula-derived, cannot be both feature and target). Main remaining deliverable, not started.
+3. (Background) Collect DOE HydroSource EHA install-cost records to upgrade Kaplan/Francis A/B from literature-form to US-data-validated; infra ready (`scripts/calibrate_capex_ab.py`).
+
+---
