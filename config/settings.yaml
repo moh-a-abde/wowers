@@ -265,6 +265,12 @@ potw_filter:
     - "NON"    # Non-major effective
     - "ADC"    # Administratively Continued (still operating under prior permit)
 
+# ── Phase 5: ML ground truth ──────────────────────────────────────────────────
+phase5:
+  # EIA-860 + EIA-923 source dir (external drive). Override if remounted elsewhere.
+  eia_data_dir: "/Volumes/SANDISK/WOWERS_Pivot_Data/V2_Industrial_Cooling_Water_Discharge"
+  eia_year: null   # null = auto-detect latest EIA860_<y> / EIA923_<y> pair present
+
 # ── Paths (relative to project root) ─────────────────────────────────────────
 paths:
   raw_data: "data/raw"
