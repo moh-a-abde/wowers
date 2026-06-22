@@ -28,6 +28,31 @@ The idea behind Phase 5 is to train a model on real hydropower plants where we a
 
 ---
 
+## Heads-Up — The Roadblock Before We Can Train the ML Model
+
+Phase 5 has started, but I want to flag a real problem honestly before we sink time into it, because part of the fix needs your help.
+
+**First, what the ML model is even for.** Right now we estimate each site's energy with physics formulas. The machine-learning model is meant to learn from *real* hydropower plants — places where we already know how much electricity they actually produce — and use that to double-check and sharpen our estimates. Basically, "show the computer thousands of real plants so it learns the pattern, then let it grade our homework."
+
+**To teach it, every training example needs two halves — like a flashcard.** The front is the *question* (the site's details: how much water, how big a drop, turbine size). The back is the *answer* (how much energy it really made). The model studies thousands of complete cards and learns the link.
+
+**Here's the snag.** The answers we have are all from **big dams**, but our detailed question-data is for **wastewater treatment plants**. Those are totally different places, so I can't pair a dam's answer with a wastewater plant's question — they don't go on the same card. And the dam records only tell us the plant's size and energy, not the water-flow details, so even the answer side is thin. Two knock-on issues: (1) every plant we have an answer for is *large* (1 megawatt and up), while our real targets are *tiny* — a model that only ever saw big dams will guess badly for small sites; (2) we have to be careful not to accidentally let the model peek at the answer through a back door, which would make it look great in testing and fail in reality.
+
+**What the datasets are, in plain terms:**
+- **EIA data** (US Energy Information Administration) — the government's master list of every power plant: its size and how much energy it made each year. We already had this on our drive. Gave us ~1,300 real hydro plants. *Big plants.*
+- **EHA / HydroSource data** (Dept. of Energy, Oak Ridge lab) — a hydropower-specific version of the same idea: an inventory of US hydro plants plus their yearly generation. I downloaded this last week. Another ~1,300 plants. *Also big plants.*
+- **FERC conduit data** (the one we still need) — this is the list of small hydropower projects built on **man-made water channels, including wastewater and canal sites**. In other words, *exactly our kind of site, at our size.* This is the missing piece that would give us "answer cards" that actually match our "questions."
+
+**So what's genuinely blocking us:** it's not the coding — it's getting the *right kind of training examples*. The EIA and EHA data we have are a fine starting point to prove the machinery works, but a model trained only on giant dams won't be trustworthy for small wastewater outfalls. The honest fix is to track down the small-site (FERC conduit) data.
+
+**Where I could use your help / a decision:**
+1. Do you (or anyone in your network at DOE / FERC / a utility) have a line on **real small-scale or wastewater hydropower project data** — actual sites with their measured energy output? That's the single thing that would unblock a trustworthy model.
+2. Are you OK with me building a rough "test-run" model on the big-plant data first — purely to confirm the whole pipeline works end-to-end — as long as we treat its numbers as a smoke test, not a real result?
+
+My plan unless you say otherwise: do the cheap setup now (merge our two answer-lists, build the question sheet, guard against the "peeking" problem), stand up that throwaway test model to prove the pipeline, and in parallel go hunting for the small-site data that makes the real model believable.
+
+---
+
 ## Decision Slide — Installation Cost % → Viability
 
 We added an installation/labor cost line to CapEx (previously implicitly $0). Modeled as **% of equipment cost** per your guidance — real install cost is unobtainable (gov procurement opacity). Production default is **17.5%** (midpoint of your 15–20% range), **pending your committed value.**
