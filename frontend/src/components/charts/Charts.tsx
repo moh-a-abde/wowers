@@ -1,0 +1,149 @@
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ReferenceArea,
+  ResponsiveContainer,
+  Scatter,
+  ScatterChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+  ZAxis,
+} from "recharts";
+import { BAND_COLOR } from "../../lib/colors";
+import type { Band } from "../../lib/types";
+import { usd } from "../../lib/format";
+
+const AXIS = { fontSize: 11, fill: "#5b6b80" };
+
+/* Horizontal bar: Annual energy by site (top N) */
+export function EnergyBar({ data }: { data: { name: string; mwh: number }[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={Math.max(220, data.length * 30)}>
+      <BarChart data={data} layout="vertical" margin={{ left: 10, right: 30, top: 4, bottom: 4 }}>
+        <CartesianGrid horizontal={false} stroke="#eef1f6" />
+        <XAxis type="number" tick={AXIS} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
+        <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11, fill: "#0f1b2d" }} />
+        <Tooltip formatter={(v) => [`${Number(v).toLocaleString()} MWh/yr`, "Energy"]} />
+        <Bar dataKey="mwh" radius={[0, 4, 4, 0]}>
+          {data.map((_, i) => (
+            <Cell key={i} fill={i === 0 ? "#16356a" : i < 3 ? "#2563eb" : "#7aa7f0"} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* Vertical bar: viable sites by state */
+export function StateBar({ data }: { data: { state: string; viable: number }[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={230}>
+      <BarChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+        <CartesianGrid vertical={false} stroke="#eef1f6" />
+        <XAxis dataKey="state" tick={{ fontSize: 9, fill: "#5b6b80" }} interval={0} />
+        <YAxis tick={AXIS} width={32} />
+        <Tooltip formatter={(v) => [`${Number(v)} viable`, "Sites"]} />
+        <Bar dataKey="viable" fill="#16356a" radius={[3, 3, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* Scatter: risk vs return (payback x, NPV y), colored by band */
+export function RiskReturn({
+  data,
+}: {
+  data: { payback: number; npv: number; band: Band; name: string }[];
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={320}>
+      <ScatterChart margin={{ left: 8, right: 16, top: 12, bottom: 16 }}>
+        <CartesianGrid stroke="#eef1f6" />
+        <ReferenceArea x1={0} x2={7} fill="#22c55e" fillOpacity={0.07} />
+        <XAxis
+          type="number"
+          dataKey="payback"
+          name="Payback"
+          unit="yr"
+          domain={[0, 20]}
+          tick={AXIS}
+          label={{ value: "Payback Period (years)", position: "insideBottom", offset: -8, fontSize: 11, fill: "#5b6b80" }}
+        />
+        <YAxis
+          type="number"
+          dataKey="npv"
+          name="NPV"
+          tick={AXIS}
+          tickFormatter={(v) => `$${(v / 1e6).toFixed(0)}M`}
+          label={{ value: "Net Present Value", angle: -90, position: "insideLeft", fontSize: 11, fill: "#5b6b80" }}
+        />
+        <ZAxis range={[35, 35]} />
+        <Tooltip
+          cursor={{ strokeDasharray: "3 3" }}
+          formatter={(v, n) => (n === "NPV" ? usd(Number(v)) : `${Number(v).toFixed(1)} yr`)}
+          labelFormatter={() => ""}
+        />
+        <Scatter data={data} fillOpacity={0.75}>
+          {data.map((d, i) => (
+            <Cell key={i} fill={BAND_COLOR[d.band]} />
+          ))}
+        </Scatter>
+      </ScatterChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* Horizontal tornado: sensitivity impact on NPV */
+export function Tornado({
+  base,
+  rows,
+}: {
+  base: number;
+  rows: { label: string; low: number | null; high: number | null }[];
+}) {
+  const data = rows
+    .filter((r) => r.low != null && r.high != null)
+    .map((r) => {
+      const lowPct = ((r.low! - base) / Math.abs(base)) * 100;
+      const highPct = ((r.high! - base) / Math.abs(base)) * 100;
+      return { label: r.label, low: Math.min(lowPct, highPct), high: Math.max(lowPct, highPct) };
+    });
+  return (
+    <ResponsiveContainer width="100%" height={150}>
+      <BarChart data={data} layout="vertical" stackOffset="sign" margin={{ left: 10, right: 20, top: 4, bottom: 4 }}>
+        <CartesianGrid horizontal={false} stroke="#eef1f6" />
+        <XAxis type="number" tick={AXIS} unit="%" />
+        <YAxis type="category" dataKey="label" width={120} tick={{ fontSize: 11, fill: "#0f1b2d" }} />
+        <Tooltip formatter={(v) => `${Number(v).toFixed(0)}%`} />
+        <Bar dataKey="low" fill="#7aa7f0" stackId="s" />
+        <Bar dataKey="high" fill="#16356a" stackId="s" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* Line: turbine efficiency curve (synthesized around rated point) */
+export function EfficiencyCurve({ qRated, peakPct }: { qRated: number; peakPct: number }) {
+  const pts = [];
+  for (let i = 0; i <= 20; i++) {
+    const q = (i / 20) * qRated * 1.4;
+    const x = q / qRated;
+    // simple unimodal efficiency shape peaking near rated flow
+    const eff = peakPct * Math.max(0, 1 - 1.1 * Math.pow(x - 1, 2)) * (x < 0.15 ? x / 0.15 : 1);
+    pts.push({ q: +q.toFixed(1), eff: +Math.max(0, eff).toFixed(0) });
+  }
+  return (
+    <ResponsiveContainer width="100%" height={170}>
+      <BarChart data={pts} margin={{ left: 0, right: 10, top: 8, bottom: 4 }}>
+        <CartesianGrid stroke="#eef1f6" />
+        <XAxis dataKey="q" tick={AXIS} label={{ value: "Flow (m³/s)", position: "insideBottom", offset: -2, fontSize: 10, fill: "#5b6b80" }} />
+        <YAxis tick={AXIS} domain={[0, 100]} width={32} unit="%" />
+        <Tooltip formatter={(v) => `${Number(v)}%`} />
+        <Bar dataKey="eff" fill="#2563eb" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
