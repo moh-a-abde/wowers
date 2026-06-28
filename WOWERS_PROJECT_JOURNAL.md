@@ -5306,3 +5306,99 @@ Closed two carried next-steps from the Jun 20 session (#1 director-meeting prep,
 3. (Background) Collect DOE HydroSource EHA install-cost records to upgrade Kaplan/Francis A/B from literature-form to US-data-validated; infra ready (`scripts/calibrate_capex_ab.py`).
 
 ---
+
+### Session: 2026-06-21 (PM) — Phase 5 Kickoff: Ground-Truth Search, Dataset Downloads + EIA Ingest (P5-GT) — Tom
+
+**What was done:**
+
+Started Phase 5 (ML model). Confirmed the hard blocker (no labeled ground truth in repo), searched the external drives for existing data, downloaded the public ground-truth datasets, and built + verified the first ingest module (EIA-860 + EIA-923 → canonical ground-truth schema). No Phase 1–4 code/config/output changed.
+
+**Phase 5 readiness audit (vs `ARCHITECTURE.md` §5):**
+- Design fully spec'd already (target `log(actual_annual_energy_kwh)`, LightGBM, nested state-stratified CV, ~60 features, SHAP leakage check). Libs declared in `pyproject.toml` (lightgbm/optuna/shap/rapidfuzz).
+- Only hard blocker = labeled ground truth. Phase 1–4 feature outputs already on disk.
+
+**External-drive search (read-only):** 3 volumes mounted — `256Drive` (container blobs, irrelevant), `Tang Drive` (empty), `SANDISK` (the data drive, 226 GB).
+- ARCHITECTURE-specified ground truth (DOE HydroSource / FERC / EHA / SGIP) = NOT on any drive.
+- **Found a usable substitute already on SANDISK:** EIA-860 (generator inventory) + EIA-923 (generation) for 2009–2024/2025, under `WOWERS_Pivot_Data/V2_Industrial_Cooling_Water_Discharge/` (originally collected for the V2 cooling-water pivot, directly reusable). Filtering prime mover `HY` + joining 860 capacity ↔ 923 generation ↔ plant lat/lon gives `(installed_kw, annual_energy_kwh, lat/lon)` per hydro plant.
+
+**Datasets downloaded → SANDISK `WOWERS_Pivot_Data/Phase5_ML_GroundTruth/`** (organized, with `README.md` documenting sources + join keys + the large-hydro caveat):
+- `EHA_HydroSource_ORNL/`
+  - `ORNL_EHAHydroPlant_PublicFY2024.xlsx` + `ORNL_EHAHydroPlant_FY2024.zip` — EHA plant inventory 2024 (`EIA_PtID`, `FcDocket`, capacity, state, lat/lon). Source: https://hydrosource.ornl.gov/data/datasets/eha2024/ (S3: https://hydrosource.s3.us-east-2.amazonaws.com/files/data/datasets/EHA2024/ORNL_EHAHydroPlant_PublicFY2024.xlsx , https://hydrosource.s3.us-east-2.amazonaws.com/files/data/datasets/EHA2024/ORNL_EHAHydroPlant_FY2024.zip )
+  - `EHA_Annual_CapacityFactor.xlsx` — annual capacity factor + generation per plant 2005–2022 (≥1 MW). Source: https://hydrosource.ornl.gov/data/datasets/existing-hydropower-assets-eha-capacity-factor-plant-database-2005-2022/ (S3: https://hydrosource.s3.us-east-2.amazonaws.com/files/data/datasets/existing-hydropower-assets-eha-capacity-factor-plant-database-2005-2022/EHA_Annual_CapacityFactor.xlsx )
+- `ORNL_Conduit_Potential/`
+  - `ORNL_Pub176069_National_Conduits_Assessment.pdf` — national conduit hydropower assessment incl. municipal wastewater discharge conduits (potential, not actual). Source: https://info.ornl.gov/sites/publications/Files/Pub176069.pdf (project: https://www.ornl.gov/project/assessing-us-conduit-hydropower-potential )
+- `FERC_Conduit/` — empty placeholder; no clean single-file download. Manual collection from Hydropower eLibrary ( https://hydropowerelibrary.pnnl.gov/ ), data.ferc.gov ( https://data.ferc.gov/ ), FERC qualifying-conduit NOI ( https://ferc.gov/how-file-notice-intent-construct-qualifying-conduit-hydropower-facility ). Cross-link to EHA via `FcDocket`.
+- Skipped: HILARRI (linker only, no capacity/generation labels).
+
+**Coding-agent note:** dispatched a subagent to build the ingest; it was blocked — the subagent sandbox denied ALL writes (Write/Edit/mkdir/pip). It returned a complete blueprint + the key EIA gotchas, which the main thread then implemented directly (main thread has write access).
+
+**Module built — `src/phase5/ground_truth.py` (P5-GT):**
+- `CANONICAL_SCHEMA` (source-agnostic, 11 cols): `ground_truth_source`, `facility_name`, `state_code`, `latitude`, `longitude`, `actual_annual_energy_kwh` (TARGET), `actual_installed_kw`, `actual_head_m` (null/EIA), `actual_flow_m3s` (null/EIA), `source_plant_code`, `source_year`. FERC/EHA ingests append to this same schema later.
+- Pure transforms (unit-tested without drive/engine): `aggregate_capacity_kw` (HY filter + plant-sum + MW→kW), `aggregate_generation_kwh` (HY filter + plant-sum + MWh→kWh), `assemble_ground_truth` (join + null head/flow + drop non-positive labels).
+- IO layer handles the three EIA gotchas: reads the **Operable** sheet (not the default Proposed), title-row header offsets (860 row 2 / 923 Page-1 row 6), and 923 multi-row-per-plant (filter `Reported Prime Mover == HY`, sum to plant). Tolerant column matcher (`_find_col`) so EIA name drift across vintages fails loudly, not silently. External-drive path guarded (clear `FileNotFoundError` if unmounted); latest year auto-detected.
+- `run()/main()` writes `data/raw/ground_truth/eia_hydro_ground_truth.parquet` (gitignored) + summary log.
+
+**Verified (live):**
+- Real ingest: **1,308 hydro plants** (year 2024 auto-detected), installed_kw 100 kW – 6.5 GW (median 8 MW), fleet 242 TWh/yr (≈ US hydro annual total — sanity ✓). Min 100 kW shows EIA carries some sub-MW plants (broader than the blueprint's "≥1 MW only" assumption).
+- Tests: **439 passed, 1 skipped** (was 427+1; +12 Phase 5 tests incl. a real-drive integration test that skips when drive/engine absent). No regressions.
+
+**Known limitation (documented in module docstring):** EIA labels skew utility-scale conventional hydro — NOT representative of WWTP micro-scale. Use for training the physics-correction relationship; supplement with FERC conduit / EHA small-scale labels (downloaded) before trusting micro-scale predictions.
+
+**Files modified / created:**
+- `src/phase5/__init__.py`, `src/phase5/ground_truth.py` — new (P5-GT).
+- `tests/test_phase5/__init__.py`, `tests/test_phase5/test_ground_truth.py` — new (12 tests).
+- `config/settings.yaml` — new `phase5:` block (`eia_data_dir`, `eia_year`).
+- `pyproject.toml` — added `fastexcel>=0.10` (polars .xlsx engine; was missing).
+- `data/raw/ground_truth/eia_hydro_ground_truth.parquet` — generated (gitignored).
+- External drive: `SANDISK/WOWERS_Pivot_Data/Phase5_ML_GroundTruth/` (downloads + README) — not in repo.
+
+**Resources used:**
+- EHA HydroSource 2024 + capacity-factor DB, ORNL conduit assessment PDF (URLs above).
+- EIA-860 + EIA-923 on SANDISK (`V2_Industrial_Cooling_Water_Discharge/`).
+- WebSearch/WebFetch for dataset discovery; coding subagent (blueprint only — blocked on writes).
+
+**Next steps after this session:**
+1. `match_to_echo()` — spatial (lat/lon ≤500m) + fuzzy-name join of EIA ground truth to ECHO POTW sites (ARCHITECTURE §5.3 step 1); produces the matched training rows.
+2. EHA ingest function — add `ingest_eha()` reusing `CANONICAL_SCHEMA` for the downloaded EHA plant + capacity-factor data (broader + some smaller plants than EIA alone).
+3. FERC conduit collection — manual export to `FERC_Conduit/`; the micro/WWTP-scale tail to fix the large-hydro bias before training.
+4. Feature matrix + leakage lock, then LightGBM training (ARCHITECTURE §5.2–5.3).
+
+---
+
+### Session: 2026-06-21 (PM #2) — Phase 5 EHA ingest review + director-brief weekly recap (P5-EHA) — Tom
+
+**What was done:**
+
+Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built by a coding agent run externally), fixed one nit, added a plain-English weekly recap to the director brief.
+
+**P5-EHA review (acted as reviewer against live code + real drive + test run, NOT the review-prompt text):** all 14 invariants verified —
+- Funnel exact: plant inventory 2,273 → CH_MW>0 filter 2,246 (−27 pumped-storage-only) → CF 2022 HY rows 1,321 → inner join → energy>0 → **1,269 plants, 227,560 GWh/yr (2022)**.
+- `ground_truth_source=="EHA"`; schema + dtypes identical to `CANONICAL_SCHEMA`; PS excluded via `ch_mw>0`; energy = `Net_Generation_MWh × 1000` (measured, not CF×cap×8760 proxy); MW→kW / MWh→kWh correct; year filter `2022 & type=="HY"`; `eha_pt_id` projected out; `source_plant_code`=EIA_PtID Int64 (1 null by design — plant with null EIA_PtID); head/flow null; EIA functions byte-identical; no Phase 1–4 files changed; **463 passed / 1 skipped (+24 EHA tests)**.
+- `run_eha()` writes `data/raw/ground_truth/eha_hydro_ground_truth.parquet` (gitignored) — 1,269 rows, 48 states, large-hydro NOTE logged.
+
+**Nit fixed (only finding worth acting on):** `_load_eha_cf` loaded a `capacity_mw` column never used in any computation (energy comes from `net_gen_mwh`). Removed the dead select + its docstring line. Tests still green (36 Phase 5), ingest unchanged (1,269 / 227,560 GWh).
+
+**Decisions accepted from the agent's design:** EIA_PtID as `source_plant_code` (EHA_PtID is a string, incompatible with the Int64 schema); measured `Net_Generation_MWh` over the `CH_MWh` plant-file column / 8760 proxy; 5 CF-only plants dropped by inner join; large-hydro bias documented (not gated), consistent with the EIA ingest. Note: EHA min installed_kw is 100 kW, so the "≥1 MW only" caveat is conservative, not literal.
+
+**Director brief — added "Quick Recap — What I Got Done Since Last Wednesday (Jun 17–21)"** in informal, non-technical language for `DIRECTOR_BRIEF_2026-06-24.md`: (1) added installation cost to make the model honest (decision slide), (2) refreshed the exclusion-funnel report to current numbers (1,141 viable / 409 GWh) + profitability gradient, (3) kicked off Phase 5 ML — checked for existing data, downloaded the DOE/EHA datasets, built two ingest tools (EIA ~1,308 + EHA ~1,269 labeled plants), with the honest large-hydro caveat.
+
+**Files modified / created:**
+- `src/phase5/ground_truth.py` — removed dead `capacity_mw` load from `_load_eha_cf` (the EHA ingest itself was authored in the external agent session; module docstring already covers both sources).
+- `config/settings.yaml` — `phase5.eha_data_dir` / `eha_year` (from the EHA session).
+- `tests/test_phase5/test_ground_truth.py` — +24 EHA tests (from the EHA session).
+- `DIRECTOR_BRIEF_2026-06-24.md` — added the plain-English weekly recap section.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- Live code review + `data/raw/ground_truth/eha_hydro_ground_truth.parquet` generation via polars.
+- EHA data on SANDISK `Phase5_ML_GroundTruth/EHA_HydroSource_ORNL/` (downloaded Jun 21).
+- Coding agent (EHA implementation, external session) + its review prompt (executed this session).
+
+**Next steps after this session:**
+1. `match_to_echo()` — spatial + fuzzy-name join of EIA + EHA labels to ECHO POTW sites (ARCHITECTURE §5.3); treat null `source_plant_code` as unmatchable.
+2. `combine_ground_truth()` — merge EIA + EHA parquets, dedupe by EIA plant code across sources.
+3. FERC conduit collection (manual) — the micro/WWTP-scale tail to fix the large-hydro bias.
+4. Feature matrix + leakage lock, then LightGBM training.
+5. Director meeting Wed Jun 24 — present brief (now includes weekly recap + F4-INSTALL decision slide).
+
+---

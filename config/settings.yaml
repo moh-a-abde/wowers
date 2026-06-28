@@ -265,6 +265,18 @@ potw_filter:
     - "NON"    # Non-major effective
     - "ADC"    # Administratively Continued (still operating under prior permit)
 
+# ── Phase 5: ML ground truth ──────────────────────────────────────────────────
+phase5:
+  # EIA-860 + EIA-923 source dir (external drive). Override if remounted elsewhere.
+  eia_data_dir: "/Volumes/SANDISK/WOWERS_Pivot_Data/V2_Industrial_Cooling_Water_Discharge"
+  eia_year: null   # null = auto-detect latest EIA860_<y> / EIA923_<y> pair present
+
+  # P5-EHA: DOE HydroSource Existing Hydropower Assets (ORNL).
+  # Folder must contain ORNL_EHAHydroPlant_PublicFY2024.xlsx and
+  # EHA_Annual_CapacityFactor.xlsx (both already on SANDISK).
+  eha_data_dir: "/Volumes/SANDISK/WOWERS_Pivot_Data/Phase5_ML_GroundTruth/EHA_HydroSource_ORNL"
+  eha_year: null   # null = use EHA_DEFAULT_YEAR (2022, latest in CF workbook)
+
 # ── Paths (relative to project root) ─────────────────────────────────────────
 paths:
   raw_data: "data/raw"
