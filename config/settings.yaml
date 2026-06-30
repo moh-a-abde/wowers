@@ -277,6 +277,31 @@ phase5:
   eha_data_dir: "/Volumes/SANDISK/WOWERS_Pivot_Data/Phase5_ML_GroundTruth/EHA_HydroSource_ORNL"
   eha_year: null   # null = use EHA_DEFAULT_YEAR (2022, latest in CF workbook)
 
+  # D1 — combined ground truth output (gitignored; data/raw/ is gitignored)
+  combined_ground_truth_path: "data/raw/ground_truth/combined_ground_truth.parquet"
+
+  # D2 — feature matrix output (gitignored; data/processed/ is gitignored)
+  feature_matrix_path: "data/processed/phase5/feature_matrix.parquet"
+
+  # D3 — model directory for serialised artifacts (gitignored)
+  model_dir: "data/processed/phase5/models"
+
+  # D3 — Methodology decision toggle (UNRESOLVED — human must choose before HP sweep).
+  # false (default, safe): physics energy estimate dropped as leakage.
+  # true: physics estimate used as an input feature (physics-as-baseline experiment).
+  # See src/phase5/features.py select_model_features() docstring for trade-offs.
+  allow_physics_estimate_feature: false
+
+  # D4 — nested cross-validation settings
+  cv:
+    outer_folds: 5
+    inner_folds: 3
+    seed: 0
+
+  # D6 — USBR RISE raw download directory (Phase 5 candidate label source).
+  # Fetcher lands raw JSON + manifest; no CANONICAL_SCHEMA parse until verified.
+  usbr_rise_dir: "/Volumes/SANDISK/WOWERS_Pivot_Data/Phase5_ML_GroundTruth/USBR_RISE"
+
 # ── Paths (relative to project root) ─────────────────────────────────────────
 paths:
   raw_data: "data/raw"

@@ -5402,3 +5402,34 @@ Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built
 5. Director meeting Wed Jun 24 — present brief (now includes weekly recap + F4-INSTALL decision slide).
 
 ---
+
+### Session: 2026-06-30 — Phase 5 ML Rails (combine + features + leakage lock + CV harness) + USBR RISE probe + EHA dedup fix — Tom
+
+**What was done:**
+- Built the Phase 5 ML "rails" (no model trained yet — decision-gated): D1 combine_ground_truth (EIA+EHA dedup), D2 build_feature_matrix (P1 spine, left-join P2/P3/P4 on npdes_id + derived features flow_x_head / power_density_kw_per_mgd / revenue_potential_per_kw / climate_zone), D3 leakage lock (LEAKAGE_DENYLIST + PHYSICS_ESTIMATE_COLS toggle + assert_no_leakage / select_model_features), D4 nested_cv (state-stratified outer, group-aware inner, leakage guard at entry), D5 settings.yaml phase5 additions, D6 scripts/fetch_usbr_rise.py.
+- Tom reviewed against live code + real parquets. Verified clean: 494 passed / 1 skipped (pre-fix baseline); Phase 1–4 + existing ingests untouched (only settings.yaml + ground_truth.py modified, additive); leakage lock correct (PHYSICS_ESTIMATE_COLS covers annual_energy_kwh/mwh + all energy_p* + power_p50 + capacity_factor; revenue_potential_per_kw = rate × capacity × 8760 is a capacity proxy, not observed energy — no leak through derived features); min installed_kw in real data = 100.
+- Found + fixed one defect: combine_ground_truth did not dedupe EHA internally — real EHA has 1 internal duplicate source_plant_code (EIA code 61217, U Canal hydro ID: "U Canal Hydro 2" and "Head of U Canal Hydro Project" — two EHA sub-sites matched to one EIA plant ID, both reporting identical 4,267 MWh from the single EIA generation record). Output was 1,361 rows with 1 duplicate plant (contradicting the 1,360 docstring) and risked the same plant splitting across CV folds. Fixed by deduping eha_has_code on source_plant_code before any cross-source join. Keep-rule: **keep-max actual_annual_energy_kwh** (ties broken by first occurrence) — correct whether rows are true duplicates (equal energy → no loss) or partial-generation splits (keep the larger). Post-fix: **1,360 rows, 0 duplicate non-null codes, fleet 250,643.7 GWh/yr** (down 4.2 GWh from 250,648 — the removed duplicate row). Added 2 regression tests for the internal-dup case.
+- USBR RISE probed as a candidate measured micro-scale label source (its V4 README recipe). VERDICT: NOT viable — RISE carries water-operations data only (canal stage, reservoir release, TDG, flow); the "Powerplant Generation (MWh)" parameter (param 32) has 0 result records in the API, smallest sites are multi-MW dams, sub-MW coverage = zero. No dataset landed on SANDISK. Recommended next label source = FERC conduit exemptions (eLibrary).
+
+**Files modified / created:**
+- `src/phase5/ground_truth.py` — D1 combine_ground_truth + run_combine; EHA-internal dedup fix (keep-max energy per source_plant_code before cross-source join).
+- `src/phase5/features.py` — new (D2 feature matrix + D3 leakage lock: LEAKAGE_DENYLIST, PHYSICS_ESTIMATE_COLS, assert_no_leakage, select_model_features).
+- `src/phase5/cv.py` — new (D4 nested CV harness: state-stratified outer, group-aware inner, 4 metrics per fold, leakage guard).
+- `config/settings.yaml` — D5 phase5 additions: combined_ground_truth_path, feature_matrix_path, model_dir, allow_physics_estimate_feature: false, cv block, usbr_rise_dir.
+- `scripts/fetch_usbr_rise.py` — new (D6 RISE fetcher; verdict: no electrical-generation data in RISE).
+- `tests/test_phase5/test_combine_and_features.py` — new (31 tests D1–D4) + 2 internal-dup regression tests (post-fix = 33 tests, full suite 496 passed / 1 skipped).
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- Labeled data already on SANDISK Phase5_ML_GroundTruth: EIA-860/923 + EHA HydroSource (combined post-fix → 1,360 plants, 250,643.7 GWh/yr fleet).
+- USBR RISE API — https://data.usbr.gov/ , catalog https://data.usbr.gov/catalog , result API https://data.usbr.gov/rise/api/result (probed; no electrical-generation data — not used).
+- Candidate next label sources (FERC conduit): Hydropower eLibrary https://hydropowerelibrary.pnnl.gov/ , data.ferc.gov https://data.ferc.gov/ , qualifying-conduit NOI https://ferc.gov/how-file-notice-intent-construct-qualifying-conduit-hydropower-facility
+- ARCHITECTURE.md §5 (ML design); existing src/phase5/ground_truth.py.
+
+**Next steps after this session:**
+1. DECISION (Tom): allow_physics_estimate_feature — is the Phase 2/3 physics energy estimate a training feature or leakage? Both paths wired; pick before any HP sweep.
+2. DECISION (Tom): train↔score feature intersection + scale gap — labeled dams share only ~4 features (lat/lon/state/capacity) with the WWTP scoring matrix, and span 100 kW–6 GW vs 1–500 kW outfalls. Decide whether training is meaningful now or wait for micro-scale labels.
+3. FERC conduit-exemption labels — the real unblock (RISE confirmed dead). Collect from eLibrary / data.ferc.gov; cross-link to EHA via FcDocket.
+4. After 1–3: ingest → leakage-locked feature matrix → nested_cv → LightGBM training + eval-vs-physics (ARCH §5.4).
+
+---

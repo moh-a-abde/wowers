@@ -563,3 +563,143 @@ def main_eha() -> None:
                     help=f"EHA CF year (default: {EHA_DEFAULT_YEAR}, the latest available)")
     args = ap.parse_args()
     run_eha(args.year)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# D1 — combine_ground_truth(): merge EIA + EHA with code-level dedup
+# ══════════════════════════════════════════════════════════════════════════════
+
+COMBINED_OUTPUT_PATH: Path = (
+    config.raw_data_dir() / "ground_truth" / "combined_ground_truth.parquet"
+)
+
+
+def combine_ground_truth(eia: pl.DataFrame, eha: pl.DataFrame) -> pl.DataFrame:
+    """Merge EIA and EHA labeled frames into one deduped ground-truth table.
+
+    Both inputs must conform to ``CANONICAL_SCHEMA`` (same columns, same dtypes).
+
+    Deduplication key: ``source_plant_code`` (Int64 EIA plant code).
+    On collision (same code in both sources) the **EHA row is kept** — EHA uses
+    measured annual net generation from the ORNL CF workbook, whereas EIA uses
+    Form-923 net generation; EHA is considered the hydro-curated authoritative
+    source.  Rows with null ``source_plant_code`` cannot be deduplicated and are
+    kept as-is (they appear only in EHA, n=1 per real-data run).
+
+    EHA-internal dedup: EHA itself may contain multiple entries per
+    ``source_plant_code`` (distinct EHA sub-sites matched to the same EIA plant
+    ID).  Verified example: EIA code 61217 (U Canal hydro, ID) appears as both
+    "U Canal Hydro 2" and "Head of U Canal Hydro Project" in the EHA workbook,
+    both reporting identical 4,267 MWh — the EIA plant record captures combined
+    output and was matched twice, so both rows report the full generation and
+    summing would double-count.  **Keep-rule: keep the row with the highest
+    ``actual_annual_energy_kwh`` (ties broken by first occurrence)** — this is
+    correct whether the two rows are true duplicates (identical energy → no loss)
+    or partial-generation splits (higher row = larger share).  In every verified
+    real case the energy values are equal, so keep-max == keep-first.
+
+    Overlap statistics (verified 2026-06-30 on real parquets, post-dedup):
+        EIA non-null codes : 1,308
+        EHA non-null codes : 1,267  (1,268 rows → 1 internal dup removed)
+        EHA null-code rows :     1  → keep (cannot dedup)
+        Overlap (EIA∩EHA)  : 1,216  → keep EHA row for each
+        EIA-only codes     :    92  → keep as-is
+        EHA-only codes     :    51  → keep as-is
+        Expected combined  :    92 + 51 + 1 + 1,216 = 1,360  (0 dup codes)
+
+    Returns:
+        DataFrame with exactly ``CANONICAL_SCHEMA`` columns.  No new columns.
+    """
+    # --- validate inputs conform to schema ---
+    for name, src in (("eia", eia), ("eha", eha)):
+        missing = set(CANONICAL_SCHEMA) - set(src.columns)
+        if missing:
+            raise ValueError(f"{name} frame is missing CANONICAL_SCHEMA columns: {missing}")
+
+    # --- null-code EHA rows: keep always (cannot participate in dedup) ---
+    eha_null_code = eha.filter(pl.col("source_plant_code").is_null())
+    eha_has_code  = eha.filter(pl.col("source_plant_code").is_not_null())
+
+    # --- EHA-internal dedup: one row per source_plant_code, keep-max energy ---
+    if eha_has_code.height > 0:
+        eha_has_code = (
+            eha_has_code
+            .sort("actual_annual_energy_kwh", descending=True, nulls_last=True)
+            .unique(subset=["source_plant_code"], keep="first")
+        )
+
+    # --- EHA codes take priority: remove EIA rows whose code appears in EHA ---
+    # Guard: if eha_has_code is empty, the anti-join key type may be null → cast
+    if eha_has_code.height == 0:
+        eia_not_in_eha = eia
+    else:
+        eha_codes = eha_has_code.select(
+            pl.col("source_plant_code").cast(pl.Int64)
+        ).unique()
+        eia_not_in_eha = eia.join(eha_codes, on="source_plant_code", how="anti")
+
+    # --- stack: EIA-only rows, deduped EHA rows with code, null-code EHA rows ---
+    combined = pl.concat([eia_not_in_eha, eha_has_code, eha_null_code], how="vertical")
+
+    # --- project to canonical schema + dtypes (no new columns) ---
+    combined = combined.select(
+        [pl.col(name).cast(dtype).alias(name) for name, dtype in CANONICAL_SCHEMA.items()]
+    )
+
+    n = combined.height
+    overlap = int(
+        eia.filter(pl.col("source_plant_code").is_not_null())
+        .join(eha_has_code.select("source_plant_code"), on="source_plant_code", how="semi")
+        .height
+    )
+    log.info(
+        "combine_ground_truth: %d EIA + %d EHA → %d combined rows "
+        "(overlap=%d, EHA row kept per collision)",
+        eia.height, eha.height, n, overlap,
+    )
+    return combined
+
+
+def run_combine(
+    eia_path: Path | None = None,
+    eha_path: Path | None = None,
+) -> Path:
+    """Load EIA + EHA parquets, combine, write ``combined_ground_truth.parquet``.
+
+    If the source parquets are absent, regenerates them from the external drive
+    via the existing ``run()`` / ``run_eha()`` wrappers (requires SANDISK mount).
+
+    Args:
+        eia_path: Override path for the EIA parquet (default: ``OUTPUT_PATH``).
+        eha_path: Override path for the EHA parquet (default: ``EHA_OUTPUT_PATH``).
+
+    Returns:
+        Path to combined_ground_truth.parquet.
+    """
+    eia_p = eia_path or OUTPUT_PATH
+    eha_p = eha_path or EHA_OUTPUT_PATH
+
+    if not eia_p.exists():
+        log.info("EIA parquet absent — regenerating via run() …")
+        run()
+    if not eha_p.exists():
+        log.info("EHA parquet absent — regenerating via run_eha() …")
+        run_eha()
+
+    eia = pl.read_parquet(eia_p)
+    eha = pl.read_parquet(eha_p)
+    combined = combine_ground_truth(eia, eha)
+
+    COMBINED_OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    io.write_parquet(combined, COMBINED_OUTPUT_PATH)
+
+    n = combined.height
+    cap = combined["actual_installed_kw"]
+    en  = combined["actual_annual_energy_kwh"]
+    log.info("Combined ground truth: %d plants", n)
+    log.info("  installed_kw  range: %.0f – %.0f (median %.0f)", cap.min(), cap.max(), cap.median())
+    log.info("  annual_kwh    range: %.3g – %.3g (median %.3g)", en.min(), en.max(), en.median())
+    log.info("  fleet GWh/yr: %.1f", en.sum() / 1e6)
+    log.info("  sources: %s", combined.group_by("ground_truth_source").len().to_dicts())
+    log.info("Wrote %s", COMBINED_OUTPUT_PATH)
+    return COMBINED_OUTPUT_PATH
