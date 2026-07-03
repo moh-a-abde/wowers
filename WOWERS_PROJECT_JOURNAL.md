@@ -5433,3 +5433,28 @@ Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built
 4. After 1–3: ingest → leakage-locked feature matrix → nested_cv → LightGBM training + eval-vs-physics (ARCH §5.4).
 
 ---
+
+### Session: 2026-07-02 — Tom
+
+**What was done:**
+- Strategy session only — **no code, config, or pipeline outputs changed.** Assessed whether Phase 5 ML is worth building, given Tom's question ("Phases 1–4 already pick the best turbine per site — what's the ML use case?") and the constraint that the team cannot test hardware (theoretical/desk work only).
+- **Conclusion: full Phase 5 (LightGBM energy model as spec'd in ARCHITECTURE §5) is NOT worth training on current data.** Labels are utility-scale dams (median 8 MW, no head/flow columns, only ~4 features shared with the WWTP scoring matrix) vs 1–500 kW outfall targets — a dam-trained model is unusable at micro scale, and the physics-vs-ML comparison (ARCH §5.4 success criterion) can't even run because EIA/EHA labels lack head/flow. This confirms the Jun 24 director-brief roadblock section; nothing has changed since.
+- **Reframed Phase 5's real value:** not a product feature (turbine selection + economics come from Phases 1–4 and are unaffected) but a **calibration/credibility play** — every headline number (1,141 viable / 409.1 GWh/yr) is currently pure physics with zero validation against any real plant. Ground-truth data = other people's operating plants, so empirical validation is possible entirely at desk; the no-hardware constraint raises (not lowers) the priority of data-based calibration.
+- **Settled Jun 30 open decision #2** (train↔score scale gap): training on dams now is not meaningful for the product — smoke-test/pipeline-proof only. (Decision #1, `allow_physics_estimate_feature`, stays `false` for any smoke test.)
+- Scoped and prioritized the next four work items (see next steps below), with a hard go/no-go gate on full Phase 5: ≥50 usable FERC conduit-scale labeled sites or the full model is formally killed.
+- Noted housekeeping: journal has no post-Jun-24 director-meeting entry (install % committed, or does 0.175 stand?); `frontend/` contains only an orphaned `node_modules` (no `package.json` — aborted install, Jun 28) and needs a gitignore entry; `WOWERS_Director_Deepdive.pptx` is untracked pending a commit decision.
+
+**Files modified / created:**
+- `WOWERS_PROJECT_JOURNAL.md` — this entry (only file touched).
+
+**Resources used:**
+- `WOWERS_PROJECT_JOURNAL.md` (full history), `ARCHITECTURE.md` §5 (Phase 5 spec + §5.4 success criterion), `DIRECTOR_BRIEF_2026-06-24.md` (ML roadblock section), repo state on branch `tom`.
+
+**Next steps after this session:**
+1. **P5-CF-CALIB — EHA capacity-factor haircut (DO FIRST, ~1 session, no ML).** Use `EHA_Annual_CapacityFactor.xlsx` (already on SANDISK, per-plant CF 2005–2022). Compute the real CF distribution for the smallest plant bucket (100 kW–5 MW), compare against Phase 2 assumed availability/efficiency, and produce a correction band on the P50 energy estimates (report table and/or new column). Deliverable: "409 GWh theoretical → X–Y GWh calibrated against N real small plants." Cheapest credibility upgrade available; uses only ingested data.
+2. **FERC conduit label hunt + kill decision (~1 session, mostly manual browsing).** Sources already identified: hydropowerelibrary.pnnl.gov, data.ferc.gov, FERC qualifying-conduit NOI list; cross-link to EHA via `FcDocket`. **Hard gate: ≥50 usable sites (capacity + annual energy, ideally head/flow) → full Phase 5 lives; <50 → formally kill the full model and journal the decision.** Either outcome is progress.
+3. **Smoke-test model (~1 day, only after items 1–2).** LightGBM on the 1,360 combined dam labels via the existing rails (combine → feature matrix → leakage lock → nested_cv). Pipeline-proof only — numbers stay internal, never in director/pitch material. Director already pre-approved this framing (Jun 24 brief, ask #2).
+4. **Frontend demo (parallel track, high pitch ROI).** `frontend/` is an orphaned `node_modules` — start clean: vite + react + maplibre scaffold; export the 1,141 viable sites (parquet → geojson); map with econ_cat coloring + per-site detail panel. A working map demo outweighs any model for director/competition purposes.
+5. **Housekeeping:** capture the Jun 24 director-meeting outcome in the journal (committed install % or 0.175 default stands); add `frontend/node_modules` to `.gitignore`; decide whether `WOWERS_Director_Deepdive.pptx` gets committed.
+
+---
