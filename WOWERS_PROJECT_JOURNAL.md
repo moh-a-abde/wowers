@@ -5458,3 +5458,44 @@ Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built
 5. **Housekeeping:** capture the Jun 24 director-meeting outcome in the journal (committed install % or 0.175 default stands); add `frontend/node_modules` to `.gitignore`; decide whether `WOWERS_Director_Deepdive.pptx` gets committed.
 
 ---
+
+### Session: 2026-07-03 — P5-CF-CALIB: Capacity-Factor Calibration Band + Review — Tom
+
+**What was done:**
+- Built and passed review for P5-CF-CALIB, the EHA capacity-factor haircut scoped in the previous session. Entirely read-only against the pipeline (no Phase 1–4 code, config, or parquets modified).
+- **Dataset used:** `EHA_Annual_CapacityFactor.xlsx` (sheet `AnnualCapacityFactor`, header row 0) from `/Volumes/SANDISK/WOWERS_Pivot_Data/Phase5_ML_GroundTruth/EHA_HydroSource_ORNL/`. The workbook has per-plant annual net generation, capacity (MW), and a capacity-factor string column covering 2005–2022 for plants ≥ 1 MW, type = HY (conventional hydro). Also used: `data/processed/phase2/energy_yield_estimates.parquet` and `data/processed/phase4/financial_scorecards.parquet` (read-only).
+- **Key finding (Phase 2 implied CF):** For the 1,141 viable sites, `capacity_factor_p50` has median **0.872** (p10–p90: 0.856–0.883 — tight and near always-on). Decomposition: availability mean ≈ 0.943 (triangular 0.90/0.95/0.98) × FDC utilisation ≈ 0.925 (flat WWTP discharge → near-rated operation). Part of the 0.87 vs. river-hydro ~0.39 gap is legitimate (flatter WWTP flow); part is optimistic (no debris/minimum-flow cutoff modeled).
+- **Key finding (empirical CF from real small hydro):** Recomputed CF = `Net_Generation_MWh / (Capacity_MW × Hours)` for all HY rows; validated against the provided `Capacity_Factor` string (mean |diff| = 0.0025 — rounding only, confirms arithmetic). After cleaning (CF ≤ 0 or > 1.2 dropped):
+  - 0.1–5 MW bucket: **629 plants, 9,798 plant-years, CF p25/p50/p75 = 0.254 / 0.390 / 0.541** (mean 0.404)
+  - 0.1–5 MW 2013–2022 (stability check): 5,530 plant-years, p50 = 0.382 (stable)
+  - 0.1–1 MW bucket (closest to WWTP scale): **59 plants, 802 plant-years, CF p25/p50/p75 = 0.268 / 0.415 / 0.546**
+- **Critical caveat (baked into the report):** River-hydro CF (~0.39 median) is low for three reasons that do NOT apply to WWTP outfalls — seasonal rainfall variability, peak-sizing (turbine sized for flood, idles during drought), and environmental minimum-flow releases. WWTP outfalls discharge near-constant municipal flow with none of these constraints. **The river-hydro floor is a floor, not the best estimate.**
+- **Real conduit/WWTP install anchors for plausible-central tier:** LucidPipe Portland OR is the only real install with a published CF: 200 kW, 1,100 MWh/yr → CF = 1,100,000 kWh / (200 kW × 8,760 h) = **0.628** (drinking-water transmission main, not wastewater — but hydraulically equivalent: continuous pressurized flow, no seasonal drought). Central anchor set at **CF = 0.60** (5% below LucidPipe, conservative). Rentricity and CINK WWTP installs cited as qualitative support (no published annual kWh per site → no CF computable). Reviewer judgment: the 119–194 GWh floor (629 real plants) is the statistically robust number; the ~281 GWh central is "defensible-but-thin" (one data point).
+- **Three-tier calibration band (0.1–5 MW primary bucket):**
+  - Conservative floor (river-hydro p25/p50): **119–183 GWh** (multiplier 0.29–0.45)
+  - Plausible central (CF = 0.60, WWTP-appropriate): **~281 GWh** (multiplier 0.69)
+  - Physics ceiling (Phase 2 assumed): **409.1 GWh** (multiplier 1.0)
+- **Deliverable headline:** "409 GWh physics ceiling → floor ~119–194 GWh (629 real small-hydro plants, 9,798 plant-years) → plausible ~281 GWh (WWTP-appropriate CF, LucidPipe-anchored)."
+- Fixed one doc nit flagged by reviewer: `CF_CALIBRATION_REPORT.md` §8 previously said "EHA plants are large-hydro (median 7.7 MW) even in the 0.1–5 MW bucket" — incorrect (the 0.1–5 MW bucket's median is by definition ≤ 5 MW; 7.7 MW is the fleet median mis-attached). Fixed to: "EHA CF workbook covers plants ≥ 1 MW (fleet median ~7.7 MW); the 0.1–5 MW bucket deliberately restricts to smaller sites."
+- Full review passed: all 8 expected numbers matched exactly; scope clean (0 Phase 1–4 modifications); 532 passed / 1 skipped (was 496/1 baseline; +36 new tests).
+
+**Files modified / created:**
+- `scripts/cf_calibration.py` — new read-only script (pure functions + IO layer; prints to stdout only; no parquet writes).
+- `CF_CALIBRATION_REPORT.md` — new repo-root markdown report (sibling of `EXCLUSION_FUNNEL_REPORT.md`); doc nit fixed post-review.
+- `tests/test_phase5/test_cf_calibration.py` — new (36 tests: 35 synthetic, 1 real-drive integration with skipif).
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- `EHA_Annual_CapacityFactor.xlsx` — SANDISK, `/Volumes/SANDISK/WOWERS_Pivot_Data/Phase5_ML_GroundTruth/EHA_HydroSource_ORNL/`. Sheet: `AnnualCapacityFactor`. 24,039 rows (2005–2022), 23,483 after clean-filter for HY/CF bounds/capacity floor. Annual net generation (MWh), installed capacity (MW), hours, and capacity-factor string per plant-year. Source: ORNL HydroSource EHA program.
+- `data/processed/phase2/energy_yield_estimates.parquet` — Phase 2 Monte Carlo output; `capacity_factor_p50` column.
+- `data/processed/phase4/financial_scorecards.parquet` — Phase 4 scorecard; `project_viable` + `annual_energy_kwh`.
+- LucidPipe Portland OR published CF: LucidEnergy/Portland Water Bureau press release; 200 kW, 1,100 MWh/yr → CF = 0.628.
+- Rentricity featured projects (rentricity.com): 32 kW @ 2.4 MGD / 40 PSI; 360 kW @ 2–12 MGD — qualitative only (no per-site annual kWh).
+
+**Next steps after this session:**
+1. **FERC conduit label hunt + kill decision** — hydropowerelibrary.pnnl.gov, data.ferc.gov, qualifying-conduit NOI list; cross-link to EHA via FcDocket. Hard gate: ≥50 usable sites → Phase 5 lives; <50 → formally kill the full model.
+2. **Commit P5-CF-CALIB** (`CF_CALIBRATION_REPORT.md`, `scripts/cf_calibration.py`, `tests/test_phase5/test_cf_calibration.py`) to branch `tom` and push.
+3. **Smoke-test model** (only after FERC hunt result + decision).
+4. **Frontend demo** (high pitch ROI, parallel track).
+
+---
