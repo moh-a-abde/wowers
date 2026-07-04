@@ -5499,3 +5499,43 @@ Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built
 4. **Frontend demo** (high pitch ROI, parallel track).
 
 ---
+
+### Session: 2026-07-04 — FERC Conduit Label Hunt + Phase 5 Kill Decision — Tom
+
+**What was done:**
+- Executed the FERC conduit label hunt scoped in the Jul-2 and Jul-3 sessions. Sources searched: EHA FcDocket cross-link (on SANDISK), FERC Active Conduit Exemptions (downloaded: 222 active), FERC Active Licenses (downloaded: 1,016), FERC Qualifying Conduit NOIs (Federal Register notices, no bulk download), Hydropower eLibrary (PNNL/DOE), data.ferc.gov. All Phase 1–4 code and parquets read-only; journal written only after reviewer accepted the corrected numbers.
+- **FERC measured-generation verdict (confirmed dead end):** Every FERC database checked carries authorized capacity only — no measured operating generation. FERC is a permitting system; annual generation is reported to EIA (Form 923), which feeds the EHA CF workbook already on SANDISK. Pursuing FERC for energy labels is structurally identical to the USBR RISE trap (Jun-30 session). Bulk FERC download strategy is closed.
+- **EHA FcDocket cross-link result:** 115 Canal/Conduit plants in EHA have measured annual Net_Generation_MWh from EIA-923, across any scale. Of these, **103 already exist in the Jun-30 combined_ground_truth.parquet** (by EIA_PtID). **Only 11 are genuinely new.** All 11 are ≥ 1 MW irrigation canal drops; none are WWTP wastewater outfalls; none have head or flow data.
+- **Point Loma CA (the one true wastewater site):** 1,500 kW turbine on treated wastewater effluent outfall — the closest WOWERS analog in the dataset. **Offline since 2018; Net_Generation_MWh = 0 for 2018–2022.** Initial report incorrectly cited 5,422 MWh as the 2022 value — that was the 2005 value, grabbed by a "latest nonzero year" recipe that masked the offline status. Corrected after reviewer caught it. Point Loma is not a usable live anchor.
+- **Corrected numbers (verified by independent reviewer repro):**
+  - ≤ 5 MW conduit plants with measured generation: **80** (not 81 — off-by-one fixed)
+  - Point Loma 2022 generation: **0 MWh** (not 5,422 MWh — stale 2005 value corrected)
+  - True wastewater sites: **1** (Point Loma, offline). Other 3 "municipal" sites = drinking water, not WWTP outfall.
+- **GATE ARITHMETIC (corrected):** Gate threshold was ≥ 50 *new* usable sites (new evidence to flip the Jul-2 kill decision). 11 new sites found. **Gate fails. Decision unchanged.**
+- **Phase 5 kill decision — formally confirmed:** Full Phase 5 ML not worth training as a product deliverable. Reasons (all pre-existing, now confirmed by the hunt): (a) labeled training rows are ≥ 1 MW large-dam and irrigation-canal plants — domain too far from 1–500 kW WWTP outfalls; (b) no head or flow in any conduit label — ARCH §5.4 physics-vs-real check still cannot run; (c) the one wastewater-outfall data point (Point Loma) is offline; (d) 11 new labels vs. 50-site gate.
+- **What survives:** The already-approved internal smoke-test (LightGBM pipeline proof on 1,360 combined dam labels — internal only, never in pitch material); the CF calibration band (CF_CALIBRATION_REPORT.md, already shipped); Phase 5 as calibration-only going forward.
+- **Artifacts written (not committed):** `FERC_CONDUIT_LABEL_REPORT.md` (repo root), `FERC_REVIEW_PROMPT.md` (repo root), `ferc_conduit_candidates.parquet` (data/raw/ground_truth/, gitignored), FERC source files on SANDISK in `FERC_Conduit/`.
+
+**Files modified / created:**
+- `FERC_CONDUIT_LABEL_REPORT.md` — new (findings report, corrected post-review)
+- `FERC_REVIEW_PROMPT.md` — new (reviewer verification prompt, corrected post-review)
+- `data/raw/ground_truth/ferc_conduit_candidates.parquet` — new (115-row candidate table, gitignored)
+- `/Volumes/SANDISK/WOWERS_Pivot_Data/Phase5_ML_GroundTruth/FERC_Conduit/` — 3 files added: `ferc_conduit_candidates_2026-07-04.csv`, `ferc_active_conduit_exemptions_2025-04-08.xlsx`, `ferc_active_licenses_2025-04-08.xlsx`
+- `.gitignore` — additive change only (`.gstack/` added by browse skill preamble side-effect)
+- `WOWERS_PROJECT_JOURNAL.md` — this entry
+
+**Resources used:**
+- EHA plant inventory + CF workbook on SANDISK (already downloaded Jun-21)
+- FERC Active Exemptions: https://www.ferc.gov/sites/default/files/2025-04/ActiveExemption_4.8.2025.xlsx
+- FERC Active Licenses: https://www.ferc.gov/sites/default/files/2025-04/ActiveLicense_4.8.2025.xlsx
+- FERC Qualifying Conduit NOI page: https://ferc.gov/industries-data/hydropower/industry-activities/how-file-notice-intent-construct-qualifying-conduit
+- Hydropower eLibrary: https://hydropowerelibrary.pnnl.gov/
+- data.ferc.gov: https://data.ferc.gov/
+
+**Next steps after this session:**
+1. **Commit Jul-3 + Jul-4 artifacts** (CF_CALIBRATION_REPORT.md, scripts/cf_calibration.py, tests/test_phase5/test_cf_calibration.py, FERC_CONDUIT_LABEL_REPORT.md, FERC_REVIEW_PROMPT.md) to branch `tom` and push.
+2. **Internal smoke-test** (pre-approved, pipeline-proof only): LightGBM on the 1,360 combined labels via existing rails. Numbers stay internal.
+3. **Frontend demo** (high pitch ROI): export 1,141 viable sites → GeoJSON → maplibre map with econ_cat coloring.
+4. **Housekeeping:** add `frontend/node_modules` to `.gitignore`; decide on `WOWERS_Director_Deepdive.pptx`.
+
+---

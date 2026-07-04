@@ -37,3 +37,4 @@ coverage.xml
 
 # Local/generated reports
 WOWERS_Project_Report.pdf
+.gstack/
