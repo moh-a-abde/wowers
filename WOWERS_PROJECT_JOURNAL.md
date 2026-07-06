@@ -5539,3 +5539,43 @@ Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built
 4. **Housekeeping:** add `frontend/node_modules` to `.gitignore`; decide on `WOWERS_Director_Deepdive.pptx`.
 
 ---
+
+### Session: 2026-07-06 — P5-SMOKE: Internal LightGBM Smoke-Test on Combined Dam Labels — Tom
+
+**What was done:**
+- Built and passed external review for the pre-approved internal smoke-test (P5-SMOKE), scoped in the Jul-2 and Jul-4 sessions. Entirely additive against the existing rails — no Phase 1–4 code, config, or parquets modified; no existing phase5 rail files (ground_truth/features/cv) modified.
+- **New module `src/phase5/train.py`:** feature engineering for the dam label set (`latitude`, `longitude`, `log_capacity_kw`, `climate_zone_code`, `state_code_code` — all Float64, all clean), log-space target, group sentinel for the 1 null `source_plant_code` row, leakage guard (belt-and-braces call to `assert_no_leakage` before returning from `build_training_frame`), `MeanRegressor` and `CFBaselineRegressor` baseline estimators (sklearn-compatible, plug into `nested_cv`), `naive_baselines()`, `demonstrate_leakage_guard()`, `run_smoke_test(seed=0)` orchestrator, and `main()` CLI.
+- **LightGBM fixed params (no HP sweep):** n_estimators=400, lr=0.05, num_leaves=31, min_child_samples=20, deterministic=True, force_row_wise=True, n_jobs=1, random_state=0. `feature_name=FEATURE_COLUMNS` passed to final fit so artifact is self-describing (reviewer check E: booster now stores real column names, not Column_0…4).
+- **Nested CV results (5 outer / 3 inner, seed=0, state-stratified):**
+  - LightGBM: rmse_log 0.9165 ± 0.0763; R² 0.778 ± 0.034; Spearman 0.914 ± 0.012; MAPE 987% ± 1353% (mean inflated by large-hydro outliers in fold 3; median MAPE ~170%)
+  - Predict-mean baseline: rmse_log 1.9486; Spearman NaN (constant predictions — undefined rank correlation)
+  - CF-baseline: rmse_log 0.9326; Spearman 0.909
+  - LightGBM does NOT clearly beat the CF-baseline (0.9165 vs 0.9326 — marginal). Not required per spec; CF-baseline is a strong prior for the dam fleet. Documented in SMOKE_TEST_REPORT.md §6.
+- **Success criteria — all 5 pass:**
+  1. End-to-end from parquet to persisted model + metadata: PASS
+  2. Leakage guard fires on deliberately-leaky feature (`annual_energy_kwh`): PASS — "Leakage detected — the following feature(s) are in LEAKAGE_DENYLIST and must be removed before training: ['annual_energy_kwh']"
+  3. LightGBM beats predict-mean on mean rmse_log (0.9165 < 1.9486) and spearman (0.914 > NaN/constant): PASS
+  4. Determinism: two consecutive runs with seed=0 produce identical mean metrics: PASS
+  5. Full pytest suite: **580 passed / 1 skipped** (532 pre-existing + 48 new)
+- **External review (one round):** 7/8 checks passed first pass. Single FAIL: booster `feature_name()` returned `Column_0…4` instead of real column names (numpy array strips names; reviewer caught it as same failure class as Jul-4 Point Loma stale-value — claim written, not repro'd). Fixed by passing `feature_name=FEATURE_COLUMNS` to `final_model.fit()`. Re-run confirmed metrics identical; check E re-verified PASS. All 8 checks passed second pass.
+
+**Files modified / created:**
+- `src/phase5/train.py` — new (smoke-test training module)
+- `tests/test_phase5/test_train.py` — new (48 tests: 47 unit + 1 integration)
+- `SMOKE_TEST_REPORT.md` — new (internal-only results report; INTERNAL header present)
+- `P5_SMOKE_REVIEW_PROMPT.md` — new (reviewer verification prompt; corrected post-round-1)
+- `data/processed/phase5/models/smoke_lgbm.txt` — new (LightGBM native model; gitignored)
+- `data/processed/phase5/models/smoke_metadata.json` — new (per-fold metrics, mappings, provenance; gitignored)
+- `WOWERS_PROJECT_JOURNAL.md` — this entry
+
+**Resources used:**
+- `data/raw/ground_truth/combined_ground_truth.parquet` — 1,360 rows (EHA 1,268 + EIA 92), already on disk from Jun-30 session. Read-only input; not regenerated.
+- `src/phase5/features.py`, `src/phase5/cv.py`, `config/settings.yaml` — read-only; not modified.
+- LightGBM 4.6.0, Polars 1.40.1, Python 3.13.
+
+**Next steps after this session:**
+1. **Frontend demo** (high pitch ROI): export 1,141 viable sites → GeoJSON → maplibre/react map with econ_cat coloring. High director/pitch value.
+2. **Housekeeping:** add `frontend/node_modules` to `.gitignore`; decide on `WOWERS_Director_Deepdive.pptx` commit.
+3. **Phase 5 calibration path:** smoke-test confirms rails work. If micro-scale FERC conduit labels ever reach ≥50 sites (gate not met as of Jul-4), re-run on those. Until then, Phase 5 = CF calibration band only (CF_CALIBRATION_REPORT.md).
+
+---
