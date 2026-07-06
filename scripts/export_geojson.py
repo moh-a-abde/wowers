@@ -1,7 +1,7 @@
 """GeoJSON export for the WOWERS frontend map demo.
 
 Reads the Phase 4 financial scorecard + Phase 1 facility coordinates and
-exports the 1,141 project-viable sites as a GeoJSON FeatureCollection.
+exports the 1,140 project-viable sites (post P1-COORD-GUARD) as a GeoJSON FeatureCollection.
 
 The output file (exports/viable_sites.geojson) is git-tracked and intended
 as the static data source for the vite+react+maplibre frontend map.
@@ -18,7 +18,7 @@ ROUNDING:
 
 USAGE:
     python scripts/export_geojson.py                   # viable only (default)
-    python scripts/export_geojson.py --all             # all 3,783 scored sites
+    python scripts/export_geojson.py --all             # all 3,780 scored sites (post P1-COORD-GUARD)
     python scripts/export_geojson.py --out path.geojson
     python scripts/export_geojson.py --scorecard path --p1 path
 """

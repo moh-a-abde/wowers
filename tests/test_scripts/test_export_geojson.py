@@ -355,11 +355,12 @@ class TestExportIntegration:
             fc = json.load(f)
         assert fc["type"] == "FeatureCollection"
 
-    def test_geojson_1141_features(self):
+    def test_geojson_1140_features(self):
+        # 1,141 → 1,140: WI0025194 (bad-coord Racine) removed by P1-COORD-GUARD
         with open(_EXPORT_PATH) as f:
             fc = json.load(f)
-        assert len(fc["features"]) == 1141, (
-            f"Expected 1141 features, got {len(fc['features'])}"
+        assert len(fc["features"]) == 1140, (
+            f"Expected 1140 features, got {len(fc['features'])}"
         )
 
     def test_all_features_have_required_properties(self):

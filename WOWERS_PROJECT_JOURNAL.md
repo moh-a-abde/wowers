@@ -5630,3 +5630,69 @@ Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built
 3. **Commit + push** — this session (done immediately after journal).
 
 ---
+
+### Session: 2026-07-06 (PM) — P1-COORD-GUARD Scoping + Coding-Agent Prompt — Tom
+
+**What was done:**
+- Scoping session — **no pipeline code, config, or parquets changed.** Read-only probes plus one new prompt file. Scoped the Phase 1 coordinate guard (backlog item #2 from the previous session) and wrote the coding-agent prompt for it.
+- Confirmed prior session fully landed: branch `tom` in sync with `origin/tom` (commit `2965d0b`), working tree clean. Housekeeping items from Jul-2 all closed (pptx committed `ad14c7c`, `frontend/node_modules` gitignored `9845817`, Jun-24 install % resolved in the Jul-6 AM entry). Frontend dir still orphaned `node_modules` — teammate track, untouched.
+- **Probe finding — the bad-coordinate problem is 10 rows, not 1.** Scanned `ranked_candidates.parquet` (17,158 rows) against US-NPDES territory whitelist bands: lat `[-14.8,-10.8] ∪ [13.0,71.5]`, lon `[-180,-64.4] ∪ [144.5,146.2]`. 10 offenders in three error classes: **5 longitude sign flips** (WYG589102, MS0061671, TX0137146, SC0047457, MS0020575 — lon stored positive), **4 corrupt/truncated/sign-flipped latitudes** (WI0025194 Racine 4.4, NJ0020371 Cape May 8.94, MS0024589 Quitman 3.34, MS0052477 Byhalia −34.90), **1 corrupt longitude** (PR0026042 at −56.17, PR is ~−66).
+- **Key scoping correction:** the backlog line "reject lat < 15°" is wrong as written — Guam (~13.4°N) and American Samoa (~−14.3°S) both hold NPDES permits present in the data (`GU`, `AS`, `MP` in `state_code`). Band whitelist replaces it; same class of error as the P4-TIER check-D continental-only range that excluded AK/HI/GU.
+- **Downstream impact pinned (exact, from live parquets):** all 10 in P1+P2 outputs (17,158 → 17,148); 4 reach Phase 3 (NJ0020371, WI0025194, MS0024589, MS0052477; 5,468 → 5,464); 3 reach Phase 4 scorecards (3,783 → 3,780); **only WI0025194 is viable** (Tier A, 342,800 kWh/yr — scorecard untrustworthy since its head was computed at lat 4.4). Post-guard: viable 1,141 → **1,140**, fleet energy 409.1405 → **408.7977 GWh/yr**; GeoJSON 1,141 → 1,140 features (ocean dot gone).
+- **Design decisions locked into the prompt:** reject-don't-fix (no auto-rescue of sign flips — hidden-divergence rule from Jul-6 AM); config-driven bands under `processing:` with hardcoded fallbacks (matching `_MAX_FLOW_MGD` pattern); new `_drop_invalid_coords()` between `_join` and `_cast_schema`; Phase 3 outfall-coords path explicitly out of scope; full P1→P4 re-run + snapshot diff + GeoJSON re-export + report refreshes (EXCLUSION_FUNNEL, CF_CALIBRATION §6) + enumerated hardcoded-test-count updates (test_calib_cols 3783/1141, test_export_geojson 1141) as hard invariants with a STOP-on-mismatch rule.
+- Wrote **`P1_COORD_GUARD_PROMPT.md`** (repo root) — full coding-agent prompt incl. the 10-row evidence table, §4 invariant table, and the requirement that the agent's review prompt back every claim with an executed command (citing the P5-SMOKE check-E and P4-TIER check-D falsified-claim incidents).
+
+**Files modified / created:**
+- `P1_COORD_GUARD_PROMPT.md` — new (coding-agent prompt).
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- `data/processed/phase1/ranked_candidates.parquet`, `phase2/energy_yield_estimates.parquet`, `phase3/*.parquet`, `phase4/financial_scorecards.parquet` — read-only probes via `/opt/miniconda3/bin/python` + polars.
+- `src/phase1/filter_potw.py`, `config/settings.yaml` — read-only (guard placement + config-pattern reconnaissance).
+- Grep sweep of `tests/`, `src/`, `scripts/` for hardcoded funnel counts (enumerated in the prompt §5–6).
+
+**Next steps after this session:**
+1. **Run the coding agent on `P1_COORD_GUARD_PROMPT.md`** (external session) — implement P1-COORD-GUARD, re-run P1→P4, regenerate GeoJSON, update reports/tests.
+2. **Review round** — verify the agent's `P1_COORD_GUARD_REVIEW_PROMPT.md` against live code + parquets (not the prompt text); check the §4 invariants exactly (17,148 / 5,464 / 3,780 / 1,140 / 408.7977 GWh).
+3. **Tell teammate** — after the re-export, `viable_sites.geojson` drops to 1,140 features and WI0025194 disappears entirely (no demo-layer filter needed anymore).
+4. **Frontend demo** (teammate track) + commit of this scoping session's files.
+
+---
+
+### Session: 2026-07-06 (PM #2) — P1-COORD-GUARD Review + Remediation — Tom
+
+**What was done:**
+- Reviewed the coding agent's P1-COORD-GUARD delivery against live code + parquets (not the agent's report). **Guard implementation APPROVED; agent's pipeline re-run REJECTED and remediated.**
+- **Approved:** `_drop_invalid_coords()` in `src/phase1/filter_potw.py` — correct band logic, config-driven with fallbacks, reject-not-fix, good docstring. 41 new unit tests. Phase 1 state verified exact: `potw_facilities` / `flow_features` / `ranked_candidates` == v008 checkpoint minus exactly the 10 bad IDs, all surviving rows byte-identical (the agent's hand-filter workaround for a `linregress` crash in the official Phase 1 runner was verified equivalent for these tables; the crash itself is unverified — backlog).
+- **Falsified claim caught (5th instance of the class):** agent reported "Phase 3 re-ran with fresh elevation data / elevation non-determinism" to explain missing the §4 invariants (3,779 rows / 1,141 viable / 409.757 GWh vs expected 3,780 / 1,140 / 408.798). Live diff: elevation values byte-identical May-20 vs Jul-6 (0 of 5,464 changed). **Actual root cause: Phase 2 Monte-Carlo seeds positionally** (`seed + row_index`, `src/phase2/monte_carlo.py:155`) — removing 10 rows shifted every later site's RNG seed. Proof: head values slid between adjacent sites (e.g. GA0033235's new head == MO0127949's old head). Blast radius: ~4,656 sites' P2 energy jittered, **1,090 of 3,779 scorecard rows changed financials**, viability churn −3/+3 (FL0A00002, NY0026328, WI0025194 out; NY0026638, OR0026891, VA0025518 in), and valid site IA0030694 fell out of the scorecards. Agent violated the prompt's STOP-on-mismatch rule and baked the false explanation into reports, test comments, and the review prompt.
+- **Additional debris found:** the agent's orphaned background Phase 1 run left `data/processed/phase1/dmr_flow_timeseries.parquet` as an 82.7M-row partitioned *directory* (baseline: 2.67M-row file); never restored. Verified nothing downstream read it (contamination came only from the seed shift). Also: the orphaned run's checkpoint (`phase1_dmr_flow_timeseries_v009.parquet`, 157 MB) shows a raw Phase 1 re-run today produces wildly different DMR data than May-20 — pipeline not reproducible from raw; separate latent issue (backlog).
+- **Remediation (decision: hand-filter, keep original MC draws):** filtered the 10 bad IDs directly out of the baseline checkpoints into `data/processed/` — P2 from v011 (17,158→17,148), P3 elevation/head/turbine from v011/v012 (5,468→5,464; head_estimates 5,528→5,524), P4 scorecards from v161 (3,783→3,780), DMR from v008 (2,668,808→2,667,701 rows, replacing the partitioned dir). Every surviving row byte-identical to the published baseline; original scoping invariants now hold **exactly**: **3,780 scored · 1,140 viable · 408.7977 GWh/yr · calib 119.0 / 182.7 / 281.3 GWh**. `outfall_elevation_data.parquet` kept from the agent's run (cache-backed deterministic, no MC; 5,178 rows, 0 bad IDs). GeoJSON re-exported: **1,140 features, WI0025194 gone**.
+- **Corrected the agent's number edits** in `EXCLUSION_FUNNEL_REPORT.md` (32 substitutions: funnel 17,148 → 5,464 → 4,860 → 3,780 → 1,140; exclusions 11,684 / 604 / 1,080 / 2,640 = 16,008; econ_cat tables recomputed; CapEx 181.5/31.8/82.7/57.2/353.2; what-if band 1,373/1,171/1,140/1,119) and `CF_CALIBRATION_REPORT.md` (15 substitutions: 408.8 headline, ~409 ceiling, ~281 central, 0.1–1 MW floor p25 126→125, §8 scope row 3,780/514.4). All recomputed live from restored parquets; `cf_calibration.py` and `install_cost_whatif.py` re-run to confirm.
+- **Fixed agent's test edits:** `test_calib_cols.py` — restored `test_report_fleet_sums` (agent had gutted it into a tautology `x*0.291 == x*0.291`), corrected counts to 3,780/1,140/408.798 and removed false "elevation non-determinism" comments; `test_export_geojson.py` — 1,141→1,140 feature assertion (agent had left it stale). Docstring headers in `cf_calibration.py`, `export_geojson.py`, `features.py` corrected. Cosmetic guard-log nit fixed (`or float("nan")` would misreport a legitimate 0.0 coordinate).
+- **`P1_COORD_GUARD_REVIEW_PROMPT.md`:** prepended a REVIEW OUTCOME section documenting the falsified claim, true root cause, remediation, and final numbers; original claims preserved below it as the record.
+- **Full suite: 685 passed / 1 skipped** (644 baseline + 41 guard tests) after all corrections.
+
+**Files modified / created:**
+- `src/phase1/filter_potw.py` — P1-COORD-GUARD (agent) + log nit fix (review).
+- `config/settings.yaml` — `processing.coord_lat_valid_bands` / `coord_lon_valid_bands` (agent).
+- `tests/test_phase1/test_coord_guard.py` — new, 41 tests (agent).
+- `data/processed/phase{1,2,3,4}/*.parquet` — remediated via checkpoint hand-filter (review).
+- `exports/viable_sites.geojson` — regenerated, 1,140 features (review).
+- `EXCLUSION_FUNNEL_REPORT.md`, `CF_CALIBRATION_REPORT.md` — numbers corrected to restored truth (review).
+- `tests/test_phase4/test_calib_cols.py`, `tests/test_scripts/test_export_geojson.py`, `scripts/cf_calibration.py`, `scripts/export_geojson.py`, `src/phase5/features.py` — assertions/docstrings corrected (review).
+- `P1_COORD_GUARD_PROMPT.md`, `P1_COORD_GUARD_REVIEW_PROMPT.md` — prompt + outcome-annotated review prompt.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- `data/checkpoints/` v008/v011/v012/v161 parquets (the decisive evidence — May-20 baselines vs Jul-6 re-run).
+- `src/phase2/monte_carlo.py` (seeding scheme), `src/phase3/elevation.py` (cache design).
+- `scripts/cf_calibration.py`, `scripts/install_cost_whatif.py`, `scripts/export_geojson.py` (re-run on restored parquets).
+
+**Next steps after this session:**
+1. **Commit + push** — guard + remediated state + corrected reports (this session).
+2. **Backlog: site-keyed MC seeding** — change Phase 2 seed to `base_seed ⊕ hash(npdes_id)` so row removals never re-draw unrelated sites; adopt the one-time fleet redraw at the next natural re-baseline.
+3. **Backlog: Phase 1 reproducibility** — official `python -m src.phase1.run` today crashes (`linregress` edge case, unverified) and produces 82.7M-row DMR data vs May-20's 2.67M; investigate before the next full re-run. Checkpoint hygiene: delete the 157 MB `phase1_dmr_flow_timeseries_v009.parquet` orphan if disk matters.
+4. **Tell teammate** — `viable_sites.geojson` now 1,140 features; WI0025194 gone (no demo-layer filter needed).
+5. **Frontend demo** (teammate track).
+
+---

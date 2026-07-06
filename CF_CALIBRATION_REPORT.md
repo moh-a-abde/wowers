@@ -14,7 +14,7 @@
 
 ## 1. What This Report Is — and Is Not
 
-The Phase 2 physics estimate (**409.1 GWh/yr, 1,141 viable sites**) is computed from the standard hydropower equation `P = η·ρ·g·Q·H`, integrated over each WWTP site's measured flow-duration curve, with efficiency and availability sampled via Monte Carlo. It has not been validated against a single real operating plant.
+The Phase 2 physics estimate (**408.8 GWh/yr, 1,140 viable sites**) is computed from the standard hydropower equation `P = η·ρ·g·Q·H`, integrated over each WWTP site's measured flow-duration curve, with efficiency and availability sampled via Monte Carlo. It has not been validated against a single real operating plant.
 
 This report is the cheapest available credibility check: benchmark the **implied capacity factor** embedded in the physics estimate against real small-hydro plants from the DOE HydroSource EHA dataset, and express the 409 GWh headline as a three-tier band.
 
@@ -30,12 +30,12 @@ Each viable site's `capacity_factor_p50` column is:
 ```
 CF = energy_p50_kwh / (power_p50_kw × 8,760 hours)
 ```
-For the 1,141 viable sites:
+For the 1,140 viable sites (post P1-COORD-GUARD; 408.8 GWh vs 409.1 pre-guard — original Monte-Carlo draws retained):
 
 | Metric | Value |
 |---|---|
-| Viable sites | 1,141 |
-| Headline energy | 409.1 GWh/yr |
+| Viable sites | 1,140 |
+| Headline energy | 408.8 GWh/yr |
 | CF p10 | 0.856 |
 | CF p25 | 0.865 |
 | **CF p50 (median)** | **0.872** |
@@ -105,7 +105,7 @@ River hydro CF (~0.39 median) is low for three reasons that do NOT apply to WWTP
 2. **Peak-sizing.** River turbines are sized to capture high-flow events; most of the year the turbine operates below rated flow. WWTP turbines are sized to the plant's *design flow*, so the rated point is closer to the actual operating point.
 3. **Licensing / environmental flow requirements.** Many river plants must release minimum ecological flows that bypass the turbine entirely. WWTP outfalls have no minimum-flow reservation — all discharge is available.
 
-**Consequence:** using the river-hydro CF floor haircuts the 409 GWh by a factor (~2.2×) that overstates the loss for WWTP applications. The floor is genuinely a floor — a scenario where WWTP turbines perform no better than river run-of-river plants, which is implausible but serves as the most pessimistic defensible bound.
+**Consequence:** using the river-hydro CF floor haircuts the ~409 GWh by a factor (~2.2×) that overstates the loss for WWTP applications. The floor is genuinely a floor — a scenario where WWTP turbines perform no better than river run-of-river plants, which is implausible but serves as the most pessimistic defensible bound.
 
 ---
 
@@ -155,13 +155,13 @@ The plausible-central tier requires at least one real conduit/WWTP installation 
 | Conservative floor (p50) | 0.390 | 0.447 | **183** | River-hydro median — central floor |
 | Conservative floor (p75) | 0.541 | 0.620 | **254** | River-hydro 75th percentile |
 | **Plausible central** | **0.600** | **0.688** | **281** | WWTP-appropriate; anchored to LucidPipe 0.628 |
-| Physics ceiling | 0.872 | 1.000 | **409** | Phase 2 assumed; optimistic upper bound |
+| Physics ceiling | 0.872 | 1.000 | **409** | Phase 2 assumed; optimistic upper bound (408.8 GWh post-guard) |
 
 ### Sub-bucket: 0.1–1 MW (59 plants, 802 plant-years — closest to WWTP turbine scale)
 
 | Tier | CF | Multiplier | GWh/yr |
 |---|---|---|---|
-| Floor (p25) | 0.268 | 0.307 | 126 |
+| Floor (p25) | 0.268 | 0.307 | 125 |
 | Floor (p50) | 0.415 | 0.475 | 194 |
 | Floor (p75) | 0.546 | 0.626 | 256 |
 | **Plausible central** | **0.600** | **0.688** | **281** |
@@ -180,7 +180,7 @@ The 0.1–1 MW sub-bucket (most comparable to WWTP micro-scale) shows a slightly
 > "Anchored to the LucidPipe Portland OR project (measured CF = 0.628 on a continuous-flow drinking-water transmission main), a WWTP-appropriate capacity factor of 0.60 implies ~281 GWh/yr — roughly 69% of the physics ceiling, representing realistic continuous-flow conduit operations."
 
 **Full honest statement:**
-> "The 409 GWh physics estimate is a ceiling under Phase 2 assumptions (CF ≈ 0.87). Benchmarked against 629 real small-hydro plants, the conservative floor is ~119–194 GWh. For the more relevant WWTP/conduit case — continuous municipal discharge, no seasonal drought — the plausible central estimate is ~281 GWh (CF = 0.60), anchored to LucidPipe Portland OR (measured CF = 0.628, 1,100 MWh/yr on a 200 kW system). Real performance will depend on site-specific factors not yet modeled: debris fouling, minimum-flow cutoffs, and maintenance downtime."
+> "The ~409 GWh physics estimate is a ceiling under Phase 2 assumptions (CF ≈ 0.87). Benchmarked against 629 real small-hydro plants, the conservative floor is ~119–194 GWh. For the more relevant WWTP/conduit case — continuous municipal discharge, no seasonal drought — the plausible central estimate is ~281 GWh (CF = 0.60), anchored to LucidPipe Portland OR (measured CF = 0.628, 1,100 MWh/yr on a 200 kW system). Real performance will depend on site-specific factors not yet modeled: debris fouling, minimum-flow cutoffs, and maintenance downtime."
 
 ---
 
@@ -192,7 +192,7 @@ The 0.1–1 MW sub-bucket (most comparable to WWTP micro-scale) shows a slightly
 | EHA CF workbook covers plants ≥ 1 MW (fleet median ~7.7 MW); the 0.1–5 MW bucket deliberately restricts to smaller sites | CF distribution may not fully represent micro-scale | The 0.1–1 MW sub-bucket (59 plants) partially addresses this |
 | Phase 2 does not model debris fouling, minimum-flow cutoffs, or ice | Physics ceiling is optimistic | Phase 5 ML model (when trained) should correct for these implicitly |
 | Multiplier assumes linear scaling (CF × energy) | Valid if the energy ratio matches the CF ratio — true for the physics model | No correction needed |
-| Band applies to viable-energy (409.1 GWh from 1,141 sites) only | The 3,783 turbine-viable sites represent 514.7 GWh physics ceiling; band not computed for that set | Can be rerun with different energy totals via the script |
+| Band applies to viable-energy (408.8 GWh from 1,140 sites) only | The 3,780 turbine-viable sites represent 514.4 GWh physics ceiling; band not computed for that set | Can be rerun with different energy totals via the script |
 
 ---
 

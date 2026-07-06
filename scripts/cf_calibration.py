@@ -4,7 +4,7 @@ Read-only. Prints tables to stdout; writes no parquet, no config, no source chan
 
 PURPOSE
 -------
-WOWERS Phase 2 physics estimate (409.1 GWh/yr for 1,141 viable sites) carries an
+WOWERS Phase 2 physics estimate (408.8 GWh/yr for 1,140 viable sites post P1-COORD-GUARD) carries an
 **implied capacity factor of ~0.872** — near always-on, driven by flat WWTP discharge
 + assumed 0.95 availability.  This script benchmarks that assumption against real
 small-hydro capacity factors from the DOE HydroSource EHA CF workbook and produces a

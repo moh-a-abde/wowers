@@ -242,6 +242,11 @@ processing:
   dmr_design_ratio_cap: 5.0       # null mean_flow_mgd when > N× design_flow (DMR units artifact)
                                    # largest known US POTW (MWRDGC Stickney) ~1,200 MGD
                                    # anything above 2,000 is almost certainly a unit error
+  # P1-COORD-GUARD (2026-07-06): inclusive lat/lon bands for all US NPDES territories.
+  # Naive "lat < 15" rejection is WRONG — Guam (~13.4°N) and CNMI have NPDES permits.
+  # Bands: AS = [-14.8, -10.8]; GU/MP/CNMI..USVI/PR..HI..CONUS..AK = [13.0, 71.5]
+  coord_lat_valid_bands: [[-14.8, -10.8], [13.0, 71.5]]   # US NPDES territories: AS | GU/MP..AK
+  coord_lon_valid_bands: [[-180.0, -64.4], [144.5, 146.2]] # W-hemisphere US | GU/MP
 
 # ── NODI code handling ────────────────────────────────────────────────────────
 nodi_codes:

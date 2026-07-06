@@ -4,8 +4,8 @@ D2 — build_feature_matrix
 --------------------------
 Joins Phase 1–4 parquets on ``npdes_id`` into a wide scoring matrix.
 
-Spine: Phase 1 (17,158 POTWs). Phase 3 covers 5,468 of them; Phase 4 covers
-3,783.  The remaining rows have nulls on Phase 3/4 columns — this is expected
+Spine: Phase 1 (17,148 POTWs post P1-COORD-GUARD). Phase 3 covers 5,464 of them;
+Phase 4 covers 3,780.  The remaining rows have nulls on Phase 3/4 columns — this is expected
 and intentional. Do NOT impute at this stage; leave nulls for LightGBM's
 native missing-value handling.
 
@@ -321,7 +321,7 @@ def build_feature_matrix(
 ) -> pl.DataFrame:
     """Join Phase 1–4 frames into the WWTP scoring feature matrix.
 
-    Spine = Phase 1 (17,158 POTWs).  Phase 2/3/4 are left-joined on ``npdes_id``.
+    Spine = Phase 1 (17,148 POTWs post P1-COORD-GUARD).  Phase 2/3/4 are left-joined on ``npdes_id``.
     Rows absent from later phases have nulls on those columns — do NOT impute;
     LightGBM handles missingness natively.
 
@@ -334,7 +334,7 @@ def build_feature_matrix(
         to become available for training.  See module docstring.
 
     Args:
-        phase1: Phase 1 ranked_candidates (17,158 POTWs spine).
+        phase1: Phase 1 ranked_candidates (17,148 POTWs spine post P1-COORD-GUARD).
         phase2: Phase 2 energy_yield_estimates.
         phase3: Phase 3 turbine_sizing.
         phase4: Phase 4 financial_scorecards.
