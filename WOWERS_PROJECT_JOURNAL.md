@@ -5579,3 +5579,54 @@ Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built
 3. **Phase 5 calibration path:** smoke-test confirms rails work. If micro-scale FERC conduit labels ever reach ≥50 sites (gate not met as of Jul-4), re-run on those. Until then, Phase 5 = CF calibration band only (CF_CALIBRATION_REPORT.md).
 
 ---
+
+### Session: 2026-07-06 — P4-TIER + GEOJSON-EXPORT: CF-Calibrated Energy Columns + Frontend Map Export — Tom
+
+**What was done:**
+
+**Part A — Three CF-calibrated energy columns in Phase 4 scorecard:**
+- Added `add_calibrated_energy_cols(df)` to `src/phase4/financials.py` — pure polars function, reads multipliers from config with hardcoded fallbacks. Added `import polars` to financials.py (additive).
+- Added `phase4.cf_calibration` block to `config/settings.yaml` (multipliers from CF_CALIBRATION_REPORT.md §6, primary 0.1–5 MW bucket, citing Jul-3 session).
+- Added one call in `src/phase4/run.py` step 4 after `pl.DataFrame(financial_rows)` — zero other changes to existing Phase 4 logic.
+- Re-ran Phase 4 (`python -m src.phase4.run`, 0.7 s). Verified against snapshot: all 46 pre-existing columns value-identical; 3 new columns added; 3,783 rows / 49 columns / 1,141 viable — unchanged.
+- **Fleet sums (1,141 viable sites, matching CF_CALIBRATION_REPORT.md §6):**
+  - Physics ceiling (`annual_energy_kwh`): 409.1 GWh/yr (unchanged)
+  - `energy_kwh_calib_floor_p25` (×0.291): **119.1 GWh/yr**
+  - `energy_kwh_calib_floor_p50` (×0.447): **182.9 GWh/yr**
+  - `energy_kwh_calib_central` (×0.688): **281.5 GWh/yr**
+  - Design: global fleet multipliers (not per-site CF ratios) — matches report method exactly; per-site CF spread is tight (p10–p90: 0.856–0.883).
+
+**Part B — GeoJSON export for frontend map demo:**
+- New `scripts/export_geojson.py`: pure functions (`round_property`, `build_feature`, `build_feature_collection`, `validate_geojson`) + IO layer + argparse main (`--all` flag for all 3,783 scored sites, default viable only). Coordinate order `[longitude, latitude]` per GeoJSON spec RFC 7946 §3.1.1. Rounding: USD/kWh → integer, ratios (irr, lcoe, capacity_factor, energy_offset_pct) → 4 d.p., coordinates → 5 d.p.
+- Exported `exports/viable_sites.geojson`: 1,141 features, 24 properties per feature, 776 KB. Zero sites dropped for null coordinates (Phase 1 lat/lon has 0 nulls for viable sites). File is git-tracked (not gitignored) — intended as static data source for teammate's vite+react+maplibre map.
+- **Known upstream data issue (Racine WI, WI0025194):** This site has `latitude = 4.4` in `ranked_candidates.parquet` — should be ~42.73 (longitude -87.77 is correct). Corrupt value inherited from ECHO ICIS_FACILITIES; pre-existing Phase 1 issue, not introduced here. Not patched (hand-editing GeoJSON without fixing the source = hidden data divergence). Consequence: one dot renders in the ocean off Colombia on the frontend map. Teammate informed. Backlog: add latitude sanity guard in `src/phase1/filter_potw.py` (reject lat < 15° for US-only NPDES permits).
+- **Full pytest suite: 644 passed / 1 skipped** (580 pre-existing + 64 new: 46 in `tests/test_phase4/test_calib_cols.py`, 18 in `tests/test_scripts/test_export_geojson.py`).
+
+**External review (one round):** Code and data APPROVED. One falsified claim in the review prompt (check D): stated "coords outside US lon range: 0" using a -130..−60 continental-only range that excluded Alaska (10 sites), Hawaii (4), Guam (2) — all legitimate NPDES-permitted US facilities. Corrected to a proper WGS84 validity check (invalid WGS84: 0) + non-continental site count (16). Same failure class as P5-SMOKE check E — review prompt claim written without running the repro command. Racine WI upstream bug found by reviewer; documented in §7 of the review prompt.
+
+**Housekeeping note — F4-INSTALL Jun-24 install %:** The open journal item "capture Jun-24 director-meeting install % outcome" is now resolved. `installation_pct_of_equipment: 0.175` (17.5% of equipment CapEx) is the committed value in `config/settings.yaml`, consistent with the director's stated 15–20% estimate range from the Jun-24 meeting. No further change required; the setting has been live since the F4-INSTALL session.
+
+**Files modified / created:**
+- `config/settings.yaml` — additive: `phase4.cf_calibration` block (multipliers 0.291 / 0.447 / 0.688)
+- `src/phase4/financials.py` — additive: `add_calibrated_energy_cols()` + `_CF_CALIB_DEFAULTS` + `import polars`
+- `src/phase4/run.py` — additive: import + 1 call to `add_calibrated_energy_cols`
+- `scripts/export_geojson.py` — new
+- `exports/viable_sites.geojson` — new (git-tracked, 776 KB, 1,141 features)
+- `tests/test_phase4/test_calib_cols.py` — new (46 tests)
+- `tests/test_scripts/__init__.py` — new
+- `tests/test_scripts/test_export_geojson.py` — new (18 tests)
+- `P4_TIER_EXPORT_REVIEW_PROMPT.md` — new (corrected post-round-1: check D fixed, §7 Racine WI added)
+- `WOWERS_PROJECT_JOURNAL.md` — this entry
+
+**Resources used:**
+- `CF_CALIBRATION_REPORT.md` §6 — source of truth for all three multipliers (session 2026-07-03, P5-CF-CALIB).
+- `data/processed/phase4/financial_scorecards.parquet` — re-run output; pre-run snapshot at `/tmp/financial_scorecards_snapshot.parquet` for diff verification.
+- `data/processed/phase1/ranked_candidates.parquet` — facility_name, city, lat/lon for GeoJSON join.
+- LightGBM not used (Phase 4 only). Polars 1.40.1.
+
+**Next steps after this session:**
+1. **Frontend demo** — teammate builds vite+react+maplibre on `exports/viable_sites.geojson`. Properties for coloring: `econ_cat_payback` / `econ_cat_npv` / `econ_cat_irr` / `site_tier`; three calibrated energy tiers for headline stats. Flag `WI0025194` in demo layer filter.
+2. **Phase 1 coord guard (backlog)** — `src/phase1/filter_potw.py`: reject lat < 15° (or lat outside US territorial bounding box) before writing `ranked_candidates.parquet`. Fixes Racine WI and any future ECHO data errors.
+3. **Commit + push** — this session (done immediately after journal).
+
+---

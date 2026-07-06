@@ -302,6 +302,16 @@ phase5:
   # Fetcher lands raw JSON + manifest; no CANONICAL_SCHEMA parse until verified.
   usbr_rise_dir: "/Volumes/SANDISK/WOWERS_Pivot_Data/Phase5_ML_GroundTruth/USBR_RISE"
 
+# ── Phase 4: CF-calibration tiers (P4-TIER, 2026-07-06) ──────────────────────
+# Multipliers from CF_CALIBRATION_REPORT.md §6, primary 0.1–5 MW bucket.
+# Multiplier = empirical_CF / 0.872 (Phase 2 implied fleet median CF).
+# Global fleet multipliers; per-site CF spread is tight (p10–p90: 0.856–0.883).
+phase4:
+  cf_calibration:
+    floor_p25: 0.291   # river-hydro p25 CF / 0.872 → pessimistic floor
+    floor_p50: 0.447   # river-hydro p50 CF / 0.872 → central floor
+    central:   0.688   # WWTP-appropriate CF=0.60 / 0.872 (LucidPipe-anchored)
+
 # ── Paths (relative to project root) ─────────────────────────────────────────
 paths:
   raw_data: "data/raw"

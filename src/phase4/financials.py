@@ -28,6 +28,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
+import polars as pl
 from scipy.optimize import brentq
 
 from src.common import config
@@ -298,3 +299,55 @@ def compute_scorecard(
         "lcoe_per_kwh":               lcoe   if not math.isinf(lcoe)    else _INF_SENTINEL,
         "project_viable":             viable,
     }
+
+
+# ── P4-TIER: CF-calibrated energy columns (2026-07-06) ────────────────────────
+
+# Default multipliers from CF_CALIBRATION_REPORT.md §6, primary 0.1–5 MW bucket.
+# multiplier = empirical_CF / 0.872  (Phase 2 implied fleet median CF).
+# Override via config/settings.yaml: phase4.cf_calibration.{floor_p25,floor_p50,central}
+_CF_CALIB_DEFAULTS: dict[str, float] = {
+    "floor_p25": 0.291,
+    "floor_p50": 0.447,
+    "central":   0.688,
+}
+
+
+def add_calibrated_energy_cols(df: pl.DataFrame) -> pl.DataFrame:
+    """Append three CF-calibrated energy columns to the Phase 4 scorecard.
+
+    New columns (additive — zero changes to existing columns):
+
+    ``energy_kwh_calib_floor_p25``
+        annual_energy_kwh × 0.291 — river-hydro p25 CF floor (pessimistic)
+    ``energy_kwh_calib_floor_p50``
+        annual_energy_kwh × 0.447 — river-hydro p50 CF floor
+    ``energy_kwh_calib_central``
+        annual_energy_kwh × 0.688 — WWTP-appropriate CF = 0.60, LucidPipe-anchored
+
+    The physics ceiling (Phase 2 assumed CF ≈ 0.872) is the pre-existing
+    ``annual_energy_kwh`` column; no ceiling column is added.
+
+    Design: **global fleet multipliers** are used, not per-site CF ratios.
+    Rationale: matches CF_CALIBRATION_REPORT.md §6 method exactly (multiplier
+    = tier_CF / 0.872 fleet median); per-site CF spread is tight (p10–p90
+    = 0.856–0.883) so site-level ratios give near-identical results.
+    Source: CF_CALIBRATION_REPORT.md §6 (session 2026-07-03, P5-CF-CALIB).
+
+    Args:
+        df: Phase 4 scorecard DataFrame (must contain ``annual_energy_kwh``).
+
+    Returns:
+        df with three new Float64 columns appended; all existing columns
+        untouched and value-identical.
+    """
+    calib     = config.get("phase4.cf_calibration") or {}
+    floor_p25 = float(calib.get("floor_p25", _CF_CALIB_DEFAULTS["floor_p25"]))
+    floor_p50 = float(calib.get("floor_p50", _CF_CALIB_DEFAULTS["floor_p50"]))
+    central   = float(calib.get("central",   _CF_CALIB_DEFAULTS["central"]))
+
+    return df.with_columns([
+        (pl.col("annual_energy_kwh") * floor_p25).alias("energy_kwh_calib_floor_p25"),
+        (pl.col("annual_energy_kwh") * floor_p50).alias("energy_kwh_calib_floor_p50"),
+        (pl.col("annual_energy_kwh") * central  ).alias("energy_kwh_calib_central"),
+    ])

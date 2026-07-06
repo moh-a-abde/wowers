@@ -34,6 +34,7 @@ from src.phase4.cost_models import (
 )
 from src.phase4.financials import (
     DEGRADATION_RATE, DISCOUNT_RATE, PROJECT_YEARS, compute_scorecard,
+    add_calibrated_energy_cols,   # P4-TIER: CF calibration columns
 )
 from src.phase4.revenue import annual_revenue, electricity_rate
 from src.phase4.sensitivity import run_tornado
@@ -375,6 +376,7 @@ def run(
     # ── Step 4: Save ──────────────────────────────────────────────────────────
     log.info("[4/4] Saving financial_scorecards.parquet …")
     out_df = pl.DataFrame(financial_rows)
+    out_df = add_calibrated_energy_cols(out_df)   # P4-TIER: appends 3 CF-calibrated columns
     out_path = OUTPUT_DIR / "financial_scorecards.parquet"
     io.write_parquet(out_df, out_path)
     io.checkpoint(out_df, "phase4", "financial_scorecards")
