@@ -5737,3 +5737,35 @@ Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built
 4. **Frontend demo** (teammate track).
 
 ---
+
+## Research-Paper Readiness — Future Reference (NOT next steps) — 2026-07-06 — Tom
+
+Assessment of what the repo already provides for a research paper vs. what still has to be produced. Reference map for when paper writing starts; ~80% of the substance exists.
+
+### Already have → where to trace it
+
+| Paper element | Source artifact in repo |
+|---|---|
+| Contribution / novelty | National screening of WWTP outfall micro-hydro from public data (ECHO/ICIS + DMR + USGS 3DEP + EIA/EHA). Framing in `ARCHITECTURE.md` + `EXCLUSION_FUNNEL_REPORT.md` headline. |
+| Methods — pipeline | `ARCHITECTURE.md` (4-phase design); `src/phase{1..4}/`; `config/settings.yaml` (all levers + provenance comments); this journal (complete decision trail, May 18 → Jul 6). |
+| Data + funnel | 17,148 POTWs → 5,464 flow-valid → 4,860 head-valid → 3,778 turbine-viable → 1,138 project-viable. `EXCLUSION_FUNNEL_REPORT.md` (incl. reproducibility footer with file+expr per number). |
+| Headline results w/ uncertainty | 409.2 GWh/yr physics ceiling; **calibrated band 119–281 GWh** vs 629 real small-hydro plants / 9,798 plant-years — `CF_CALIBRATION_REPORT.md` (strongest single paper element). |
+| Monte-Carlo uncertainty | `src/phase2/monte_carlo.py` (site-keyed seeded, deterministic); P10/P50/P90 columns; sensitivity columns (head/flow/rate NPV bands) in `financial_scorecards.parquet`. |
+| Economics + cost provenance | Cost-assumption provenance table (journal Jun 04); vendor CapEx-band cross-check (F4-VENDORBAND, 0/3,778 violations); ORNL BCM recalibration (settings comments); F4-INSTALL band table; econ_cat profitability gradient. |
+| Selection-bias defense | Exclusion-reason rollup: 76.8% data-gap vs 16.5% economics — `EXCLUSION_FUNNEL_REPORT.md`. |
+| Honest negative result | Phase 5 ML kill: label-gate ≥50 conduit sites failed (11 found) — journal Jul-02/Jul-04 + `FERC_CONDUIT_LABEL_REPORT.md`. Point Loma = the only US wastewater-outfall install found, offline since 2018. |
+| Public-data pitfalls (methods subsection) | EPA 999 sentinels, GPD/MGD unit errors, DMR/design ratio cap (`filter_potw.py`); coordinate corruption + territory-band guard (P1-COORD-GUARD, 10 documented rows); positional-seed reproducibility bug + fix (P2-SEED). |
+| Real-install anchors | LucidPipe Portland (CF 0.628, published); Rentricity + CINK qualitative — `CF_CALIBRATION_REPORT.md` §4. |
+| Map / spatial data | `exports/viable_sites.geojson` (1,138 sites, 24 properties). |
+
+### Still missing → must be produced for the paper
+
+1. **Literature review / related work** — nothing in repo. Position against: ORNL national conduit assessment (PDF already on SANDISK `ORNL_Conduit_Potential/`), prior WWTP energy-recovery studies, micro-hydro screening literature. Biggest gap.
+2. **Validation framing** — no measured WWTP-hydro ground truth exists anywhere (proven by the FERC hunt). Paper must be framed as *screening study with calibrated bounds*, never as validated prediction. Material exists; the explicit framing paragraph does not.
+3. **Head-estimation error analysis** — DEM elevation delta (facility→outfall) as hydraulic-head proxy is the largest methodological assumption. Needs a dedicated justification/error-bound discussion beyond the existing `data_quality_tier` + head-source confidence columns.
+4. **Publication figures** — none exist yet. Needed: national site map, funnel diagram, implied-CF vs EHA-CF distribution overlay, CapEx-vs-capacity scatter with vendor bands, sensitivity tornado, calibration-band bar. All derivable from current parquets (~1 session with a figure script).
+5. **Venue choice + the writing itself** — Applied Energy / Renewable Energy / Water Research have different framings (energy-systems vs water-sector). Decide before outlining.
+
+---
+
+---
