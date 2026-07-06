@@ -1,4 +1,4 @@
-# Exclusion Funnel Report — How WOWERS Narrows 17,148 POTWs to 1,140 Investment-Ready Sites
+# Exclusion Funnel Report — How WOWERS Narrows 17,148 POTWs to 1,138 Investment-Ready Sites
 
 **Purpose:** This report answers the director's question — *"how did you exclude the rest?"* — with a stage-by-stage account of every site drop, the reason for each drop, and what happens to the energy potential of excluded sites. All numbers are recomputed directly from the pipeline parquet outputs; every figure is traceable to a specific file and column.
 
@@ -7,7 +7,7 @@
 2. **F4-INSTALL (Jun 20):** an installation/labor cost line was added to CapEx (default **17.5%** of equipment cost, director's 15–20% midpoint), where previously installation was implicitly $0.
 3. **P1-COORD-GUARD (Jul 6):** 10 facilities with coordinates outside all US NPDES territory bands dropped from Phase 1 (longitude sign-flips, truncated latitudes, corrupt values inherited from EPA ECHO). Reject-not-fix design: no auto-correction. Known IDs: WYG589102, MS0061671, TX0137146, NJ0020371, WI0025194, SC0047457, MS0024589, PR0026042, MS0052477, MS0020575.
 
-Current production headline at install = 17.5%: **1,140 investment-ready sites · 408.8 GWh/yr.**
+Current production headline at install = 17.5%: **1,138 investment-ready sites · 409.2 GWh/yr.**
 
 ---
 
@@ -15,10 +15,10 @@ Current production headline at install = 17.5%: **1,140 investment-ready sites �
 
 > **~80% of all exclusions are missing-data problems, not economic rejections.**
 
-Of the 16,008 sites that are not investment-ready:
+Of the 16,010 sites that are not investment-ready:
 - **11,684 excluded in Phase 2** — no usable flow data (DMR gaps). *No turbine was sized. No energy was computed.*
 - **604 excluded in Phase 3 (head)** — no valid net head (elevation or outfall data missing). *Same: no energy.*
-- **1,080 excluded in Phase 3 (physics)** — rated power < 1 kW after sizing. *Physics floor, not economics.*
+- **1,082 excluded in Phase 3 (physics)** — rated power < 1 kW after sizing. *Physics floor, not economics.*
 - **2,640 scored but uneconomic in Phase 4** — turbine sized, annual energy computed, cash flows built — failed the finance gate.
 
 The question "did you cherry-pick the viable sites?" is answered by the structure of the pipeline: most non-viable sites were not excluded because they performed poorly on a financial model — they were excluded because the data required to run *any* model did not exist. Only 2,640 sites had a fully-sized turbine, a computed annual energy figure, and a complete financial scorecard, yet still failed economics. Those sites are not discarded — they remain in the output with their energy totals and turbine specs intact, and are categorized by profitability (see the econ_cat gradient below).
@@ -34,8 +34,8 @@ All counts recomputed from parquet.
 | **Phase 1 — Ranked POTWs** | 17,148 | — | — | — | Active POTWs with DMR permit coverage; 10 bad-coord sites removed by P1-COORD-GUARD |
 | **Phase 2 — Retained** | 5,464 | 11,684 | 11,684 | **Data gap** | No usable flow record in EPA DMR (gaps, non-numeric, zero-flow) |
 | **Phase 3 — Head valid** | 4,860 | 604 | 12,288 | **Data gap** | No valid net head (elevation or outfall elevation absent/unreliable) |
-| **Phase 3 — Turbine viable** | 3,780 | 1,080 | 13,368 | **Physics floor** | Best-fit rated power < 1 kW after turbine selection |
-| **Phase 4 — Project viable** | 1,140 | 2,640 | 16,008 | **Economics** | NPV ≤ 0 *or* payback > 20 yr *or* IRR not real (no revenue floor — removed Jun 12) |
+| **Phase 3 — Turbine viable** | 3,778 | 1,082 | 13,370 | **Physics floor** | Best-fit rated power < 1 kW after turbine selection |
+| **Phase 4 — Project viable** | 1,138 | 2,640 | 16,010 | **Economics** | NPV ≤ 0 *or* payback > 20 yr *or* IRR not real (no revenue floor — removed Jun 12) |
 
 The viability gate at install = 17.5%. The `min_annual_revenue_usd` floor is set to 0 (no-op, reversible lever retained in config).
 
@@ -43,12 +43,12 @@ The viability gate at install = 17.5%. The `min_annual_revenue_usd` floor is set
 
 ## Exclusion-Reason Rollup
 
-| Reason Category | Sites Dropped | % of All Exclusions (16,008) |
+| Reason Category | Sites Dropped | % of All Exclusions (16,010) |
 |---|---:|---:|
 | **Data gap** (flow or head missing) | 12,288 | 76.8% |
-| **Physics floor** (< 1 kW rated power) | 1,080 | 6.7% |
+| **Physics floor** (< 1 kW rated power) | 1,082 | 6.8% |
 | **Economics** (finance gate, Phase 4) | 2,640 | 16.5% |
-| **Total** | 16,008 | 100% |
+| **Total** | 16,010 | 100% |
 
 Interpretation: more than three-quarters of all site exclusions happened before any financial model was applied, because the physical inputs (flow, head) were absent from public records. The 16.5% economics exclusions are the only cases where the pipeline had enough data to build a full project pro forma and the result was not investable.
 
@@ -56,13 +56,13 @@ Interpretation: more than three-quarters of all site exclusions happened before 
 
 ## Energy by Cohort — "We Are Not Abandoning the Small Sites"
 
-Every turbine-viable site (3,780 total) has a best-fit turbine type, rated power (kW), and annual energy output computed by `src/phase3/turbine_selection.py`. Phase 4 then scores all 3,780 against project economics. The table below shows where that energy sits.
+Every turbine-viable site (3,778 total) has a best-fit turbine type, rated power (kW), and annual energy output computed by `src/phase3/turbine_selection.py`. Phase 4 then scores all 3,778 against project economics. The table below shows where that energy sits.
 
 | Cohort | Sites | Annual Energy (GWh/yr) | Status |
 |---|---:|---:|---|
-| **All turbine-viable** | 3,780 | 514.4 | Turbine sized; annual energy computed |
-| **Investment-ready** (`project_viable`) | 1,140 | 408.8 | NPV>0, payback≤20yr, real IRR, at install 17.5% |
-| **Scored but not financeable** | 2,640 | 105.6 | Full financial scorecard exists; not removed from dataset |
+| **All turbine-viable** | 3,778 | 514.9 | Turbine sized; annual energy computed |
+| **Investment-ready** (`project_viable`) | 1,138 | 409.2 | NPV>0, payback≤20yr, real IRR, at install 17.5% |
+| **Scored but not financeable** | 2,640 | 105.7 | Full financial scorecard exists; not removed from dataset |
 
 Sites that fail economics are retained in the output dataset with full turbine specs. They are *reported and categorized*, not dropped.
 
@@ -70,36 +70,36 @@ Sites that fail economics are retained in the output dataset with full turbine s
 
 ## Profit Gradient — econ_cat Categories (F4-ECON-CAT)
 
-Rather than a single binary viable/not-viable cut, all 3,780 scored sites are independently categorized on three economic dimensions. Each is computed from the post-install (17.5%) scorecard. (Columns: `econ_cat_payback`, `econ_cat_npv`, `econ_cat_irr` in `financial_scorecards.parquet`.)
+Rather than a single binary viable/not-viable cut, all 3,778 scored sites are independently categorized on three economic dimensions. Each is computed from the post-install (17.5%) scorecard. (Columns: `econ_cat_payback`, `econ_cat_npv`, `econ_cat_irr` in `financial_scorecards.parquet`.)
 
 **Payback period** (`econ_cat_payback`)
 
 | Band | Criteria | Sites | Energy (GWh/yr) |
 |---|---|---:|---:|
 | Excellent | ≤ 5 yr | 94 | 181.7 |
-| Good | 5–10 yr | 507 | 153.3 |
-| Marginal | 10–20 yr | 539 | 73.7 |
-| Uneconomic | > 20 yr or not viable | 2,640 | 105.6 |
+| Good | 5–10 yr | 507 | 153.9 |
+| Marginal | 10–20 yr | 537 | 73.6 |
+| Uneconomic | > 20 yr or not viable | 2,640 | 105.7 |
 
 **Net present value** (`econ_cat_npv`)
 
 | Band | Criteria | Sites | Energy (GWh/yr) |
 |---|---|---:|---:|
 | High | ≥ $500k | 103 | 241.1 |
-| Medium | $100k–500k | 155 | 71.9 |
-| Low | $0–100k | 882 | 95.8 |
-| Negative | ≤ $0 | 2,640 | 105.6 |
+| Medium | $100k–500k | 156 | 72.5 |
+| Low | $0–100k | 879 | 95.6 |
+| Negative | ≤ $0 | 2,640 | 105.7 |
 
 **Internal rate of return** (`econ_cat_irr`, stored as fraction)
 
 | Band | Criteria | Sites | Energy (GWh/yr) |
 |---|---|---:|---:|
-| Strong | ≥ 15% | 196 | 242.1 |
-| Moderate | 8–15% | 578 | 120.3 |
-| Weak | 0–8% | 2,179 | 138.7 |
-| None | < 0 or non-real | 827 | 13.3 |
+| Strong | ≥ 15% | 195 | 242.0 |
+| Moderate | 8–15% | 579 | 120.9 |
+| Weak | 0–8% | 2,181 | 138.8 |
+| None | < 0 or non-real | 823 | 13.2 |
 
-The three dimensions are intentionally independent and do not sum to the viable count the same way (e.g. IRR "weak" includes positive-IRR-but-negative-NPV sites). NPV-positive (1,140) equals `project_viable` in this run — every positive-NPV site also clears payback and real IRR.
+The three dimensions are intentionally independent and do not sum to the viable count the same way (e.g. IRR "weak" includes positive-IRR-but-negative-NPV sites). NPV-positive (1,138) equals `project_viable` in this run — every positive-NPV site also clears payback and real IRR.
 
 ---
 
@@ -107,13 +107,13 @@ The three dimensions are intentionally independent and do not sum to the viable 
 
 | CapEx component | $M | Notes |
 |---|---:|---|
-| Equipment | 181.5 | Power-law, vendor-band clamped (equipment-only) |
+| Equipment | 181.6 | Power-law, vendor-band clamped (equipment-only) |
 | Installation | 31.8 | = equipment × 0.175 (F4-INSTALL, mechanical labor only) |
-| Interconnection | 82.7 | Tiered by rated power |
+| Interconnection | 82.9 | Tiered by rated power |
 | Permitting | 57.2 | FERC conduit-NOI / abbreviated / full-NEPA tiers |
-| **Total** | **353.2** | 4-component sum |
+| **Total** | **353.5** | 4-component sum |
 
-Vendor-band check (`capex_outside_vendor_band`) is on equipment $/kW only and remains **0 of 3,780** sites.
+Vendor-band check (`capex_outside_vendor_band`) is on equipment $/kW only and remains **0 of 3,778** sites.
 
 ---
 
@@ -125,10 +125,10 @@ Viability count is sensitive to the installation cost fraction. The director's c
 
 | install_pct | Viable sites | Viable GWh/yr |
 |---:|---:|---:|
-| 0% | 1,373 | 427.8 |
-| 15% | 1,171 | 411.4 |
-| **17.5%** (production) | **1,140** | **408.8** |
-| 20% | 1,119 | 407.2 |
+| 0% | 1,375 | 428.4 |
+| 15% | 1,174 | 412.3 |
+| **17.5%** (production) | **1,138** | **409.2** |
+| 20% | 1,118 | 407.7 |
 
 ---
 
@@ -143,14 +143,14 @@ All numbers in this report can be re-derived from the following files and filter
 | Phase 2 excluded | same | `excluded == True` | 11,684 |
 | Phase 3 head_valid | `data/processed/phase3/turbine_sizing.parquet` | `head_valid == True` | 4,860 |
 | Phase 3 head invalid | same | `head_valid == False` | 604 |
-| Phase 3 turbine_viable | same | `turbine_viable == True` | 3,780 |
-| Phase 3 not viable | same | `turbine_viable == False` | 1,684 |
-| Phase 4 project_viable | `data/processed/phase4/financial_scorecards.parquet` | `project_viable == True` | 1,140 |
+| Phase 3 turbine_viable | same | `turbine_viable == True` | 3,778 |
+| Phase 3 not viable | same | `turbine_viable == False` | 1,686 |
+| Phase 4 project_viable | `data/processed/phase4/financial_scorecards.parquet` | `project_viable == True` | 1,138 |
 | Phase 4 not viable | same | `project_viable == False` | 2,640 |
-| Viable energy | same | `project_viable == True`, `annual_energy_kwh.sum() / 1e6` | 408.8 GWh/yr |
-| Total turbine-viable energy | same | all rows, same | 514.4 GWh/yr |
-| Median payback (viable) | same | `project_viable == True`, `payback_years.median()` | 9.83 yr |
-| Equipment CapEx | same | `equipment_capex_usd.sum() / 1e6` | $181.5M |
+| Viable energy | same | `project_viable == True`, `annual_energy_kwh.sum() / 1e6` | 409.2 GWh/yr |
+| Total turbine-viable energy | same | all rows, same | 514.9 GWh/yr |
+| Median payback (viable) | same | `project_viable == True`, `payback_years.median()` | 9.8 yr |
+| Equipment CapEx | same | `equipment_capex_usd.sum() / 1e6` | $181.6M |
 | Installation CapEx | same | `installation_capex_usd.sum() / 1e6` | $31.8M |
 | What-if band | `scripts/install_cost_whatif.py` | read-only re-score at 0/15/17.5/20% | see table |
 
@@ -158,4 +158,4 @@ Energy unit note: Phase 3 uses `annual_energy_mwh`; Phase 4 uses `annual_energy_
 
 ---
 
-*Report regenerated: 2026-07-06. Numbers recomputed from post-P1-COORD-GUARD parquet (10 bad-coordinate sites removed; original Monte-Carlo draws retained). No pipeline code, config, or thresholds were modified by this report.*
+*Report regenerated: 2026-07-06. Numbers recomputed from post-P2-SEED parquet (P1-COORD-GUARD: 10 bad-coordinate sites removed; P2-SEED: site-keyed Monte Carlo seeding adopted — one-time fleet re-baseline). No pipeline thresholds, CapEx model, or exclusion criteria were modified.*

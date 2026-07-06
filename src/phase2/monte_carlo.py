@@ -17,6 +17,7 @@ facilities and processes them sequentially, returning a list of result dicts.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import math
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -48,6 +49,37 @@ _OUTPUT_KEYS: tuple[str, ...] = (
     "equivalent_homes_p50", "excluded", "exclusion_reason",
 )
 
+# ── Site-keyed seeding ───────────────────────────────────────────────────────
+
+def _site_seed_sequence(base_seed: int, npdes_id: str) -> np.random.SeedSequence:
+    """Per-facility seed independent of row order and row count.
+
+    Uses sha256 (not builtin hash(), which is process-salted and changes between
+    runs) so the draw for a given (base_seed, npdes_id) pair is reproducible
+    across runs, processes, and Python versions.  Removing or inserting rows in
+    the input does not change the seed — or the Monte Carlo draws — for any other
+    facility.
+
+    Background: positional seeding (``seed + row_index``) meant that removing
+    WI0025194 from 17,158 → 17,148 facilities on 2026-07-06 shifted seeds for
+    all facilities after WI0025194's old position, re-drawing 1,090 scorecard
+    rows and flipping 3 viability calls.  Site-keyed seeding eliminates this
+    class of bug entirely.
+
+    Args:
+        base_seed: CLI ``--seed`` (default 42).  Changing this deliberately
+            re-draws all facilities (one-time re-baseline).
+        npdes_id:  NPDES permit number identifying the facility.
+
+    Returns:
+        ``np.random.SeedSequence`` that can be passed to ``np.random.default_rng``.
+    """
+    site_key = int.from_bytes(
+        hashlib.sha256(npdes_id.encode("utf-8")).digest()[:8], "big"
+    )
+    return np.random.SeedSequence([base_seed, site_key])
+
+
 # ── Exclusion filter (pre-Phase-2) ────────────────────────────────────────────
 
 def _exclude(row: dict) -> str | None:
@@ -73,8 +105,13 @@ def _exclude(row: dict) -> str | None:
 
 # ── Single-facility processing (called in worker processes) ───────────────────
 
-def _process_one(row: dict, n_iterations: int, seed: int | None) -> dict:
-    """Run Monte Carlo for one facility row.  Returns output dict."""
+def _process_one(row: dict, n_iterations: int, base_seed: int) -> dict:
+    """Run Monte Carlo for one facility row.  Returns output dict.
+
+    The RNG seed is derived from ``(base_seed, npdes_id)`` via
+    ``_site_seed_sequence`` so that draws are independent of row position.
+    Removing or inserting other facilities never changes this facility's draws.
+    """
     exclusion = _exclude(row)
     npdes_id = row["npdes_id"]
 
@@ -98,7 +135,7 @@ def _process_one(row: dict, n_iterations: int, seed: int | None) -> dict:
         mean_flow = float(row["mean_flow_mgd"])
         fdc_flows = np.full(20, mean_flow, dtype=np.float64)
 
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(_site_seed_sequence(base_seed, npdes_id))
     mc = run_monte_carlo(
         fdc_flows_mgd=fdc_flows,
         head_low_m=head_dist.low_m,
@@ -126,10 +163,15 @@ def _process_one(row: dict, n_iterations: int, seed: int | None) -> dict:
 
 
 def _process_batch(rows: list[dict], n_iterations: int, base_seed: int) -> list[dict]:
-    """Process a batch of facility rows.  Used in worker processes."""
+    """Process a batch of facility rows.  Used in worker processes.
+
+    Each facility's seed is derived from ``(base_seed, npdes_id)`` — independent
+    of batch offset or row index.  All batches use the same ``base_seed`` so
+    sequential and parallel paths produce identical outputs.
+    """
     results = []
-    for i, row in enumerate(rows):
-        results.append(_process_one(row, n_iterations, base_seed + i))
+    for row in rows:
+        results.append(_process_one(row, n_iterations, base_seed))
     return results
 
 
@@ -152,7 +194,11 @@ def estimate_all_facilities(
                       ``n_months_data``.
         n_iterations: MC samples per facility (default 10,000).
         n_workers:    Parallel worker processes.  1 = single-threaded.
-        seed:         Base random seed (each facility gets seed + row_index).
+        seed:         Base random seed.  Each facility's RNG is derived from
+                      ``(seed, npdes_id)`` via ``_site_seed_sequence`` — independent
+                      of row position.  Removing or inserting rows never changes
+                      draws for other facilities.  Change ``seed`` deliberately to
+                      trigger a one-time fleet-wide re-baseline.
         log_interval: Log a progress message every N facilities.
 
     Returns:
@@ -166,15 +212,16 @@ def estimate_all_facilities(
     if n_workers <= 1:
         results: list[dict] = []
         for i, row in enumerate(rows):
-            results.append(_process_one(row, n_iterations, seed + i))
+            results.append(_process_one(row, n_iterations, seed))
             if (i + 1) % log_interval == 0 or (i + 1) == n_total:
                 n_exc = sum(1 for r in results if r["excluded"])
                 log.info(f"  Processed {i + 1:,}/{n_total:,} | excluded: {n_exc:,}")
     else:
-        # Split into batches, one per worker
+        # Split into batches, one per worker. All batches share the same base_seed;
+        # per-facility seeding is done inside _process_one via _site_seed_sequence.
         batch_size = math.ceil(n_total / n_workers)
         batches = [
-            (rows[i: i + batch_size], n_iterations, seed + i)
+            (rows[i: i + batch_size], n_iterations, seed)
             for i in range(0, n_total, batch_size)
         ]
         results = []

@@ -170,8 +170,13 @@ def _compute_for_facility(
         flows_for_trend = group["avg_flow_mgd"].drop_nulls().to_numpy()
         if len(dates_list) == len(flows_for_trend) >= 6:
             t = np.array([d.year + d.month / 12.0 for d in dates_list])
-            slope, _, _, _, _ = stats.linregress(t, flows_for_trend)
-            flow_trend = float(slope)
+            # Guard: scipy.stats.linregress raises ValueError when all x-values are
+            # identical (e.g. a facility whose 6+ DMR records all share the same
+            # period_end — duplicate submissions or a single batch-reported period).
+            # In that case we cannot estimate a trend; leave flow_trend = 0.0.
+            if np.unique(t).size >= 2:
+                slope, _, _, _, _ = stats.linregress(t, flows_for_trend)
+                flow_trend = float(slope)
 
     # Flow duration curve
     fdc = _compute_fdc(flows)

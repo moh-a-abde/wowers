@@ -14,7 +14,7 @@
 
 ## 1. What This Report Is — and Is Not
 
-The Phase 2 physics estimate (**408.8 GWh/yr, 1,140 viable sites**) is computed from the standard hydropower equation `P = η·ρ·g·Q·H`, integrated over each WWTP site's measured flow-duration curve, with efficiency and availability sampled via Monte Carlo. It has not been validated against a single real operating plant.
+The Phase 2 physics estimate (**409.2 GWh/yr, 1,138 viable sites**) is computed from the standard hydropower equation `P = η·ρ·g·Q·H`, integrated over each WWTP site's measured flow-duration curve, with efficiency and availability sampled via Monte Carlo. It has not been validated against a single real operating plant.
 
 This report is the cheapest available credibility check: benchmark the **implied capacity factor** embedded in the physics estimate against real small-hydro plants from the DOE HydroSource EHA dataset, and express the 409 GWh headline as a three-tier band.
 
@@ -30,12 +30,12 @@ Each viable site's `capacity_factor_p50` column is:
 ```
 CF = energy_p50_kwh / (power_p50_kw × 8,760 hours)
 ```
-For the 1,140 viable sites (post P1-COORD-GUARD; 408.8 GWh vs 409.1 pre-guard — original Monte-Carlo draws retained):
+For the 1,138 viable sites (post P2-SEED site-keyed re-baseline; 409.2 GWh):
 
 | Metric | Value |
 |---|---|
-| Viable sites | 1,140 |
-| Headline energy | 408.8 GWh/yr |
+| Viable sites | 1,138 |
+| Headline energy | 409.2 GWh/yr |
 | CF p10 | 0.856 |
 | CF p25 | 0.865 |
 | **CF p50 (median)** | **0.872** |
@@ -155,7 +155,7 @@ The plausible-central tier requires at least one real conduit/WWTP installation 
 | Conservative floor (p50) | 0.390 | 0.447 | **183** | River-hydro median — central floor |
 | Conservative floor (p75) | 0.541 | 0.620 | **254** | River-hydro 75th percentile |
 | **Plausible central** | **0.600** | **0.688** | **281** | WWTP-appropriate; anchored to LucidPipe 0.628 |
-| Physics ceiling | 0.872 | 1.000 | **409** | Phase 2 assumed; optimistic upper bound (408.8 GWh post-guard) |
+| Physics ceiling | 0.872 | 1.000 | **409** | Phase 2 assumed; optimistic upper bound (409.2 GWh post P2-SEED) |
 
 ### Sub-bucket: 0.1–1 MW (59 plants, 802 plant-years — closest to WWTP turbine scale)
 
@@ -192,7 +192,7 @@ The 0.1–1 MW sub-bucket (most comparable to WWTP micro-scale) shows a slightly
 | EHA CF workbook covers plants ≥ 1 MW (fleet median ~7.7 MW); the 0.1–5 MW bucket deliberately restricts to smaller sites | CF distribution may not fully represent micro-scale | The 0.1–1 MW sub-bucket (59 plants) partially addresses this |
 | Phase 2 does not model debris fouling, minimum-flow cutoffs, or ice | Physics ceiling is optimistic | Phase 5 ML model (when trained) should correct for these implicitly |
 | Multiplier assumes linear scaling (CF × energy) | Valid if the energy ratio matches the CF ratio — true for the physics model | No correction needed |
-| Band applies to viable-energy (408.8 GWh from 1,140 sites) only | The 3,780 turbine-viable sites represent 514.4 GWh physics ceiling; band not computed for that set | Can be rerun with different energy totals via the script |
+| Band applies to viable-energy (409.2 GWh from 1,138 sites) only | The 3,778 turbine-viable sites represent 514.9 GWh physics ceiling; band not computed for that set | Can be rerun with different energy totals via the script |
 
 ---
 

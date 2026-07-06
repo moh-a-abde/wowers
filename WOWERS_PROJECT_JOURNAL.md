@@ -5696,3 +5696,44 @@ Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built
 5. **Frontend demo** (teammate track).
 
 ---
+
+### Session: 2026-07-06 (PM #3) — P2-SEED + P1-REPRO: Site-Keyed Seeding Re-Baseline + Phase 1 Repro Investigation — Tom
+
+**What was done:**
+- Scoped and dispatched the two backlog items via `P2SEED_P1REPRO_PROMPT.md` (coding agent, external session), then reviewed the delivery against live code + parquets. **APPROVED with two corrections.** Committed at the end of this session.
+- **P1-REPRO (Part 1, no renumber):**
+  - `linregress` crash confirmed and fixed — `scipy.stats.linregress` raises `ValueError` on all-identical x-values (facility whose 6+ DMR records share one `period_end`). Guard `np.unique(t).size >= 2` in `src/phase1/flow_features.py` (trend stays 0.0 otherwise); 6 regression tests.
+  - DMR blow-up root cause: **partition-directory accumulation** — `pq.write_to_dataset` appends to existing partition subdirs; the Jul-6 orphaned session stacked ~7.5 copies (v009 checkpoint: 20,012,244 rows; unique keys 2,742,255 ≈ v008's 2,668,808 + 189,613 genuinely-new keys from a fresh ICIS download). Recommendation on file: delete target dir before partitioned writes. New data NOT adopted. *(Reviewer note: v009 was deleted before review, so these counts are plausible-not-confirmed.)*
+  - Checkpoint hygiene: v009 (157 MB) deleted; `data/processed/` proven byte-identical through Part 1 (SHA-256 before/after).
+- **P2-SEED (Part 2, deliberate one-time fleet re-baseline):**
+  - `_site_seed_sequence(base_seed, npdes_id)` — sha256(npdes_id)[:8] mixed with base seed via `np.random.SeedSequence`; replaces `seed + row_index` in all three call paths (sequential, `_process_batch`, parallel dispatch). Verified: no positional seeding remains; removal/insertion invariance reproduced live (A/C draws identical with and without B present); different base seed → different draws; determinism SHA reproduced.
+  - 16 new tests (6 linregress + 10 seeding); invariance tests verified non-tautological. **Suite: 701 passed / 1 skipped.**
+  - **New production baseline:** 3,778 scored · **1,138 viable** · **409.1695 GWh/yr** · calib 119.07 / 182.90 / 281.51 GWh · GeoJSON 1,138 features. Structural invariants held exactly (P2 17,148 / retained 5,464 / P3 5,464 / head_valid 4,860). Churn vs 408.7977 baseline: FL0A00002 + NY0026328 lost viability; none gained; IA0030694 + PA0036293 dropped below the 1 kW physics floor; 319 shared viable sites' (rounded) energies changed. Reports renumbered and verified consistent (funnel 16,010 exclusions; arithmetic checked).
+- **Review corrections (documented in the REVIEW OUTCOME banner of `P2SEED_P1REPRO_REVIEW_PROMPT.md`):**
+  1. Agent's §6.3 attributed the turbine_viable −2 to "elevation non-determinism" — **falsified again** (elevation values byte-identical for all 5,464 sites vs May-20; the §6.3 text even self-contradicts). Real mechanism verified per-site: seeding redrew MC head (`head_m_p50` shifts for IA0030694 / PA0036293), pushing both borderline 1.0 kW sites under the physics floor. Numbers stand; explanation wrong. Seventh falsified-explanation instance across sessions.
+  2. **Checkpoint trap (OPEN):** `get_latest_checkpoint('phase1','dmr_flow_timeseries')` now resolves to **v010** — the Jul-6 botched-restore artifact (2,659,560 rows; matches no production state; production = 2,667,701 = v008 minus 10). Reviewer's delete-and-repoint fix was blocked by the permission classifier (pre-existing file). **Pending Tom: delete v010 + repoint manifest to v008.**
+
+**Files modified / created:**
+- `src/phase1/flow_features.py` — linregress guard (agent).
+- `src/phase2/monte_carlo.py`, `src/phase2/run.py` — site-keyed seeding (agent).
+- `tests/test_phase1/test_flow_features.py`, `tests/test_phase2/test_monte_carlo.py` — +16 tests (agent).
+- `tests/test_phase4/test_calib_cols.py`, `tests/test_scripts/test_export_geojson.py` — renumbered to 3,778 / 1,138 / 409.17 (agent).
+- `EXCLUSION_FUNNEL_REPORT.md`, `CF_CALIBRATION_REPORT.md`, `scripts/cf_calibration.py`, `scripts/export_geojson.py` — renumbered (agent; verified).
+- `data/processed/phase{2,3,4}/*.parquet`, `exports/viable_sites.geojson` — re-baselined via official runners (agent; verified).
+- `data/checkpoints/phase1_dmr_flow_timeseries_v009.parquet` — deleted (agent).
+- `P2SEED_P1REPRO_PROMPT.md` — new (this session's coding-agent prompt).
+- `P2SEED_P1REPRO_REVIEW_PROMPT.md` — new (agent) + REVIEW OUTCOME banner (review).
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- `/tmp/p4_pre_seed_fix.parquet` (agent's pre-redraw snapshot — verified == the 408.7977 committed baseline before trusting the churn diff).
+- `data/checkpoints/` phase3 v011/v012 (elevation-determinism falsification), manifest.json + `src/common/io.py` (checkpoint-trap diagnosis).
+- Live re-runs: removal-invariance repro, `cf_calibration.py`-adjacent live sums, full pytest.
+
+**Next steps after this session:**
+1. ~~Pending decision: delete `phase1_dmr_flow_timeseries_v010.parquet` + repoint manifest to v008~~ — **DONE (Tom approved, same session):** v010 deleted; manifest repointed; `get_latest_checkpoint` verified resolving to v008 (2,668,808 rows).
+2. **Tell teammate:** `viable_sites.geojson` now **1,138** features (re-baseline churn: FL0A00002, NY0026328 out).
+3. **Backlog:** apply the 1b recommendation (delete-before-write for partitioned parquet) whenever Phase 1 ingest is next touched; adopt the +189,613-key fresh ICIS data only as a deliberate future re-baseline.
+4. **Frontend demo** (teammate track).
+
+---
