@@ -38,3 +38,6 @@ coverage.xml
 # Local/generated reports
 WOWERS_Project_Report.pdf
 .gstack/
+
+# Frontend dependencies (teammate's vite/react app installs its own)
+frontend/node_modules/
