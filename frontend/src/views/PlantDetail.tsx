@@ -1,0 +1,149 @@
+import { Link, useParams } from "react-router-dom";
+import { fetchPlant, useAsync } from "../lib/data";
+import { CONF_PILL, TURBINE_LABEL } from "../lib/colors";
+import { num, pct, pctRaw, usd, years } from "../lib/format";
+import Gauge from "../components/charts/Gauge";
+import { EfficiencyCurve, Tornado } from "../components/charts/Charts";
+
+function Row({ l, v }: { l: string; v: string }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #eef1f6", fontSize: 13 }}>
+      <span className="muted">{l}</span>
+      <span style={{ fontWeight: 600 }}>{v}</span>
+    </div>
+  );
+}
+
+export default function PlantDetail() {
+  const { id = "" } = useParams();
+  const { data: p, error } = useAsync(() => fetchPlant(id), [id]);
+
+  if (error) return <div className="loading">Plant “{id}” not found. <Link to="/">← Back to map</Link></div>;
+  if (!p) return <div className="loading">Loading plant…</div>;
+
+  const f = p.financial;
+
+  return (
+    <div style={{ padding: 22 }}>
+      <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+        <Link to="/">Dashboard</Link> ›{" "}
+        {p.state && <><Link to={`/state/${p.state}`}>{p.state}</Link> › </>}
+        {p.name}
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--navy)", margin: 0 }}>{p.name}</h1>
+        <span className={`pill ${CONF_PILL[p.confidence]}`}>{p.confidence} confidence</span>
+        {p.dmr_backed && <span className="pill pill-high">✓ DMR-Backed</span>}
+        {p.tier && <span className="pill pill-lower">Tier {p.tier}</span>}
+      </div>
+      <div className="muted" style={{ fontSize: 13, margin: "4px 0 18px" }}>
+        {p.city}, {p.state} &nbsp;|&nbsp; NPDES: {p.id} &nbsp;|&nbsp; {num(p.flow.mean_mgd)} MGD mean flow
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr 1fr", gap: 18, alignItems: "start" }}>
+        {/* left column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div className="card card-pad">
+            <h3 className="card-title">≈ Flow Data</h3>
+            <Row l="Mean Flow" v={`${num(p.flow.mean_mgd)} MGD`} />
+            <Row l="P10 Flow" v={p.flow.p10_mgd != null ? `${num(p.flow.p10_mgd)} MGD` : "—"} />
+            <Row l="P90 Flow" v={p.flow.p90_mgd != null ? `${num(p.flow.p90_mgd)} MGD` : "—"} />
+            <Row l="Data Quality" v={p.flow.data_quality ?? "—"} />
+            <Row l="Months DMR" v={num(p.flow.n_months_dmr)} />
+            <Row l="Utilization" v={pct(p.flow.utilization)} />
+          </div>
+          <div className="card card-pad">
+            <h3 className="card-title">⛰ Elevation Data</h3>
+            <Row l="Head Source" v={p.elevation.head_source === "usgs_3dep" ? "USGS 3DEP ✓" : "Literature"} />
+            <Row l="Net Head" v={p.elevation.head_net_m != null ? `${p.elevation.head_net_m} m` : "—"} />
+            <Row l="Gross Head" v={p.elevation.head_gross_m != null ? `${p.elevation.head_gross_m} m` : "—"} />
+            <Row l="Facility Elevation" v={p.elevation.facility_elev_m != null ? `${num(p.elevation.facility_elev_m)} m` : "—"} />
+            <Row l="Outfall Elevation" v={p.elevation.outfall_elev_m != null ? `${num(p.elevation.outfall_elev_m)} m` : "—"} />
+          </div>
+        </div>
+
+        {/* center column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div className="card card-pad">
+            <h3 className="card-title">Energy Recovery Estimate</h3>
+            {p.energy.p50_mwh != null && p.energy.p10_mwh != null && p.energy.p90_mwh != null ? (
+              <Gauge p10={p.energy.p10_mwh} p50={p.energy.p50_mwh} p90={p.energy.p90_mwh} />
+            ) : <div className="muted">No energy estimate.</div>}
+            <div style={{ display: "flex", justifyContent: "space-around", marginTop: 10, fontSize: 12 }}>
+              <div style={{ textAlign: "center" }}><div className="muted">P10</div><b>{num(p.energy.p10_mwh)}</b></div>
+              <div style={{ textAlign: "center" }}><div className="muted">P50</div><b>{num(p.energy.p50_mwh)}</b></div>
+              <div style={{ textAlign: "center" }}><div className="muted">P90</div><b>{num(p.energy.p90_mwh)}</b></div>
+            </div>
+            <div className="faint" style={{ fontSize: 11, textAlign: "center", marginTop: 8 }}>
+              Offsets {pctRaw(p.energy.offset_pct)} of plant electricity · ≈{num(p.energy.equivalent_homes)} homes
+            </div>
+          </div>
+          <div className="card card-pad">
+            <h3 className="card-title">Recommended Turbine</h3>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--navy)" }}>
+              {TURBINE_LABEL[p.turbine.type ?? ""] ?? p.turbine.type} Turbine
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <Row l="Rated Power" v={`${num(p.turbine.rated_power_kw)} kW`} />
+              <Row l="Rated Flow" v={p.turbine.rated_flow_m3s != null ? `${p.turbine.rated_flow_m3s} m³/s` : "—"} />
+              <Row l="Peak Efficiency" v={p.turbine.peak_efficiency_pct != null ? `${p.turbine.peak_efficiency_pct}%` : "—"} />
+              <Row l="Capacity Factor" v={pct(p.turbine.capacity_factor)} />
+            </div>
+            {p.turbine.rated_flow_m3s != null && p.turbine.peak_efficiency_pct != null && (
+              <div style={{ marginTop: 10 }}>
+                <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Efficiency Curve</div>
+                <EfficiencyCurve qRated={p.turbine.rated_flow_m3s} peakPct={p.turbine.peak_efficiency_pct} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* right column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div className="card card-pad">
+            <h3 className="card-title">Financial Scorecard</h3>
+            <div style={{ display: "flex", gap: 16, alignItems: "baseline" }}>
+              <div>
+                <div className="muted" style={{ fontSize: 12 }}>NPV</div>
+                <div style={{ fontSize: 30, fontWeight: 800, color: "var(--green)" }}>{usd(f.npv_usd)}</div>
+              </div>
+              <div>
+                <div className="muted" style={{ fontSize: 12 }}>IRR</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "var(--green)" }}>{pct(f.irr)}</div>
+              </div>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <Row l="Payback" v={years(f.payback_years)} />
+              <Row l="Installation Cost" v={usd(f.capex.installation_usd)} />
+              <Row l="Total CapEx" v={usd(f.capex.total_usd)} />
+              <Row l="Annual Savings" v={`${usd(f.annual_revenue_usd)}/yr`} />
+              <Row l="LCOE" v={f.lcoe_per_kwh != null ? `$${f.lcoe_per_kwh.toFixed(3)}/kWh` : "—"} />
+              <Row l="NPV w/ 50% grant" v={usd(f.npv_with_grant_usd)} />
+            </div>
+          </div>
+          <div className="card card-pad">
+            <h3 className="card-title">Sensitivity Analysis</h3>
+            <div className="faint" style={{ fontSize: 11, marginBottom: 6 }}>Impact on NPV (±20%). Dominant driver: {p.sensitivity.dominant}</div>
+            {f.npv_usd != null && (
+              <Tornado
+                base={f.npv_usd}
+                rows={[
+                  { label: "Head ±20%", low: p.sensitivity.head[0], high: p.sensitivity.head[1] },
+                  { label: "Flow ±20%", low: p.sensitivity.flow[0], high: p.sensitivity.flow[1] },
+                  { label: "Elec. rate ±20%", low: p.sensitivity.rate[0], high: p.sensitivity.rate[1] },
+                ]}
+              />
+            )}
+          </div>
+          <div className="card card-pad">
+            <h3 className="card-title">Next Steps</h3>
+            <button className="btn btn-blue" style={{ width: "100%", justifyContent: "center", marginBottom: 8 }}>Get Turbine Quotes</button>
+            <button className="btn btn-green" style={{ width: "100%", justifyContent: "center", marginBottom: 8 }}>Apply for DOE Funding</button>
+            <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center" }}>View Similar Sites</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
