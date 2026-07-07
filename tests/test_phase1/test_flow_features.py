@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import datetime
+
+import numpy as np
 import polars as pl
 import pytest
 
-from src.phase1.flow_features import compute_flow_features, _compute_fdc, FDC_PROBS
+from src.phase1.flow_features import (
+    compute_flow_features, _compute_fdc, _compute_for_facility, FDC_PROBS,
+)
 
 
 class TestFlowFeatures:
@@ -189,3 +194,99 @@ class TestSingleOutlierFix:
         assert row["mean_flow_mgd"][0] is None or row["flow_duration_curve"][0] is None, (
             "Unit-error site should have null flow stats"
         )
+
+
+# ── Regression: linregress crash on identical timestamps ──────────────────────
+
+
+def _make_group_with_dates(
+    dates: list[tuple[int, int]],
+    flows: list[float],
+    npdes_id: str = "TEST001",
+) -> pl.DataFrame:
+    """Build a minimal group DataFrame for _compute_for_facility.
+
+    Args:
+        dates: list of (year, month) tuples
+        flows: matching flow values (MGD)
+    """
+    return pl.DataFrame({
+        "npdes_id":       [npdes_id] * len(dates),
+        "outfall":        ["001"]    * len(dates),
+        "period_end":     pl.Series(
+            [datetime.date(y, m, 28) for y, m in dates], dtype=pl.Date
+        ),
+        "avg_flow_mgd":   pl.Series(flows, dtype=pl.Float64),
+        "max_flow_mgd":   pl.Series([v * 1.1 for v in flows], dtype=pl.Float64),
+        "min_flow_mgd":   pl.Series([v * 0.9 for v in flows], dtype=pl.Float64),
+        "is_estimated":   [False] * len(dates),
+        "fiscal_year":    pl.Series([y for y, m in dates], dtype=pl.Int64),
+        "design_flow_mgd": pl.Series([10.0] * len(dates), dtype=pl.Float64),
+    })
+
+
+class TestLinregressCrashGuard:
+    """Regression tests for the linregress identical-timestamp guard (P1-REPRO 1a).
+
+    Root cause: scipy.stats.linregress raises ValueError when all x-values are
+    identical ("Cannot calculate a linear regression if all x values are
+    identical").  This fires in _compute_for_facility when a facility has 6+
+    DMR records that all share the same period_end month — possible with
+    duplicate batch submissions or a single-period bulk report.
+
+    Fix: check np.unique(t).size >= 2 before calling linregress.
+    If fewer than 2 distinct timestamps, flow_trend stays 0.0.
+    """
+
+    def test_all_same_date_six_records_no_crash(self):
+        """6 records, all same period_end → no ValueError, flow_trend = 0.0."""
+        dates = [(2020, 1)] * 6
+        flows = [1.0, 1.1, 0.9, 1.05, 0.95, 1.02]
+        group = _make_group_with_dates(dates, flows)
+        result = _compute_for_facility("TEST001", np.array(flows), group)
+        assert result["flow_trend_mgd_per_year"] == 0.0
+
+    def test_all_same_date_twelve_records_no_crash(self):
+        """12 records, all same period_end → no crash, flow_trend = 0.0."""
+        dates = [(2021, 6)] * 12
+        flows = [2.0 + 0.1 * i for i in range(12)]
+        group = _make_group_with_dates(dates, flows)
+        result = _compute_for_facility("TEST002", np.array(flows), group)
+        assert result["flow_trend_mgd_per_year"] == 0.0
+
+    def test_two_identical_dates_no_crash(self):
+        """6 records with only 2 values for t, each repeated 3 times — was also crashing."""
+        # np.unique would give size=2 which passes the guard
+        dates = [(2020, 1)] * 3 + [(2020, 2)] * 3
+        flows = [1.0, 1.1, 0.9, 1.2, 1.3, 1.1]
+        group = _make_group_with_dates(dates, flows)
+        # Should not raise — 2 unique timestamps is enough for linregress
+        result = _compute_for_facility("TEST003", np.array(flows), group)
+        assert isinstance(result["flow_trend_mgd_per_year"], float)
+
+    def test_normal_case_returns_nonzero_trend(self):
+        """6 records with distinct months and a clear upward trend → non-zero slope."""
+        dates = [(2020, m) for m in range(1, 7)]
+        flows = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5]   # clear upward trend
+        group = _make_group_with_dates(dates, flows)
+        result = _compute_for_facility("TEST004", np.array(flows), group)
+        assert result["flow_trend_mgd_per_year"] > 0, (
+            "Upward trend should yield positive slope"
+        )
+
+    def test_fewer_than_six_records_skips_linregress(self):
+        """Only 5 records → guard n >= 6 prevents linregress call entirely."""
+        dates = [(2020, 1)] * 5   # same date — would crash if guard were missing
+        flows = [1.0] * 5
+        group = _make_group_with_dates(dates, flows)
+        # With n=5 and the n>=6 guard, linregress is never called → no crash
+        result = _compute_for_facility("TEST005", np.array(flows), group)
+        assert result["flow_trend_mgd_per_year"] == 0.0
+
+    def test_flow_trend_key_present_in_output(self):
+        """flow_trend_mgd_per_year key always present in output dict."""
+        dates = [(2020, m) for m in range(1, 7)]
+        flows = [1.0] * 6
+        group = _make_group_with_dates(dates, flows)
+        result = _compute_for_facility("TEST006", np.array(flows), group)
+        assert "flow_trend_mgd_per_year" in result

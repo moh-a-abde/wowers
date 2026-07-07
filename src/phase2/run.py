@@ -48,7 +48,9 @@ def run(
         top_n:         Limit to top-N ranked facilities (useful for testing).
         n_iterations:  Monte Carlo samples per facility.
         n_workers:     Parallel worker processes (1 = single-threaded).
-        seed:          Base random seed.
+        seed:          Base random seed.  Per-facility seeds are derived from
+                       (seed, npdes_id) via site-keyed seeding, so removing or
+                       inserting rows never changes draws for other facilities.
 
     Returns:
         Path to energy_yield_estimates.parquet.

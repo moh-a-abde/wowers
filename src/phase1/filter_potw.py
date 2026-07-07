@@ -24,6 +24,33 @@ _EPA_999_SENTINEL: float = 999.0
 # Cap at configurable ratio; default 5×.
 _DMR_DESIGN_RATIO_CAP: float = config.get("processing.dmr_design_ratio_cap", 5.0)
 
+# P1-COORD-GUARD (2026-07-06): inclusive lat/lon validity bands for all US
+# NPDES territories.  A row is valid only when BOTH coordinates fall within
+# at least one of their respective bands.
+#
+# Design decisions (do not change without updating the journal):
+#   REJECT, don't fix — longitude sign-flips and digit errors are not
+#   auto-corrected even when the fix is obvious.  Auto-rescue without an
+#   authoritative source creates hidden data divergence.  The 10 known
+#   bad rows are simply removed; the probe-verified drop count is 10.
+#
+#   Naïve "lat < 15°" rejection is WRONG: Guam (~13.4°N), CNMI, and
+#   American Samoa (~-14.3°S) all have active NPDES permits.  Use the
+#   inclusive territory bands below instead.
+#
+# Latitude bands:
+#   [-14.8, -10.8]  American Samoa (AS)
+#   [ 13.0,  71.5]  Guam/CNMI → USVI/PR → Hawaii → CONUS → Alaska
+# Longitude bands:
+#   [-180.0, -64.4]  Western-hemisphere US (incl. USVI east tip ~-64.56)
+#   [ 144.5, 146.2]  Guam / CNMI (Northern Mariana Islands)
+_COORD_LAT_VALID_BANDS: list[list[float]] = config.get(
+    "processing.coord_lat_valid_bands", [[-14.8, -10.8], [13.0, 71.5]]
+)
+_COORD_LON_VALID_BANDS: list[list[float]] = config.get(
+    "processing.coord_lon_valid_bands", [[-180.0, -64.4], [144.5, 146.2]]
+)
+
 # Output schema — enforced after join
 POTW_SCHEMA = {
     "npdes_id": pl.Utf8,
@@ -63,6 +90,9 @@ def load_potw_facilities(
 
     joined = _join(facilities, potw_permits)
     log.info(f"POTW facilities after join: {len(joined):,}")
+
+    joined = _drop_invalid_coords(joined)   # P1-COORD-GUARD
+    log.info(f"POTW facilities after coord guard: {len(joined):,}")
 
     result = _cast_schema(joined)
     _log_summary(result)
@@ -253,6 +283,76 @@ def _join(facilities: pl.DataFrame, permits: pl.DataFrame) -> pl.DataFrame:
         log.warning(f"Dropped {dropped:,} facilities with no coordinates")
 
     return joined
+
+
+# ── Coordinate validity guard ─────────────────────────────────────────────────
+
+def _in_any_band(value: pl.Expr, bands: list[list[float]]) -> pl.Expr:
+    """Return a boolean Expr: True if ``value`` falls in ANY of ``bands``."""
+    exprs = [
+        (value >= lo) & (value <= hi)
+        for lo, hi in bands
+    ]
+    result = exprs[0]
+    for e in exprs[1:]:
+        result = result | e
+    return result
+
+
+def _drop_invalid_coords(df: pl.DataFrame) -> pl.DataFrame:
+    """Remove rows whose lat/lon fall outside any recognised US NPDES territory.
+
+    US territories covered by the validity bands (see ``_COORD_LAT_VALID_BANDS`` /
+    ``_COORD_LON_VALID_BANDS``):
+        American Samoa (AS), Guam (GU), CNMI (MP), Puerto Rico (PR),
+        US Virgin Islands (VI), Hawaii (HI), contiguous US, Alaska (AK).
+
+    Rows are **rejected, not corrected**, even when the error is visually
+    obvious (e.g. positive longitude = likely sign flip).  Auto-correction
+    without an authoritative source creates hidden data divergence; the
+    correct fix is to obtain a verified coordinate from EPA ECHO or a GIS
+    source and re-ingest (see WOWERS_PROJECT_JOURNAL.md, 2026-07-06).
+
+    Rows with null latitude or longitude are left for the existing null-drop
+    in ``_join`` (called before this function in ``load_potw_facilities``).
+
+    Args:
+        df: Post-join, pre-schema-cast DataFrame containing ``latitude``,
+            ``longitude``, ``npdes_id``, and ``state_code`` columns.
+
+    Returns:
+        df with invalid-coordinate rows removed.
+    """
+    lat_ok = _in_any_band(pl.col("latitude"),  _COORD_LAT_VALID_BANDS)
+    lon_ok = _in_any_band(pl.col("longitude"), _COORD_LON_VALID_BANDS)
+
+    # Treat null coords as "ok here" — null-drop handled upstream in _join
+    valid_mask = (
+        pl.col("latitude").is_null()
+        | pl.col("longitude").is_null()
+        | (lat_ok & lon_ok)
+    )
+
+    bad = df.filter(~valid_mask)
+    n_bad = bad.height
+
+    if n_bad > 0:
+        log.warning(
+            "P1-COORD-GUARD: dropping %d facilit%s with coordinates outside "
+            "all US NPDES territory bands (reject-not-fix; see module docstring):",
+            n_bad, "ies" if n_bad != 1 else "y",
+        )
+        detail_rows = bad.select(
+            ["npdes_id", "state_code", "latitude", "longitude"]
+        ).to_dicts()
+        for row in detail_rows[:20]:   # cap at 20 lines of detail
+            log.warning(
+                "  %s  state=%s  lat=%.6f  lon=%.6f",
+                row["npdes_id"], row["state_code"],
+                row["latitude"], row["longitude"],
+            )
+
+    return df.filter(valid_mask)
 
 
 # ── Schema cast ───────────────────────────────────────────────────────────────

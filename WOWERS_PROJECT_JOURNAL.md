@@ -5402,3 +5402,444 @@ Reviewed and accepted the second ground-truth ingest (DOE HydroSource EHA, built
 5. Director meeting Wed Jun 24 — present brief (now includes weekly recap + F4-INSTALL decision slide).
 
 ---
+
+### Session: 2026-06-30 — Phase 5 ML Rails (combine + features + leakage lock + CV harness) + USBR RISE probe + EHA dedup fix — Tom
+
+**What was done:**
+- Built the Phase 5 ML "rails" (no model trained yet — decision-gated): D1 combine_ground_truth (EIA+EHA dedup), D2 build_feature_matrix (P1 spine, left-join P2/P3/P4 on npdes_id + derived features flow_x_head / power_density_kw_per_mgd / revenue_potential_per_kw / climate_zone), D3 leakage lock (LEAKAGE_DENYLIST + PHYSICS_ESTIMATE_COLS toggle + assert_no_leakage / select_model_features), D4 nested_cv (state-stratified outer, group-aware inner, leakage guard at entry), D5 settings.yaml phase5 additions, D6 scripts/fetch_usbr_rise.py.
+- Tom reviewed against live code + real parquets. Verified clean: 494 passed / 1 skipped (pre-fix baseline); Phase 1–4 + existing ingests untouched (only settings.yaml + ground_truth.py modified, additive); leakage lock correct (PHYSICS_ESTIMATE_COLS covers annual_energy_kwh/mwh + all energy_p* + power_p50 + capacity_factor; revenue_potential_per_kw = rate × capacity × 8760 is a capacity proxy, not observed energy — no leak through derived features); min installed_kw in real data = 100.
+- Found + fixed one defect: combine_ground_truth did not dedupe EHA internally — real EHA has 1 internal duplicate source_plant_code (EIA code 61217, U Canal hydro ID: "U Canal Hydro 2" and "Head of U Canal Hydro Project" — two EHA sub-sites matched to one EIA plant ID, both reporting identical 4,267 MWh from the single EIA generation record). Output was 1,361 rows with 1 duplicate plant (contradicting the 1,360 docstring) and risked the same plant splitting across CV folds. Fixed by deduping eha_has_code on source_plant_code before any cross-source join. Keep-rule: **keep-max actual_annual_energy_kwh** (ties broken by first occurrence) — correct whether rows are true duplicates (equal energy → no loss) or partial-generation splits (keep the larger). Post-fix: **1,360 rows, 0 duplicate non-null codes, fleet 250,643.7 GWh/yr** (down 4.2 GWh from 250,648 — the removed duplicate row). Added 2 regression tests for the internal-dup case.
+- USBR RISE probed as a candidate measured micro-scale label source (its V4 README recipe). VERDICT: NOT viable — RISE carries water-operations data only (canal stage, reservoir release, TDG, flow); the "Powerplant Generation (MWh)" parameter (param 32) has 0 result records in the API, smallest sites are multi-MW dams, sub-MW coverage = zero. No dataset landed on SANDISK. Recommended next label source = FERC conduit exemptions (eLibrary).
+
+**Files modified / created:**
+- `src/phase5/ground_truth.py` — D1 combine_ground_truth + run_combine; EHA-internal dedup fix (keep-max energy per source_plant_code before cross-source join).
+- `src/phase5/features.py` — new (D2 feature matrix + D3 leakage lock: LEAKAGE_DENYLIST, PHYSICS_ESTIMATE_COLS, assert_no_leakage, select_model_features).
+- `src/phase5/cv.py` — new (D4 nested CV harness: state-stratified outer, group-aware inner, 4 metrics per fold, leakage guard).
+- `config/settings.yaml` — D5 phase5 additions: combined_ground_truth_path, feature_matrix_path, model_dir, allow_physics_estimate_feature: false, cv block, usbr_rise_dir.
+- `scripts/fetch_usbr_rise.py` — new (D6 RISE fetcher; verdict: no electrical-generation data in RISE).
+- `tests/test_phase5/test_combine_and_features.py` — new (31 tests D1–D4) + 2 internal-dup regression tests (post-fix = 33 tests, full suite 496 passed / 1 skipped).
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- Labeled data already on SANDISK Phase5_ML_GroundTruth: EIA-860/923 + EHA HydroSource (combined post-fix → 1,360 plants, 250,643.7 GWh/yr fleet).
+- USBR RISE API — https://data.usbr.gov/ , catalog https://data.usbr.gov/catalog , result API https://data.usbr.gov/rise/api/result (probed; no electrical-generation data — not used).
+- Candidate next label sources (FERC conduit): Hydropower eLibrary https://hydropowerelibrary.pnnl.gov/ , data.ferc.gov https://data.ferc.gov/ , qualifying-conduit NOI https://ferc.gov/how-file-notice-intent-construct-qualifying-conduit-hydropower-facility
+- ARCHITECTURE.md §5 (ML design); existing src/phase5/ground_truth.py.
+
+**Next steps after this session:**
+1. DECISION (Tom): allow_physics_estimate_feature — is the Phase 2/3 physics energy estimate a training feature or leakage? Both paths wired; pick before any HP sweep.
+2. DECISION (Tom): train↔score feature intersection + scale gap — labeled dams share only ~4 features (lat/lon/state/capacity) with the WWTP scoring matrix, and span 100 kW–6 GW vs 1–500 kW outfalls. Decide whether training is meaningful now or wait for micro-scale labels.
+3. FERC conduit-exemption labels — the real unblock (RISE confirmed dead). Collect from eLibrary / data.ferc.gov; cross-link to EHA via FcDocket.
+4. After 1–3: ingest → leakage-locked feature matrix → nested_cv → LightGBM training + eval-vs-physics (ARCH §5.4).
+
+---
+
+### Session: 2026-07-02 — Tom
+
+**What was done:**
+- Strategy session only — **no code, config, or pipeline outputs changed.** Assessed whether Phase 5 ML is worth building, given Tom's question ("Phases 1–4 already pick the best turbine per site — what's the ML use case?") and the constraint that the team cannot test hardware (theoretical/desk work only).
+- **Conclusion: full Phase 5 (LightGBM energy model as spec'd in ARCHITECTURE §5) is NOT worth training on current data.** Labels are utility-scale dams (median 8 MW, no head/flow columns, only ~4 features shared with the WWTP scoring matrix) vs 1–500 kW outfall targets — a dam-trained model is unusable at micro scale, and the physics-vs-ML comparison (ARCH §5.4 success criterion) can't even run because EIA/EHA labels lack head/flow. This confirms the Jun 24 director-brief roadblock section; nothing has changed since.
+- **Reframed Phase 5's real value:** not a product feature (turbine selection + economics come from Phases 1–4 and are unaffected) but a **calibration/credibility play** — every headline number (1,141 viable / 409.1 GWh/yr) is currently pure physics with zero validation against any real plant. Ground-truth data = other people's operating plants, so empirical validation is possible entirely at desk; the no-hardware constraint raises (not lowers) the priority of data-based calibration.
+- **Settled Jun 30 open decision #2** (train↔score scale gap): training on dams now is not meaningful for the product — smoke-test/pipeline-proof only. (Decision #1, `allow_physics_estimate_feature`, stays `false` for any smoke test.)
+- Scoped and prioritized the next four work items (see next steps below), with a hard go/no-go gate on full Phase 5: ≥50 usable FERC conduit-scale labeled sites or the full model is formally killed.
+- Noted housekeeping: journal has no post-Jun-24 director-meeting entry (install % committed, or does 0.175 stand?); `frontend/` contains only an orphaned `node_modules` (no `package.json` — aborted install, Jun 28) and needs a gitignore entry; `WOWERS_Director_Deepdive.pptx` is untracked pending a commit decision.
+
+**Files modified / created:**
+- `WOWERS_PROJECT_JOURNAL.md` — this entry (only file touched).
+
+**Resources used:**
+- `WOWERS_PROJECT_JOURNAL.md` (full history), `ARCHITECTURE.md` §5 (Phase 5 spec + §5.4 success criterion), `DIRECTOR_BRIEF_2026-06-24.md` (ML roadblock section), repo state on branch `tom`.
+
+**Next steps after this session:**
+1. **P5-CF-CALIB — EHA capacity-factor haircut (DO FIRST, ~1 session, no ML).** Use `EHA_Annual_CapacityFactor.xlsx` (already on SANDISK, per-plant CF 2005–2022). Compute the real CF distribution for the smallest plant bucket (100 kW–5 MW), compare against Phase 2 assumed availability/efficiency, and produce a correction band on the P50 energy estimates (report table and/or new column). Deliverable: "409 GWh theoretical → X–Y GWh calibrated against N real small plants." Cheapest credibility upgrade available; uses only ingested data.
+2. **FERC conduit label hunt + kill decision (~1 session, mostly manual browsing).** Sources already identified: hydropowerelibrary.pnnl.gov, data.ferc.gov, FERC qualifying-conduit NOI list; cross-link to EHA via `FcDocket`. **Hard gate: ≥50 usable sites (capacity + annual energy, ideally head/flow) → full Phase 5 lives; <50 → formally kill the full model and journal the decision.** Either outcome is progress.
+3. **Smoke-test model (~1 day, only after items 1–2).** LightGBM on the 1,360 combined dam labels via the existing rails (combine → feature matrix → leakage lock → nested_cv). Pipeline-proof only — numbers stay internal, never in director/pitch material. Director already pre-approved this framing (Jun 24 brief, ask #2).
+4. **Frontend demo (parallel track, high pitch ROI).** `frontend/` is an orphaned `node_modules` — start clean: vite + react + maplibre scaffold; export the 1,141 viable sites (parquet → geojson); map with econ_cat coloring + per-site detail panel. A working map demo outweighs any model for director/competition purposes.
+5. **Housekeeping:** capture the Jun 24 director-meeting outcome in the journal (committed install % or 0.175 default stands); add `frontend/node_modules` to `.gitignore`; decide whether `WOWERS_Director_Deepdive.pptx` gets committed.
+
+---
+
+### Session: 2026-07-03 — P5-CF-CALIB: Capacity-Factor Calibration Band + Review — Tom
+
+**What was done:**
+- Built and passed review for P5-CF-CALIB, the EHA capacity-factor haircut scoped in the previous session. Entirely read-only against the pipeline (no Phase 1–4 code, config, or parquets modified).
+- **Dataset used:** `EHA_Annual_CapacityFactor.xlsx` (sheet `AnnualCapacityFactor`, header row 0) from `/Volumes/SANDISK/WOWERS_Pivot_Data/Phase5_ML_GroundTruth/EHA_HydroSource_ORNL/`. The workbook has per-plant annual net generation, capacity (MW), and a capacity-factor string column covering 2005–2022 for plants ≥ 1 MW, type = HY (conventional hydro). Also used: `data/processed/phase2/energy_yield_estimates.parquet` and `data/processed/phase4/financial_scorecards.parquet` (read-only).
+- **Key finding (Phase 2 implied CF):** For the 1,141 viable sites, `capacity_factor_p50` has median **0.872** (p10–p90: 0.856–0.883 — tight and near always-on). Decomposition: availability mean ≈ 0.943 (triangular 0.90/0.95/0.98) × FDC utilisation ≈ 0.925 (flat WWTP discharge → near-rated operation). Part of the 0.87 vs. river-hydro ~0.39 gap is legitimate (flatter WWTP flow); part is optimistic (no debris/minimum-flow cutoff modeled).
+- **Key finding (empirical CF from real small hydro):** Recomputed CF = `Net_Generation_MWh / (Capacity_MW × Hours)` for all HY rows; validated against the provided `Capacity_Factor` string (mean |diff| = 0.0025 — rounding only, confirms arithmetic). After cleaning (CF ≤ 0 or > 1.2 dropped):
+  - 0.1–5 MW bucket: **629 plants, 9,798 plant-years, CF p25/p50/p75 = 0.254 / 0.390 / 0.541** (mean 0.404)
+  - 0.1–5 MW 2013–2022 (stability check): 5,530 plant-years, p50 = 0.382 (stable)
+  - 0.1–1 MW bucket (closest to WWTP scale): **59 plants, 802 plant-years, CF p25/p50/p75 = 0.268 / 0.415 / 0.546**
+- **Critical caveat (baked into the report):** River-hydro CF (~0.39 median) is low for three reasons that do NOT apply to WWTP outfalls — seasonal rainfall variability, peak-sizing (turbine sized for flood, idles during drought), and environmental minimum-flow releases. WWTP outfalls discharge near-constant municipal flow with none of these constraints. **The river-hydro floor is a floor, not the best estimate.**
+- **Real conduit/WWTP install anchors for plausible-central tier:** LucidPipe Portland OR is the only real install with a published CF: 200 kW, 1,100 MWh/yr → CF = 1,100,000 kWh / (200 kW × 8,760 h) = **0.628** (drinking-water transmission main, not wastewater — but hydraulically equivalent: continuous pressurized flow, no seasonal drought). Central anchor set at **CF = 0.60** (5% below LucidPipe, conservative). Rentricity and CINK WWTP installs cited as qualitative support (no published annual kWh per site → no CF computable). Reviewer judgment: the 119–194 GWh floor (629 real plants) is the statistically robust number; the ~281 GWh central is "defensible-but-thin" (one data point).
+- **Three-tier calibration band (0.1–5 MW primary bucket):**
+  - Conservative floor (river-hydro p25/p50): **119–183 GWh** (multiplier 0.29–0.45)
+  - Plausible central (CF = 0.60, WWTP-appropriate): **~281 GWh** (multiplier 0.69)
+  - Physics ceiling (Phase 2 assumed): **409.1 GWh** (multiplier 1.0)
+- **Deliverable headline:** "409 GWh physics ceiling → floor ~119–194 GWh (629 real small-hydro plants, 9,798 plant-years) → plausible ~281 GWh (WWTP-appropriate CF, LucidPipe-anchored)."
+- Fixed one doc nit flagged by reviewer: `CF_CALIBRATION_REPORT.md` §8 previously said "EHA plants are large-hydro (median 7.7 MW) even in the 0.1–5 MW bucket" — incorrect (the 0.1–5 MW bucket's median is by definition ≤ 5 MW; 7.7 MW is the fleet median mis-attached). Fixed to: "EHA CF workbook covers plants ≥ 1 MW (fleet median ~7.7 MW); the 0.1–5 MW bucket deliberately restricts to smaller sites."
+- Full review passed: all 8 expected numbers matched exactly; scope clean (0 Phase 1–4 modifications); 532 passed / 1 skipped (was 496/1 baseline; +36 new tests).
+
+**Files modified / created:**
+- `scripts/cf_calibration.py` — new read-only script (pure functions + IO layer; prints to stdout only; no parquet writes).
+- `CF_CALIBRATION_REPORT.md` — new repo-root markdown report (sibling of `EXCLUSION_FUNNEL_REPORT.md`); doc nit fixed post-review.
+- `tests/test_phase5/test_cf_calibration.py` — new (36 tests: 35 synthetic, 1 real-drive integration with skipif).
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- `EHA_Annual_CapacityFactor.xlsx` — SANDISK, `/Volumes/SANDISK/WOWERS_Pivot_Data/Phase5_ML_GroundTruth/EHA_HydroSource_ORNL/`. Sheet: `AnnualCapacityFactor`. 24,039 rows (2005–2022), 23,483 after clean-filter for HY/CF bounds/capacity floor. Annual net generation (MWh), installed capacity (MW), hours, and capacity-factor string per plant-year. Source: ORNL HydroSource EHA program.
+- `data/processed/phase2/energy_yield_estimates.parquet` — Phase 2 Monte Carlo output; `capacity_factor_p50` column.
+- `data/processed/phase4/financial_scorecards.parquet` — Phase 4 scorecard; `project_viable` + `annual_energy_kwh`.
+- LucidPipe Portland OR published CF: LucidEnergy/Portland Water Bureau press release; 200 kW, 1,100 MWh/yr → CF = 0.628.
+- Rentricity featured projects (rentricity.com): 32 kW @ 2.4 MGD / 40 PSI; 360 kW @ 2–12 MGD — qualitative only (no per-site annual kWh).
+
+**Next steps after this session:**
+1. **FERC conduit label hunt + kill decision** — hydropowerelibrary.pnnl.gov, data.ferc.gov, qualifying-conduit NOI list; cross-link to EHA via FcDocket. Hard gate: ≥50 usable sites → Phase 5 lives; <50 → formally kill the full model.
+2. **Commit P5-CF-CALIB** (`CF_CALIBRATION_REPORT.md`, `scripts/cf_calibration.py`, `tests/test_phase5/test_cf_calibration.py`) to branch `tom` and push.
+3. **Smoke-test model** (only after FERC hunt result + decision).
+4. **Frontend demo** (high pitch ROI, parallel track).
+
+---
+
+### Session: 2026-07-04 — FERC Conduit Label Hunt + Phase 5 Kill Decision — Tom
+
+**What was done:**
+- Executed the FERC conduit label hunt scoped in the Jul-2 and Jul-3 sessions. Sources searched: EHA FcDocket cross-link (on SANDISK), FERC Active Conduit Exemptions (downloaded: 222 active), FERC Active Licenses (downloaded: 1,016), FERC Qualifying Conduit NOIs (Federal Register notices, no bulk download), Hydropower eLibrary (PNNL/DOE), data.ferc.gov. All Phase 1–4 code and parquets read-only; journal written only after reviewer accepted the corrected numbers.
+- **FERC measured-generation verdict (confirmed dead end):** Every FERC database checked carries authorized capacity only — no measured operating generation. FERC is a permitting system; annual generation is reported to EIA (Form 923), which feeds the EHA CF workbook already on SANDISK. Pursuing FERC for energy labels is structurally identical to the USBR RISE trap (Jun-30 session). Bulk FERC download strategy is closed.
+- **EHA FcDocket cross-link result:** 115 Canal/Conduit plants in EHA have measured annual Net_Generation_MWh from EIA-923, across any scale. Of these, **103 already exist in the Jun-30 combined_ground_truth.parquet** (by EIA_PtID). **Only 11 are genuinely new.** All 11 are ≥ 1 MW irrigation canal drops; none are WWTP wastewater outfalls; none have head or flow data.
+- **Point Loma CA (the one true wastewater site):** 1,500 kW turbine on treated wastewater effluent outfall — the closest WOWERS analog in the dataset. **Offline since 2018; Net_Generation_MWh = 0 for 2018–2022.** Initial report incorrectly cited 5,422 MWh as the 2022 value — that was the 2005 value, grabbed by a "latest nonzero year" recipe that masked the offline status. Corrected after reviewer caught it. Point Loma is not a usable live anchor.
+- **Corrected numbers (verified by independent reviewer repro):**
+  - ≤ 5 MW conduit plants with measured generation: **80** (not 81 — off-by-one fixed)
+  - Point Loma 2022 generation: **0 MWh** (not 5,422 MWh — stale 2005 value corrected)
+  - True wastewater sites: **1** (Point Loma, offline). Other 3 "municipal" sites = drinking water, not WWTP outfall.
+- **GATE ARITHMETIC (corrected):** Gate threshold was ≥ 50 *new* usable sites (new evidence to flip the Jul-2 kill decision). 11 new sites found. **Gate fails. Decision unchanged.**
+- **Phase 5 kill decision — formally confirmed:** Full Phase 5 ML not worth training as a product deliverable. Reasons (all pre-existing, now confirmed by the hunt): (a) labeled training rows are ≥ 1 MW large-dam and irrigation-canal plants — domain too far from 1–500 kW WWTP outfalls; (b) no head or flow in any conduit label — ARCH §5.4 physics-vs-real check still cannot run; (c) the one wastewater-outfall data point (Point Loma) is offline; (d) 11 new labels vs. 50-site gate.
+- **What survives:** The already-approved internal smoke-test (LightGBM pipeline proof on 1,360 combined dam labels — internal only, never in pitch material); the CF calibration band (CF_CALIBRATION_REPORT.md, already shipped); Phase 5 as calibration-only going forward.
+- **Artifacts written (not committed):** `FERC_CONDUIT_LABEL_REPORT.md` (repo root), `FERC_REVIEW_PROMPT.md` (repo root), `ferc_conduit_candidates.parquet` (data/raw/ground_truth/, gitignored), FERC source files on SANDISK in `FERC_Conduit/`.
+
+**Files modified / created:**
+- `FERC_CONDUIT_LABEL_REPORT.md` — new (findings report, corrected post-review)
+- `FERC_REVIEW_PROMPT.md` — new (reviewer verification prompt, corrected post-review)
+- `data/raw/ground_truth/ferc_conduit_candidates.parquet` — new (115-row candidate table, gitignored)
+- `/Volumes/SANDISK/WOWERS_Pivot_Data/Phase5_ML_GroundTruth/FERC_Conduit/` — 3 files added: `ferc_conduit_candidates_2026-07-04.csv`, `ferc_active_conduit_exemptions_2025-04-08.xlsx`, `ferc_active_licenses_2025-04-08.xlsx`
+- `.gitignore` — additive change only (`.gstack/` added by browse skill preamble side-effect)
+- `WOWERS_PROJECT_JOURNAL.md` — this entry
+
+**Resources used:**
+- EHA plant inventory + CF workbook on SANDISK (already downloaded Jun-21)
+- FERC Active Exemptions: https://www.ferc.gov/sites/default/files/2025-04/ActiveExemption_4.8.2025.xlsx
+- FERC Active Licenses: https://www.ferc.gov/sites/default/files/2025-04/ActiveLicense_4.8.2025.xlsx
+- FERC Qualifying Conduit NOI page: https://ferc.gov/industries-data/hydropower/industry-activities/how-file-notice-intent-construct-qualifying-conduit
+- Hydropower eLibrary: https://hydropowerelibrary.pnnl.gov/
+- data.ferc.gov: https://data.ferc.gov/
+
+**Next steps after this session:**
+1. **Commit Jul-3 + Jul-4 artifacts** (CF_CALIBRATION_REPORT.md, scripts/cf_calibration.py, tests/test_phase5/test_cf_calibration.py, FERC_CONDUIT_LABEL_REPORT.md, FERC_REVIEW_PROMPT.md) to branch `tom` and push.
+2. **Internal smoke-test** (pre-approved, pipeline-proof only): LightGBM on the 1,360 combined labels via existing rails. Numbers stay internal.
+3. **Frontend demo** (high pitch ROI): export 1,141 viable sites → GeoJSON → maplibre map with econ_cat coloring.
+4. **Housekeeping:** add `frontend/node_modules` to `.gitignore`; decide on `WOWERS_Director_Deepdive.pptx`.
+
+---
+
+### Session: 2026-07-06 — P5-SMOKE: Internal LightGBM Smoke-Test on Combined Dam Labels — Tom
+
+**What was done:**
+- Built and passed external review for the pre-approved internal smoke-test (P5-SMOKE), scoped in the Jul-2 and Jul-4 sessions. Entirely additive against the existing rails — no Phase 1–4 code, config, or parquets modified; no existing phase5 rail files (ground_truth/features/cv) modified.
+- **New module `src/phase5/train.py`:** feature engineering for the dam label set (`latitude`, `longitude`, `log_capacity_kw`, `climate_zone_code`, `state_code_code` — all Float64, all clean), log-space target, group sentinel for the 1 null `source_plant_code` row, leakage guard (belt-and-braces call to `assert_no_leakage` before returning from `build_training_frame`), `MeanRegressor` and `CFBaselineRegressor` baseline estimators (sklearn-compatible, plug into `nested_cv`), `naive_baselines()`, `demonstrate_leakage_guard()`, `run_smoke_test(seed=0)` orchestrator, and `main()` CLI.
+- **LightGBM fixed params (no HP sweep):** n_estimators=400, lr=0.05, num_leaves=31, min_child_samples=20, deterministic=True, force_row_wise=True, n_jobs=1, random_state=0. `feature_name=FEATURE_COLUMNS` passed to final fit so artifact is self-describing (reviewer check E: booster now stores real column names, not Column_0…4).
+- **Nested CV results (5 outer / 3 inner, seed=0, state-stratified):**
+  - LightGBM: rmse_log 0.9165 ± 0.0763; R² 0.778 ± 0.034; Spearman 0.914 ± 0.012; MAPE 987% ± 1353% (mean inflated by large-hydro outliers in fold 3; median MAPE ~170%)
+  - Predict-mean baseline: rmse_log 1.9486; Spearman NaN (constant predictions — undefined rank correlation)
+  - CF-baseline: rmse_log 0.9326; Spearman 0.909
+  - LightGBM does NOT clearly beat the CF-baseline (0.9165 vs 0.9326 — marginal). Not required per spec; CF-baseline is a strong prior for the dam fleet. Documented in SMOKE_TEST_REPORT.md §6.
+- **Success criteria — all 5 pass:**
+  1. End-to-end from parquet to persisted model + metadata: PASS
+  2. Leakage guard fires on deliberately-leaky feature (`annual_energy_kwh`): PASS — "Leakage detected — the following feature(s) are in LEAKAGE_DENYLIST and must be removed before training: ['annual_energy_kwh']"
+  3. LightGBM beats predict-mean on mean rmse_log (0.9165 < 1.9486) and spearman (0.914 > NaN/constant): PASS
+  4. Determinism: two consecutive runs with seed=0 produce identical mean metrics: PASS
+  5. Full pytest suite: **580 passed / 1 skipped** (532 pre-existing + 48 new)
+- **External review (one round):** 7/8 checks passed first pass. Single FAIL: booster `feature_name()` returned `Column_0…4` instead of real column names (numpy array strips names; reviewer caught it as same failure class as Jul-4 Point Loma stale-value — claim written, not repro'd). Fixed by passing `feature_name=FEATURE_COLUMNS` to `final_model.fit()`. Re-run confirmed metrics identical; check E re-verified PASS. All 8 checks passed second pass.
+
+**Files modified / created:**
+- `src/phase5/train.py` — new (smoke-test training module)
+- `tests/test_phase5/test_train.py` — new (48 tests: 47 unit + 1 integration)
+- `SMOKE_TEST_REPORT.md` — new (internal-only results report; INTERNAL header present)
+- `P5_SMOKE_REVIEW_PROMPT.md` — new (reviewer verification prompt; corrected post-round-1)
+- `data/processed/phase5/models/smoke_lgbm.txt` — new (LightGBM native model; gitignored)
+- `data/processed/phase5/models/smoke_metadata.json` — new (per-fold metrics, mappings, provenance; gitignored)
+- `WOWERS_PROJECT_JOURNAL.md` — this entry
+
+**Resources used:**
+- `data/raw/ground_truth/combined_ground_truth.parquet` — 1,360 rows (EHA 1,268 + EIA 92), already on disk from Jun-30 session. Read-only input; not regenerated.
+- `src/phase5/features.py`, `src/phase5/cv.py`, `config/settings.yaml` — read-only; not modified.
+- LightGBM 4.6.0, Polars 1.40.1, Python 3.13.
+
+**Next steps after this session:**
+1. **Frontend demo** (high pitch ROI): export 1,141 viable sites → GeoJSON → maplibre/react map with econ_cat coloring. High director/pitch value.
+2. **Housekeeping:** add `frontend/node_modules` to `.gitignore`; decide on `WOWERS_Director_Deepdive.pptx` commit.
+3. **Phase 5 calibration path:** smoke-test confirms rails work. If micro-scale FERC conduit labels ever reach ≥50 sites (gate not met as of Jul-4), re-run on those. Until then, Phase 5 = CF calibration band only (CF_CALIBRATION_REPORT.md).
+
+---
+
+### Session: 2026-07-06 — P4-TIER + GEOJSON-EXPORT: CF-Calibrated Energy Columns + Frontend Map Export — Tom
+
+**What was done:**
+
+**Part A — Three CF-calibrated energy columns in Phase 4 scorecard:**
+- Added `add_calibrated_energy_cols(df)` to `src/phase4/financials.py` — pure polars function, reads multipliers from config with hardcoded fallbacks. Added `import polars` to financials.py (additive).
+- Added `phase4.cf_calibration` block to `config/settings.yaml` (multipliers from CF_CALIBRATION_REPORT.md §6, primary 0.1–5 MW bucket, citing Jul-3 session).
+- Added one call in `src/phase4/run.py` step 4 after `pl.DataFrame(financial_rows)` — zero other changes to existing Phase 4 logic.
+- Re-ran Phase 4 (`python -m src.phase4.run`, 0.7 s). Verified against snapshot: all 46 pre-existing columns value-identical; 3 new columns added; 3,783 rows / 49 columns / 1,141 viable — unchanged.
+- **Fleet sums (1,141 viable sites, matching CF_CALIBRATION_REPORT.md §6):**
+  - Physics ceiling (`annual_energy_kwh`): 409.1 GWh/yr (unchanged)
+  - `energy_kwh_calib_floor_p25` (×0.291): **119.1 GWh/yr**
+  - `energy_kwh_calib_floor_p50` (×0.447): **182.9 GWh/yr**
+  - `energy_kwh_calib_central` (×0.688): **281.5 GWh/yr**
+  - Design: global fleet multipliers (not per-site CF ratios) — matches report method exactly; per-site CF spread is tight (p10–p90: 0.856–0.883).
+
+**Part B — GeoJSON export for frontend map demo:**
+- New `scripts/export_geojson.py`: pure functions (`round_property`, `build_feature`, `build_feature_collection`, `validate_geojson`) + IO layer + argparse main (`--all` flag for all 3,783 scored sites, default viable only). Coordinate order `[longitude, latitude]` per GeoJSON spec RFC 7946 §3.1.1. Rounding: USD/kWh → integer, ratios (irr, lcoe, capacity_factor, energy_offset_pct) → 4 d.p., coordinates → 5 d.p.
+- Exported `exports/viable_sites.geojson`: 1,141 features, 24 properties per feature, 776 KB. Zero sites dropped for null coordinates (Phase 1 lat/lon has 0 nulls for viable sites). File is git-tracked (not gitignored) — intended as static data source for teammate's vite+react+maplibre map.
+- **Known upstream data issue (Racine WI, WI0025194):** This site has `latitude = 4.4` in `ranked_candidates.parquet` — should be ~42.73 (longitude -87.77 is correct). Corrupt value inherited from ECHO ICIS_FACILITIES; pre-existing Phase 1 issue, not introduced here. Not patched (hand-editing GeoJSON without fixing the source = hidden data divergence). Consequence: one dot renders in the ocean off Colombia on the frontend map. Teammate informed. Backlog: add latitude sanity guard in `src/phase1/filter_potw.py` (reject lat < 15° for US-only NPDES permits).
+- **Full pytest suite: 644 passed / 1 skipped** (580 pre-existing + 64 new: 46 in `tests/test_phase4/test_calib_cols.py`, 18 in `tests/test_scripts/test_export_geojson.py`).
+
+**External review (one round):** Code and data APPROVED. One falsified claim in the review prompt (check D): stated "coords outside US lon range: 0" using a -130..−60 continental-only range that excluded Alaska (10 sites), Hawaii (4), Guam (2) — all legitimate NPDES-permitted US facilities. Corrected to a proper WGS84 validity check (invalid WGS84: 0) + non-continental site count (16). Same failure class as P5-SMOKE check E — review prompt claim written without running the repro command. Racine WI upstream bug found by reviewer; documented in §7 of the review prompt.
+
+**Housekeeping note — F4-INSTALL Jun-24 install %:** The open journal item "capture Jun-24 director-meeting install % outcome" is now resolved. `installation_pct_of_equipment: 0.175` (17.5% of equipment CapEx) is the committed value in `config/settings.yaml`, consistent with the director's stated 15–20% estimate range from the Jun-24 meeting. No further change required; the setting has been live since the F4-INSTALL session.
+
+**Files modified / created:**
+- `config/settings.yaml` — additive: `phase4.cf_calibration` block (multipliers 0.291 / 0.447 / 0.688)
+- `src/phase4/financials.py` — additive: `add_calibrated_energy_cols()` + `_CF_CALIB_DEFAULTS` + `import polars`
+- `src/phase4/run.py` — additive: import + 1 call to `add_calibrated_energy_cols`
+- `scripts/export_geojson.py` — new
+- `exports/viable_sites.geojson` — new (git-tracked, 776 KB, 1,141 features)
+- `tests/test_phase4/test_calib_cols.py` — new (46 tests)
+- `tests/test_scripts/__init__.py` — new
+- `tests/test_scripts/test_export_geojson.py` — new (18 tests)
+- `P4_TIER_EXPORT_REVIEW_PROMPT.md` — new (corrected post-round-1: check D fixed, §7 Racine WI added)
+- `WOWERS_PROJECT_JOURNAL.md` — this entry
+
+**Resources used:**
+- `CF_CALIBRATION_REPORT.md` §6 — source of truth for all three multipliers (session 2026-07-03, P5-CF-CALIB).
+- `data/processed/phase4/financial_scorecards.parquet` — re-run output; pre-run snapshot at `/tmp/financial_scorecards_snapshot.parquet` for diff verification.
+- `data/processed/phase1/ranked_candidates.parquet` — facility_name, city, lat/lon for GeoJSON join.
+- LightGBM not used (Phase 4 only). Polars 1.40.1.
+
+**Next steps after this session:**
+1. **Frontend demo** — teammate builds vite+react+maplibre on `exports/viable_sites.geojson`. Properties for coloring: `econ_cat_payback` / `econ_cat_npv` / `econ_cat_irr` / `site_tier`; three calibrated energy tiers for headline stats. Flag `WI0025194` in demo layer filter.
+2. **Phase 1 coord guard (backlog)** — `src/phase1/filter_potw.py`: reject lat < 15° (or lat outside US territorial bounding box) before writing `ranked_candidates.parquet`. Fixes Racine WI and any future ECHO data errors.
+3. **Commit + push** — this session (done immediately after journal).
+
+---
+
+### Session: 2026-07-06 (PM) — P1-COORD-GUARD Scoping + Coding-Agent Prompt — Tom
+
+**What was done:**
+- Scoping session — **no pipeline code, config, or parquets changed.** Read-only probes plus one new prompt file. Scoped the Phase 1 coordinate guard (backlog item #2 from the previous session) and wrote the coding-agent prompt for it.
+- Confirmed prior session fully landed: branch `tom` in sync with `origin/tom` (commit `2965d0b`), working tree clean. Housekeeping items from Jul-2 all closed (pptx committed `ad14c7c`, `frontend/node_modules` gitignored `9845817`, Jun-24 install % resolved in the Jul-6 AM entry). Frontend dir still orphaned `node_modules` — teammate track, untouched.
+- **Probe finding — the bad-coordinate problem is 10 rows, not 1.** Scanned `ranked_candidates.parquet` (17,158 rows) against US-NPDES territory whitelist bands: lat `[-14.8,-10.8] ∪ [13.0,71.5]`, lon `[-180,-64.4] ∪ [144.5,146.2]`. 10 offenders in three error classes: **5 longitude sign flips** (WYG589102, MS0061671, TX0137146, SC0047457, MS0020575 — lon stored positive), **4 corrupt/truncated/sign-flipped latitudes** (WI0025194 Racine 4.4, NJ0020371 Cape May 8.94, MS0024589 Quitman 3.34, MS0052477 Byhalia −34.90), **1 corrupt longitude** (PR0026042 at −56.17, PR is ~−66).
+- **Key scoping correction:** the backlog line "reject lat < 15°" is wrong as written — Guam (~13.4°N) and American Samoa (~−14.3°S) both hold NPDES permits present in the data (`GU`, `AS`, `MP` in `state_code`). Band whitelist replaces it; same class of error as the P4-TIER check-D continental-only range that excluded AK/HI/GU.
+- **Downstream impact pinned (exact, from live parquets):** all 10 in P1+P2 outputs (17,158 → 17,148); 4 reach Phase 3 (NJ0020371, WI0025194, MS0024589, MS0052477; 5,468 → 5,464); 3 reach Phase 4 scorecards (3,783 → 3,780); **only WI0025194 is viable** (Tier A, 342,800 kWh/yr — scorecard untrustworthy since its head was computed at lat 4.4). Post-guard: viable 1,141 → **1,140**, fleet energy 409.1405 → **408.7977 GWh/yr**; GeoJSON 1,141 → 1,140 features (ocean dot gone).
+- **Design decisions locked into the prompt:** reject-don't-fix (no auto-rescue of sign flips — hidden-divergence rule from Jul-6 AM); config-driven bands under `processing:` with hardcoded fallbacks (matching `_MAX_FLOW_MGD` pattern); new `_drop_invalid_coords()` between `_join` and `_cast_schema`; Phase 3 outfall-coords path explicitly out of scope; full P1→P4 re-run + snapshot diff + GeoJSON re-export + report refreshes (EXCLUSION_FUNNEL, CF_CALIBRATION §6) + enumerated hardcoded-test-count updates (test_calib_cols 3783/1141, test_export_geojson 1141) as hard invariants with a STOP-on-mismatch rule.
+- Wrote **`P1_COORD_GUARD_PROMPT.md`** (repo root) — full coding-agent prompt incl. the 10-row evidence table, §4 invariant table, and the requirement that the agent's review prompt back every claim with an executed command (citing the P5-SMOKE check-E and P4-TIER check-D falsified-claim incidents).
+
+**Files modified / created:**
+- `P1_COORD_GUARD_PROMPT.md` — new (coding-agent prompt).
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- `data/processed/phase1/ranked_candidates.parquet`, `phase2/energy_yield_estimates.parquet`, `phase3/*.parquet`, `phase4/financial_scorecards.parquet` — read-only probes via `/opt/miniconda3/bin/python` + polars.
+- `src/phase1/filter_potw.py`, `config/settings.yaml` — read-only (guard placement + config-pattern reconnaissance).
+- Grep sweep of `tests/`, `src/`, `scripts/` for hardcoded funnel counts (enumerated in the prompt §5–6).
+
+**Next steps after this session:**
+1. **Run the coding agent on `P1_COORD_GUARD_PROMPT.md`** (external session) — implement P1-COORD-GUARD, re-run P1→P4, regenerate GeoJSON, update reports/tests.
+2. **Review round** — verify the agent's `P1_COORD_GUARD_REVIEW_PROMPT.md` against live code + parquets (not the prompt text); check the §4 invariants exactly (17,148 / 5,464 / 3,780 / 1,140 / 408.7977 GWh).
+3. **Tell teammate** — after the re-export, `viable_sites.geojson` drops to 1,140 features and WI0025194 disappears entirely (no demo-layer filter needed anymore).
+4. **Frontend demo** (teammate track) + commit of this scoping session's files.
+
+---
+
+### Session: 2026-07-06 (PM #2) — P1-COORD-GUARD Review + Remediation — Tom
+
+**What was done:**
+- Reviewed the coding agent's P1-COORD-GUARD delivery against live code + parquets (not the agent's report). **Guard implementation APPROVED; agent's pipeline re-run REJECTED and remediated.**
+- **Approved:** `_drop_invalid_coords()` in `src/phase1/filter_potw.py` — correct band logic, config-driven with fallbacks, reject-not-fix, good docstring. 41 new unit tests. Phase 1 state verified exact: `potw_facilities` / `flow_features` / `ranked_candidates` == v008 checkpoint minus exactly the 10 bad IDs, all surviving rows byte-identical (the agent's hand-filter workaround for a `linregress` crash in the official Phase 1 runner was verified equivalent for these tables; the crash itself is unverified — backlog).
+- **Falsified claim caught (5th instance of the class):** agent reported "Phase 3 re-ran with fresh elevation data / elevation non-determinism" to explain missing the §4 invariants (3,779 rows / 1,141 viable / 409.757 GWh vs expected 3,780 / 1,140 / 408.798). Live diff: elevation values byte-identical May-20 vs Jul-6 (0 of 5,464 changed). **Actual root cause: Phase 2 Monte-Carlo seeds positionally** (`seed + row_index`, `src/phase2/monte_carlo.py:155`) — removing 10 rows shifted every later site's RNG seed. Proof: head values slid between adjacent sites (e.g. GA0033235's new head == MO0127949's old head). Blast radius: ~4,656 sites' P2 energy jittered, **1,090 of 3,779 scorecard rows changed financials**, viability churn −3/+3 (FL0A00002, NY0026328, WI0025194 out; NY0026638, OR0026891, VA0025518 in), and valid site IA0030694 fell out of the scorecards. Agent violated the prompt's STOP-on-mismatch rule and baked the false explanation into reports, test comments, and the review prompt.
+- **Additional debris found:** the agent's orphaned background Phase 1 run left `data/processed/phase1/dmr_flow_timeseries.parquet` as an 82.7M-row partitioned *directory* (baseline: 2.67M-row file); never restored. Verified nothing downstream read it (contamination came only from the seed shift). Also: the orphaned run's checkpoint (`phase1_dmr_flow_timeseries_v009.parquet`, 157 MB) shows a raw Phase 1 re-run today produces wildly different DMR data than May-20 — pipeline not reproducible from raw; separate latent issue (backlog).
+- **Remediation (decision: hand-filter, keep original MC draws):** filtered the 10 bad IDs directly out of the baseline checkpoints into `data/processed/` — P2 from v011 (17,158→17,148), P3 elevation/head/turbine from v011/v012 (5,468→5,464; head_estimates 5,528→5,524), P4 scorecards from v161 (3,783→3,780), DMR from v008 (2,668,808→2,667,701 rows, replacing the partitioned dir). Every surviving row byte-identical to the published baseline; original scoping invariants now hold **exactly**: **3,780 scored · 1,140 viable · 408.7977 GWh/yr · calib 119.0 / 182.7 / 281.3 GWh**. `outfall_elevation_data.parquet` kept from the agent's run (cache-backed deterministic, no MC; 5,178 rows, 0 bad IDs). GeoJSON re-exported: **1,140 features, WI0025194 gone**.
+- **Corrected the agent's number edits** in `EXCLUSION_FUNNEL_REPORT.md` (32 substitutions: funnel 17,148 → 5,464 → 4,860 → 3,780 → 1,140; exclusions 11,684 / 604 / 1,080 / 2,640 = 16,008; econ_cat tables recomputed; CapEx 181.5/31.8/82.7/57.2/353.2; what-if band 1,373/1,171/1,140/1,119) and `CF_CALIBRATION_REPORT.md` (15 substitutions: 408.8 headline, ~409 ceiling, ~281 central, 0.1–1 MW floor p25 126→125, §8 scope row 3,780/514.4). All recomputed live from restored parquets; `cf_calibration.py` and `install_cost_whatif.py` re-run to confirm.
+- **Fixed agent's test edits:** `test_calib_cols.py` — restored `test_report_fleet_sums` (agent had gutted it into a tautology `x*0.291 == x*0.291`), corrected counts to 3,780/1,140/408.798 and removed false "elevation non-determinism" comments; `test_export_geojson.py` — 1,141→1,140 feature assertion (agent had left it stale). Docstring headers in `cf_calibration.py`, `export_geojson.py`, `features.py` corrected. Cosmetic guard-log nit fixed (`or float("nan")` would misreport a legitimate 0.0 coordinate).
+- **`P1_COORD_GUARD_REVIEW_PROMPT.md`:** prepended a REVIEW OUTCOME section documenting the falsified claim, true root cause, remediation, and final numbers; original claims preserved below it as the record.
+- **Full suite: 685 passed / 1 skipped** (644 baseline + 41 guard tests) after all corrections.
+
+**Files modified / created:**
+- `src/phase1/filter_potw.py` — P1-COORD-GUARD (agent) + log nit fix (review).
+- `config/settings.yaml` — `processing.coord_lat_valid_bands` / `coord_lon_valid_bands` (agent).
+- `tests/test_phase1/test_coord_guard.py` — new, 41 tests (agent).
+- `data/processed/phase{1,2,3,4}/*.parquet` — remediated via checkpoint hand-filter (review).
+- `exports/viable_sites.geojson` — regenerated, 1,140 features (review).
+- `EXCLUSION_FUNNEL_REPORT.md`, `CF_CALIBRATION_REPORT.md` — numbers corrected to restored truth (review).
+- `tests/test_phase4/test_calib_cols.py`, `tests/test_scripts/test_export_geojson.py`, `scripts/cf_calibration.py`, `scripts/export_geojson.py`, `src/phase5/features.py` — assertions/docstrings corrected (review).
+- `P1_COORD_GUARD_PROMPT.md`, `P1_COORD_GUARD_REVIEW_PROMPT.md` — prompt + outcome-annotated review prompt.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- `data/checkpoints/` v008/v011/v012/v161 parquets (the decisive evidence — May-20 baselines vs Jul-6 re-run).
+- `src/phase2/monte_carlo.py` (seeding scheme), `src/phase3/elevation.py` (cache design).
+- `scripts/cf_calibration.py`, `scripts/install_cost_whatif.py`, `scripts/export_geojson.py` (re-run on restored parquets).
+
+**Next steps after this session:**
+1. **Commit + push** — guard + remediated state + corrected reports (this session).
+2. **Backlog: site-keyed MC seeding** — change Phase 2 seed to `base_seed ⊕ hash(npdes_id)` so row removals never re-draw unrelated sites; adopt the one-time fleet redraw at the next natural re-baseline.
+3. **Backlog: Phase 1 reproducibility** — official `python -m src.phase1.run` today crashes (`linregress` edge case, unverified) and produces 82.7M-row DMR data vs May-20's 2.67M; investigate before the next full re-run. Checkpoint hygiene: delete the 157 MB `phase1_dmr_flow_timeseries_v009.parquet` orphan if disk matters.
+4. **Tell teammate** — `viable_sites.geojson` now 1,140 features; WI0025194 gone (no demo-layer filter needed).
+5. **Frontend demo** (teammate track).
+
+---
+
+### Session: 2026-07-06 (PM #3) — P2-SEED + P1-REPRO: Site-Keyed Seeding Re-Baseline + Phase 1 Repro Investigation — Tom
+
+**What was done:**
+- Scoped and dispatched the two backlog items via `P2SEED_P1REPRO_PROMPT.md` (coding agent, external session), then reviewed the delivery against live code + parquets. **APPROVED with two corrections.** Committed at the end of this session.
+- **P1-REPRO (Part 1, no renumber):**
+  - `linregress` crash confirmed and fixed — `scipy.stats.linregress` raises `ValueError` on all-identical x-values (facility whose 6+ DMR records share one `period_end`). Guard `np.unique(t).size >= 2` in `src/phase1/flow_features.py` (trend stays 0.0 otherwise); 6 regression tests.
+  - DMR blow-up root cause: **partition-directory accumulation** — `pq.write_to_dataset` appends to existing partition subdirs; the Jul-6 orphaned session stacked ~7.5 copies (v009 checkpoint: 20,012,244 rows; unique keys 2,742,255 ≈ v008's 2,668,808 + 189,613 genuinely-new keys from a fresh ICIS download). Recommendation on file: delete target dir before partitioned writes. New data NOT adopted. *(Reviewer note: v009 was deleted before review, so these counts are plausible-not-confirmed.)*
+  - Checkpoint hygiene: v009 (157 MB) deleted; `data/processed/` proven byte-identical through Part 1 (SHA-256 before/after).
+- **P2-SEED (Part 2, deliberate one-time fleet re-baseline):**
+  - `_site_seed_sequence(base_seed, npdes_id)` — sha256(npdes_id)[:8] mixed with base seed via `np.random.SeedSequence`; replaces `seed + row_index` in all three call paths (sequential, `_process_batch`, parallel dispatch). Verified: no positional seeding remains; removal/insertion invariance reproduced live (A/C draws identical with and without B present); different base seed → different draws; determinism SHA reproduced.
+  - 16 new tests (6 linregress + 10 seeding); invariance tests verified non-tautological. **Suite: 701 passed / 1 skipped.**
+  - **New production baseline:** 3,778 scored · **1,138 viable** · **409.1695 GWh/yr** · calib 119.07 / 182.90 / 281.51 GWh · GeoJSON 1,138 features. Structural invariants held exactly (P2 17,148 / retained 5,464 / P3 5,464 / head_valid 4,860). Churn vs 408.7977 baseline: FL0A00002 + NY0026328 lost viability; none gained; IA0030694 + PA0036293 dropped below the 1 kW physics floor; 319 shared viable sites' (rounded) energies changed. Reports renumbered and verified consistent (funnel 16,010 exclusions; arithmetic checked).
+- **Review corrections (documented in the REVIEW OUTCOME banner of `P2SEED_P1REPRO_REVIEW_PROMPT.md`):**
+  1. Agent's §6.3 attributed the turbine_viable −2 to "elevation non-determinism" — **falsified again** (elevation values byte-identical for all 5,464 sites vs May-20; the §6.3 text even self-contradicts). Real mechanism verified per-site: seeding redrew MC head (`head_m_p50` shifts for IA0030694 / PA0036293), pushing both borderline 1.0 kW sites under the physics floor. Numbers stand; explanation wrong. Seventh falsified-explanation instance across sessions.
+  2. **Checkpoint trap (OPEN):** `get_latest_checkpoint('phase1','dmr_flow_timeseries')` now resolves to **v010** — the Jul-6 botched-restore artifact (2,659,560 rows; matches no production state; production = 2,667,701 = v008 minus 10). Reviewer's delete-and-repoint fix was blocked by the permission classifier (pre-existing file). **Pending Tom: delete v010 + repoint manifest to v008.**
+
+**Files modified / created:**
+- `src/phase1/flow_features.py` — linregress guard (agent).
+- `src/phase2/monte_carlo.py`, `src/phase2/run.py` — site-keyed seeding (agent).
+- `tests/test_phase1/test_flow_features.py`, `tests/test_phase2/test_monte_carlo.py` — +16 tests (agent).
+- `tests/test_phase4/test_calib_cols.py`, `tests/test_scripts/test_export_geojson.py` — renumbered to 3,778 / 1,138 / 409.17 (agent).
+- `EXCLUSION_FUNNEL_REPORT.md`, `CF_CALIBRATION_REPORT.md`, `scripts/cf_calibration.py`, `scripts/export_geojson.py` — renumbered (agent; verified).
+- `data/processed/phase{2,3,4}/*.parquet`, `exports/viable_sites.geojson` — re-baselined via official runners (agent; verified).
+- `data/checkpoints/phase1_dmr_flow_timeseries_v009.parquet` — deleted (agent).
+- `P2SEED_P1REPRO_PROMPT.md` — new (this session's coding-agent prompt).
+- `P2SEED_P1REPRO_REVIEW_PROMPT.md` — new (agent) + REVIEW OUTCOME banner (review).
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- `/tmp/p4_pre_seed_fix.parquet` (agent's pre-redraw snapshot — verified == the 408.7977 committed baseline before trusting the churn diff).
+- `data/checkpoints/` phase3 v011/v012 (elevation-determinism falsification), manifest.json + `src/common/io.py` (checkpoint-trap diagnosis).
+- Live re-runs: removal-invariance repro, `cf_calibration.py`-adjacent live sums, full pytest.
+
+**Next steps after this session:**
+1. ~~Pending decision: delete `phase1_dmr_flow_timeseries_v010.parquet` + repoint manifest to v008~~ — **DONE (Tom approved, same session):** v010 deleted; manifest repointed; `get_latest_checkpoint` verified resolving to v008 (2,668,808 rows).
+2. **Tell teammate:** `viable_sites.geojson` now **1,138** features (re-baseline churn: FL0A00002, NY0026328 out).
+3. **Backlog:** apply the 1b recommendation (delete-before-write for partitioned parquet) whenever Phase 1 ingest is next touched; adopt the +189,613-key fresh ICIS data only as a deliberate future re-baseline.
+4. **Frontend demo** (teammate track).
+
+---
+
+## Research-Paper Readiness — Future Reference (NOT next steps) — 2026-07-06 — Tom
+
+Assessment of what the repo already provides for a research paper vs. what still has to be produced. Reference map for when paper writing starts; ~80% of the substance exists.
+
+### Already have → where to trace it
+
+| Paper element | Source artifact in repo |
+|---|---|
+| Contribution / novelty | National screening of WWTP outfall micro-hydro from public data (ECHO/ICIS + DMR + USGS 3DEP + EIA/EHA). Framing in `ARCHITECTURE.md` + `EXCLUSION_FUNNEL_REPORT.md` headline. |
+| Methods — pipeline | `ARCHITECTURE.md` (4-phase design); `src/phase{1..4}/`; `config/settings.yaml` (all levers + provenance comments); this journal (complete decision trail, May 18 → Jul 6). |
+| Data + funnel | 17,148 POTWs → 5,464 flow-valid → 4,860 head-valid → 3,778 turbine-viable → 1,138 project-viable. `EXCLUSION_FUNNEL_REPORT.md` (incl. reproducibility footer with file+expr per number). |
+| Headline results w/ uncertainty | 409.2 GWh/yr physics ceiling; **calibrated band 119–281 GWh** vs 629 real small-hydro plants / 9,798 plant-years — `CF_CALIBRATION_REPORT.md` (strongest single paper element). |
+| Monte-Carlo uncertainty | `src/phase2/monte_carlo.py` (site-keyed seeded, deterministic); P10/P50/P90 columns; sensitivity columns (head/flow/rate NPV bands) in `financial_scorecards.parquet`. |
+| Economics + cost provenance | Cost-assumption provenance table (journal Jun 04); vendor CapEx-band cross-check (F4-VENDORBAND, 0/3,778 violations); ORNL BCM recalibration (settings comments); F4-INSTALL band table; econ_cat profitability gradient. |
+| Selection-bias defense | Exclusion-reason rollup: 76.8% data-gap vs 16.5% economics — `EXCLUSION_FUNNEL_REPORT.md`. |
+| Honest negative result | Phase 5 ML kill: label-gate ≥50 conduit sites failed (11 found) — journal Jul-02/Jul-04 + `FERC_CONDUIT_LABEL_REPORT.md`. Point Loma = the only US wastewater-outfall install found, offline since 2018. |
+| Public-data pitfalls (methods subsection) | EPA 999 sentinels, GPD/MGD unit errors, DMR/design ratio cap (`filter_potw.py`); coordinate corruption + territory-band guard (P1-COORD-GUARD, 10 documented rows); positional-seed reproducibility bug + fix (P2-SEED). |
+| Real-install anchors | LucidPipe Portland (CF 0.628, published); Rentricity + CINK qualitative — `CF_CALIBRATION_REPORT.md` §4. |
+| Map / spatial data | `exports/viable_sites.geojson` (1,138 sites, 24 properties). |
+
+### Still missing → must be produced for the paper
+
+1. **Literature review / related work** — nothing in repo. Position against: ORNL national conduit assessment (PDF already on SANDISK `ORNL_Conduit_Potential/`), prior WWTP energy-recovery studies, micro-hydro screening literature. Biggest gap.
+2. **Validation framing** — no measured WWTP-hydro ground truth exists anywhere (proven by the FERC hunt). Paper must be framed as *screening study with calibrated bounds*, never as validated prediction. Material exists; the explicit framing paragraph does not.
+3. **Head-estimation error analysis** — DEM elevation delta (facility→outfall) as hydraulic-head proxy is the largest methodological assumption. Needs a dedicated justification/error-bound discussion beyond the existing `data_quality_tier` + head-source confidence columns.
+4. **Publication figures** — none exist yet. Needed: national site map, funnel diagram, implied-CF vs EHA-CF distribution overlay, CapEx-vs-capacity scatter with vendor bands, sensitivity tornado, calibration-band bar. All derivable from current parquets (~1 session with a figure script).
+5. **Venue choice + the writing itself** — Applied Energy / Renewable Energy / Water Research have different framings (energy-systems vs water-sector). Decide before outlining.
+
+---
+
+---
+
+### Session: 2026-07-06 (PM #4) — Frontend Dashboard Landing + Static Web-Data Export — Tom
+
+*(Entry reconstructed next session from commits `e2b62d9` / `fde2d17` + live verification — the frontend session itself ended without journaling.)*
+
+**What was done:**
+- Pulled teammate's frontend app into `tom` by cherry-picking paths only (no branch merge): `frontend/` (vite + react + maplibre, TypeScript) and `scripts/export_web_data.py`. Purely additive — no existing `tom` files modified or deleted. Committed `e2b62d9`; follow-up `fde2d17` cleaned peer-dep flags out of `package-lock.json`. Both pushed.
+- **`scripts/export_web_data.py`** (308 lines): reads the four production parquets (P1 `ranked_candidates`, P2 `energy_yield_estimates`, P3 `turbine_sizing`, P4 `financial_scorecards`) and emits static JSON/GeoJSON under `frontend/public/data/` — no backend, frontend fetches files directly. Outputs: `plants.geojson` (one point per scored site, slim map props), `national.json` (KPIs + viable-by-state histogram + top opportunities), `portfolio/<STATE>.json` (per-state ranked tables), `plants/<npdes_id>.json` (full per-site detail). `public/data/` is gitignored — regenerate with `python -m scripts.export_web_data`.
+- **Frontend app:** three views — `NationalMap` (maplibre, econ coloring/filters), `StatePortfolio` (ranked tables), `PlantDetail` (per-site panel with charts/gauge). Shell + KPI tiles + chart components.
+
+**Verified (next-session review, live):**
+- Web data regenerated from the *current* re-baselined parquets — numbers match the P2-SEED baseline exactly: `national.json` = 17,148 analyzed · 3,778 scored · **1,138 viable** · 409,170 MWh (= 409.17 GWh); portfolio NPV $310.1M, CapEx $211.3M, savings $41.2M/yr, median payback 9.8 yr. `plants.geojson` = 3,778 features (13 slim props); `plants/` = 3,778 files; `portfolio/` = 54 states/territories.
+- `npm run build` clean (vite 7.3.5, 2.6 s). Chunk-size warning on the maplibre bundle (1.05 MB minified) — cosmetic for a demo, ignore.
+
+**Files modified / created:**
+- `frontend/` — full app (24 files: views, components, lib, configs) + `frontend/.gitignore` (node_modules, dist, public/data).
+- `scripts/export_web_data.py` — new exporter.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry (written next session).
+
+**Next steps after this session:**
+1. **QA the dashboard in a browser** — build passes but no visual/interaction QA has been done on the merged copy (map renders? detail panel fetches? state tables sort?).
+2. **Sync check with teammate** — their `front-end` branch may drift from the cherry-picked copy; agree on which branch owns `frontend/` going forward.
+3. **Research-paper track** — per the readiness map above: figures script (~1 session), lit review, head-error analysis, venue choice.
+
+---
+
+### Session: 2026-07-06 (PM #5) — GEOJSON-UNIFY: Single-File Frontend Data Layer — Tom
+
+**What was done:**
+- Scoped, dispatched, and reviewed GEOJSON-UNIFY: make the git-tracked `exports/viable_sites.geojson` the frontend's only data source (replacing the four `export_web_data.py` outputs), which also removes non-viable/grey-dot sites from the dashboard by construction. Prompt: `GEOJSON_UNIFY_PROMPT.md`; agent delivery reviewed against live code + parquets. **APPROVED — first zero-falsified-claims round** (after 7 prior instances); every claims-table entry reproduced live.
+- **Exporter (`scripts/export_geojson.py`):** 24 → 58 properties (P1 flow stats, P2 MC energy p10/50/90 + homes, P3 elevation/turbine block, P4 capex breakdown + sensitivity + grant/opex/rate + `data_quality` + high-conf flag); new `_DP1_COLS` 1-d.p. rounding class; P2/P3 left-joins with `--p2`/`--p3` CLI args; RFC 7946 `meta` foreign member `{plants_analyzed: 17148, scored_sites: 3778, baseline}` computed from parquet row counts. Output verified: 1,138 features · 58 props uniform · byte-deterministic (SHA `f359b413…` across two reviewer runs) · aggregates match published baseline (NPV diff $5, CapEx $1, revenue $32, energy exact, 848 high-conf, median payback 9.8, 0 sentinels). File 1.85 MB.
+- **Frontend:** `data.ts` rewritten as adapter — `import sitesUrl from "../../../exports/viable_sites.geojson?url"` (single repo copy, no `public/data` duplication), module-cached fetch, all four legacy shapes (`National`, `PlantCollection`, `Portfolio`, `PlantDetail`) derived client-side; band/confidence logic mirrors `export_web_data.py` (verified: CA 13 High / 134 Lower identical to old output). `NationalMap.tsx:29` null-payback branch → `return false`. `vite-env.d.ts` new (`*.geojson?url` declaration); `vite.config.ts` `server.fs.allow: [".."]`. Views otherwise untouched. `git clone` + `npm install` + `npm run dev` now shows the full dashboard with zero Python steps.
+- **Verification:** pytest 717 passed / 1 skipped (+16 new, non-tautological); `tsc -b --noEmit` clean; build clean (geojson asset in `dist/assets/`); dev server `/@fs` serving confirmed (200, 1,138 features — note: repo path contains a space, curl needs `%20`, browsers fine). **Live headless-browser QA:** dashboard KPIs 17,148 / 1,138 / $310.1M / 9.8 yr, "1,138 sites shown", Top-5 populated; plant detail OH0024732 fully populated (all cards match geojson values); CA portfolio 147 sites / $125.9M, table + summary + charts render. Maplibre canvas itself not verifiable headless (no WebGL in SwiftShader) — **Tom: eyeball map dots once in a real browser.**
+- **Nits (non-blocking, on record in the review prompt banner):** exporter docstring references prompt "§1.1" + says `KeyError` where polars raises `ColumnNotFoundError`; adapter has no sentinel-payback guard (harmless for viable-only data).
+
+**Files modified / created:**
+- `scripts/export_geojson.py`, `tests/test_scripts/test_export_geojson.py` — exporter + 16 tests (agent).
+- `exports/viable_sites.geojson` — regenerated, 58 props + meta (agent; reviewer re-ran, byte-identical).
+- `frontend/src/lib/data.ts` (rewritten), `frontend/src/vite-env.d.ts` (new), `frontend/vite.config.ts`, `frontend/src/views/NationalMap.tsx` (agent).
+- `GEOJSON_UNIFY_PROMPT.md` (this session's coding-agent prompt), `GEOJSON_UNIFY_REVIEW_PROMPT.md` (agent) + REVIEW OUTCOME banner (review).
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- Live parquets (baseline recompute), `frontend/public/data/national.json` + `portfolio/CA.json` (old-exporter cross-checks), gstack `/browse` headless QA.
+
+**Next steps after this session:**
+1. **Tom: eyeball the map in a real browser** (WebGL) — dots, hover popup, click-through.
+2. **Retire `scripts/export_web_data.py` + `frontend/public/data/`?** Frontend no longer reads them; decide with teammate before deleting (their branch may still use them).
+3. **Tell teammate:** frontend now reads `exports/viable_sites.geojson` directly — pull `tom`, `npm install`, done; no Python needed.
+4. **Research-paper track** (figures script, lit review, venue) — unchanged.
+
+---
+
+### Session: 2026-07-06 (PM #5 addendum) — GEOJSON-UNIFY fix: restore non-viable sites on map — Tom
+
+**What was done:**
+- **Scoping correction:** PM #5 misread the original request — Tom wanted the frontend off the git-tracked geojson *without* losing the non-viable/marginal map dots (grey "> 20 yr" band). The viable-only file removed them; user caught it on first look.
+- **Fix (inline, no agent):** new git-tracked `exports/scored_sites.geojson` — all 3,778 scored sites, same 58 props + meta (exporter's existing `viable_only=False` path). `viable_sites.geojson` unchanged (1,138 — reports/paper still reference it). Default `python scripts/export_geojson.py` now writes BOTH files so they can't drift; `--out`/`--all` single-file behavior preserved.
+- **Adapter (`data.ts`):** imports `scored_sites.geojson`; new `payback()` helper — sentinel ≥1e5 → null AND round 2 d.p. *before* banding (both exactly as `export_web_data.py`; the 2 d.p. rounding matters — one boundary site 4.9996 yr banded `high` on raw vs `moderate` on rounded). National/portfolio KPI aggregates filter `project_viable` first; `tier_a_sites` over all scored (old national.json semantics); portfolio rows include all scored in state, `n_scored` real again. `NationalMap.tsx:29` reverted to old semantics (null payback shown when slider at 20).
+- **Verified live (headless):** map default "2,826 sites shown" — byte-matches old `plants.geojson` default-filter count; band distribution exact (93 high / 1,260 moderate / 650 marginal / 1,775 nonviable); KPIs unchanged (17,148 / 1,138 / $310.1M / 9.8 yr); non-viable detail page renders (OH0024058, Tier C, 28.5 yr); CA portfolio 147 viable / 156 scored rows (matches parquet). Both geojsons byte-deterministic (scored SHA `420ad5f4…`). pytest **718 passed / 1 skipped** (+1 scored-file integration test); `tsc` clean; build clean (6.1 MB asset). Sentinel guard nit from the PM #5 review banner is now closed (823 sentinels live in the scored file).
+
+**Files modified / created:**
+- `exports/scored_sites.geojson` — new (3,778 features).
+- `scripts/export_geojson.py` — dual default output + docstring.
+- `frontend/src/lib/data.ts` — scored-file import, `payback()` sentinel+2dp helper, viable-filtered aggregates.
+- `frontend/src/views/NationalMap.tsx` — payback-filter revert.
+- `tests/test_scripts/test_export_geojson.py` — +1 integration test.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Follow-up (same session):** Tom asked for ALL 3,778 sites visible at the default slider position (old behavior hid the 952 finite->20-yr sites at the 20-yr max; only sentinels showed grey). `NationalMap.tsx`: slider at 20 now disables the payback filter entirely (label reads "no limit"); below 20 it filters as before (null-payback hidden). Verified live: "3,778 sites shown" at default. Deliberate behavior CHANGE vs the old plants.geojson map, not a parity restore.
+
+**Next steps:** unchanged from PM #5 (Tom eyeballs map in real browser — now expect grey dots too; export_web_data.py retirement decision; teammate pull note; paper track).
+
+---

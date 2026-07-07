@@ -26,7 +26,10 @@ export default function NationalMap() {
       if (state && p.state !== state) return false;
       if (p.turbine && !turbines.includes(p.turbine)) return false;
       if (highOnly && p.confidence !== "High") return false;
-      if (p.payback == null) return maxPayback >= 20;
+      // Slider at its 20-yr max = no payback filter: all scored sites,
+      // including finite >20 yr and "never pays back" (null) sentinels.
+      if (maxPayback >= 20) return true;
+      if (p.payback == null) return false;
       return p.payback <= maxPayback;
     });
     return { type: "FeatureCollection", features: feats };
@@ -84,7 +87,7 @@ export default function NationalMap() {
           ))}
 
           <div className="muted" style={{ fontSize: 12, fontWeight: 600, margin: "18px 0 6px" }}>
-            Max Payback: {maxPayback} yr
+            Max Payback: {maxPayback >= 20 ? "no limit" : `${maxPayback} yr`}
           </div>
           <input type="range" min={1} max={20} value={maxPayback} onChange={(e) => setMaxPayback(+e.target.value)} style={{ width: "100%" }} />
 
