@@ -1,8 +1,9 @@
 import { Link, useParams } from "react-router-dom";
 import { fetchPlant, useAsync } from "../lib/data";
-import { CONF_PILL, TURBINE_LABEL } from "../lib/colors";
+import { CONF_PILL, DOE_FUNDING_URL, TURBINE_LABEL, TURBINE_VENDOR } from "../lib/colors";
 import { num, pct, pctRaw, usd, years } from "../lib/format";
 import Gauge from "../components/charts/Gauge";
+import { MiniMap } from "../components/MapView";
 import { EfficiencyCurve, Tornado } from "../components/charts/Charts";
 
 function Row({ l, v }: { l: string; v: string }) {
@@ -22,6 +23,10 @@ export default function PlantDetail() {
   if (!p) return <div className="loading">Loading plant…</div>;
 
   const f = p.financial;
+  const vendor = p.turbine.type ? TURBINE_VENDOR[p.turbine.type] : undefined;
+  const similarParams = new URLSearchParams();
+  if (p.state) similarParams.set("state", p.state);
+  if (p.turbine.type) similarParams.set("turbine", p.turbine.type);
 
   return (
     <div style={{ padding: 22 }}>
@@ -41,7 +46,7 @@ export default function PlantDetail() {
         {p.city}, {p.state} &nbsp;|&nbsp; NPDES: {p.id} &nbsp;|&nbsp; {num(p.flow.mean_mgd)} MGD mean flow
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr 1fr", gap: 18, alignItems: "start" }}>
+      <div className="pd-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr 1fr", gap: 18, alignItems: "start" }}>
         {/* left column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="card card-pad">
@@ -61,6 +66,15 @@ export default function PlantDetail() {
             <Row l="Facility Elevation" v={p.elevation.facility_elev_m != null ? `${num(p.elevation.facility_elev_m)} m` : "—"} />
             <Row l="Outfall Elevation" v={p.elevation.outfall_elev_m != null ? `${num(p.elevation.outfall_elev_m)} m` : "—"} />
           </div>
+          {p.lat != null && p.lon != null && (
+            <div className="card card-pad">
+              <h3 className="card-title">⌖ Site Location</h3>
+              <MiniMap lat={p.lat} lon={p.lon} />
+              <div className="faint" style={{ fontSize: 11, marginTop: 8, textAlign: "center" }}>
+                {p.lat.toFixed(4)}, {p.lon.toFixed(4)}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* center column */}
@@ -138,9 +152,22 @@ export default function PlantDetail() {
           </div>
           <div className="card card-pad">
             <h3 className="card-title">Next Steps</h3>
-            <button className="btn btn-blue" style={{ width: "100%", justifyContent: "center", marginBottom: 8 }}>Get Turbine Quotes</button>
-            <button className="btn btn-green" style={{ width: "100%", justifyContent: "center", marginBottom: 8 }}>Apply for DOE Funding</button>
-            <button className="btn btn-ghost" style={{ width: "100%", justifyContent: "center" }}>View Similar Sites</button>
+            {vendor && (
+              <a href={vendor.url} target="_blank" rel="noopener noreferrer" className="btn btn-blue" style={{ width: "100%", justifyContent: "center", marginBottom: 8 }}>
+                Get Turbine Quotes ↗
+              </a>
+            )}
+            <a href={DOE_FUNDING_URL} target="_blank" rel="noopener noreferrer" className="btn btn-green" style={{ width: "100%", justifyContent: "center", marginBottom: 8 }}>
+              DOE Water Power Funding ↗
+            </a>
+            <Link to={`/plants?${similarParams.toString()}`} className="btn btn-ghost" style={{ width: "100%", justifyContent: "center" }}>
+              View Similar Sites
+            </Link>
+            {vendor && (
+              <div className="faint" style={{ fontSize: 11, marginTop: 10, textAlign: "center" }}>
+                Supplier: {vendor.vendor}
+              </div>
+            )}
           </div>
         </div>
       </div>

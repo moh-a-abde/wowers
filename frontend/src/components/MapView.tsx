@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import Map, { Layer, Popup, Source } from "react-map-gl/maplibre";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Map, { Layer, Marker, Popup, Source } from "react-map-gl/maplibre";
+import type { MapRef } from "react-map-gl/maplibre";
 import type { MapLayerMouseEvent, StyleSpecification } from "maplibre-gl";
 import { useNavigate } from "react-router-dom";
 import type { MapProps, PlantCollection } from "../lib/types";
@@ -21,9 +22,34 @@ const SATELLITE: StyleSpecification = {
   layers: [{ id: "esri", type: "raster", source: "esri" }],
 };
 
-export default function MapView({ data }: { data: PlantCollection }) {
+const NATIONAL_VIEW = { longitude: -96, latitude: 38.5, zoom: 3.6 };
+
+export type LngLatBounds = [[number, number], [number, number]]; // [[w, s], [e, n]]
+
+export default function MapView({
+  data,
+  bounds,
+}: {
+  data: PlantCollection;
+  /** When set, the map eases to fit these bounds; when cleared, back to national view. */
+  bounds?: LngLatBounds | null;
+}) {
   const nav = useNavigate();
+  const mapRef = useRef<MapRef>(null);
+  const [loaded, setLoaded] = useState(false);
   const [hover, setHover] = useState<{ lng: number; lat: number; p: MapProps } | null>(null);
+
+  // Runs once the map instance exists (onLoad) and again on bounds changes,
+  // so a deep-linked ?state=XX zooms correctly on first paint.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    if (bounds) {
+      map.fitBounds(bounds, { padding: 60, maxZoom: 9, duration: 900 });
+    } else {
+      map.easeTo({ center: [NATIONAL_VIEW.longitude, NATIONAL_VIEW.latitude], zoom: NATIONAL_VIEW.zoom, duration: 900 });
+    }
+  }, [bounds, loaded]);
 
   const circleColor = useMemo(
     () =>
@@ -49,7 +75,9 @@ export default function MapView({ data }: { data: PlantCollection }) {
 
   return (
     <Map
-      initialViewState={{ longitude: -96, latitude: 38.5, zoom: 3.6 }}
+      ref={mapRef}
+      initialViewState={NATIONAL_VIEW}
+      onLoad={() => setLoaded(true)}
       mapStyle={SATELLITE}
       interactiveLayerIds={["plants"]}
       onClick={onClick}
@@ -84,5 +112,31 @@ export default function MapView({ data }: { data: PlantCollection }) {
         </Popup>
       )}
     </Map>
+  );
+}
+
+/** Small single-site locator map for the plant detail page. */
+export function MiniMap({ lat, lon }: { lat: number; lon: number }) {
+  return (
+    <div style={{ height: 220, borderRadius: 8, overflow: "hidden" }}>
+      <Map
+        initialViewState={{ longitude: lon, latitude: lat, zoom: 13 }}
+        mapStyle={SATELLITE}
+        style={{ width: "100%", height: "100%" }}
+      >
+        <Marker longitude={lon} latitude={lat} anchor="center">
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: "50%",
+              background: "#2563eb",
+              border: "3px solid #fff",
+              boxShadow: "0 0 0 2px rgba(37,99,235,.45), 0 2px 6px rgba(0,0,0,.4)",
+            }}
+          />
+        </Marker>
+      </Map>
+    </div>
   );
 }

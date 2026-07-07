@@ -1,30 +1,62 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { fetchNational, fetchPlants, useAsync } from "../lib/data";
 import type { PlantCollection } from "../lib/types";
 import { BAND_COLOR, BAND_LABEL, TURBINE_LABEL } from "../lib/colors";
 import { mwh, num, usd, years } from "../lib/format";
 import KpiTile from "../components/KpiTile";
 import MapView from "../components/MapView";
+import type { LngLatBounds } from "../components/MapView";
 import { StateBar } from "../components/charts/Charts";
 
-const TURBINES = ["Kaplan", "Francis", "Crossflow", "in_conduit_micro"];
+const NONE = "__none__";
+const TURBINES = ["Kaplan", "Francis", "Crossflow", "in_conduit_micro", NONE];
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const s = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  const m = s.length % 2 === 0 ? (s[mid - 1] + s[mid]) / 2 : s[mid];
+  return Math.round(m * 10) / 10;
+}
 
 export default function NationalMap() {
-  const { data: national } = useAsync(fetchNational, []);
-  const { data: plants } = useAsync(fetchPlants, []);
+  const { data: national, error: nErr } = useAsync(fetchNational, []);
+  const { data: plants, error: pErr } = useAsync(fetchPlants, []);
 
-  const [state, setState] = useState("");
-  const [turbines, setTurbines] = useState<string[]>([...TURBINES]);
-  const [maxPayback, setMaxPayback] = useState(20);
-  const [highOnly, setHighOnly] = useState(false);
+  // Filters live in the URL so views are shareable and survive refresh.
+  const [params, setParams] = useSearchParams();
+  const state = params.get("state") ?? "";
+  const turbines = useMemo(() => {
+    const t = params.get("turb");
+    return t == null ? [...TURBINES] : t.split(",").filter(Boolean);
+  }, [params]);
+  const maxPayback = Number(params.get("pb") ?? 20) || 20;
+  const highOnly = params.get("hc") === "1";
+
+  const update = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(params);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v == null || v === "") next.delete(k);
+      else next.set(k, v);
+    }
+    setParams(next, { replace: true });
+  };
+
+  const setState = (s: string) => update({ state: s || null });
+  const setMaxPayback = (v: number) => update({ pb: v >= 20 ? null : String(v) });
+  const setHighOnly = (v: boolean) => update({ hc: v ? "1" : null });
+  const toggleTurbine = (t: string) => {
+    const next = turbines.includes(t) ? turbines.filter((x) => x !== t) : [...turbines, t];
+    update({ turb: next.length === TURBINES.length ? null : next.join(",") });
+  };
 
   const filtered: PlantCollection | null = useMemo(() => {
     if (!plants) return null;
     const feats = plants.features.filter((f) => {
       const p = f.properties;
       if (state && p.state !== state) return false;
-      if (p.turbine && !turbines.includes(p.turbine)) return false;
+      if (!turbines.includes(p.turbine ?? NONE)) return false;
       if (highOnly && p.confidence !== "High") return false;
       // Slider at its 20-yr max = no payback filter: all scored sites,
       // including finite >20 yr and "never pays back" (null) sentinels.
@@ -35,36 +67,62 @@ export default function NationalMap() {
     return { type: "FeatureCollection", features: feats };
   }, [plants, state, turbines, maxPayback, highOnly]);
 
+  // Live KPIs reflect the current filter set (viable sites within it).
+  const kpis = useMemo(() => {
+    if (!filtered) return null;
+    const viable = filtered.features.map((f) => f.properties).filter((p) => p.viable);
+    return {
+      shown: filtered.features.length,
+      viable: viable.length,
+      npv: viable.reduce((a, p) => a + (p.npv ?? 0), 0),
+      medianPayback: median(viable.map((p) => p.payback).filter((v): v is number => v != null)),
+    };
+  }, [filtered]);
+
+  // When a state is selected, fit the map to that state's sites.
+  const bounds: LngLatBounds | null = useMemo(() => {
+    if (!state || !plants) return null;
+    let w = Infinity, s = Infinity, e = -Infinity, n = -Infinity;
+    for (const f of plants.features) {
+      if (f.properties.state !== state) continue;
+      const [lng, lat] = f.geometry.coordinates;
+      if (lng < w) w = lng;
+      if (lng > e) e = lng;
+      if (lat < s) s = lat;
+      if (lat > n) n = lat;
+    }
+    return e >= w ? [[w, s], [e, n]] : null;
+  }, [state, plants]);
+
   const states = useMemo(
     () => (national ? national.by_state.map((s) => s.state).sort() : []),
     [national],
   );
 
-  const toggleTurbine = (t: string) =>
-    setTurbines((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]));
+  const error = nErr ?? pErr;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       {/* header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 22px", background: "#fff", borderBottom: "1px solid var(--border)" }}>
+      <div className="nm-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", padding: "14px 22px", background: "#fff", borderBottom: "1px solid var(--border)" }}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 800, color: "var(--navy)" }}>National Opportunity Map</div>
           <div className="muted" style={{ fontSize: 12 }}>Micro-hydro energy recovery across US wastewater plants</div>
         </div>
-        {national && (
+        {kpis && (
           <div className="kpi-row">
-            <KpiTile value={num(national.plants_analyzed)} label="Plants Analyzed" />
-            <KpiTile value={num(national.viable_projects)} label="Viable Projects" accent="var(--blue)" />
-            <KpiTile value={usd(national.portfolio_npv_usd)} label="Portfolio NPV" accent="var(--green)" />
-            <KpiTile value={years(national.median_payback)} label="Median Payback" />
+            <KpiTile value={num(kpis.shown)} label="Sites Shown" />
+            <KpiTile value={num(kpis.viable)} label="Viable in Filter" accent="var(--blue)" />
+            <KpiTile value={usd(kpis.npv)} label="NPV (viable)" accent="var(--green)" />
+            <KpiTile value={years(kpis.medianPayback)} label="Median Payback" />
           </div>
         )}
       </div>
 
       {/* body */}
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+      <div className="nm-body" style={{ display: "flex", flex: 1, minHeight: 0 }}>
         {/* filters */}
-        <div style={{ width: 230, flexShrink: 0, background: "#fff", borderRight: "1px solid var(--border)", padding: 18, overflowY: "auto" }}>
+        <div className="nm-filters" style={{ width: 230, flexShrink: 0, background: "#fff", borderRight: "1px solid var(--border)", padding: 18, overflowY: "auto" }}>
           <h3 className="card-title">Filters</h3>
 
           <label className="muted" style={{ fontSize: 12, fontWeight: 600 }}>State</label>
@@ -82,7 +140,7 @@ export default function NationalMap() {
           {TURBINES.map((t) => (
             <label key={t} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "3px 0" }}>
               <input type="checkbox" checked={turbines.includes(t)} onChange={() => toggleTurbine(t)} />
-              {TURBINE_LABEL[t] ?? t}
+              {t === NONE ? "Unassigned" : TURBINE_LABEL[t] ?? t}
             </label>
           ))}
 
@@ -108,12 +166,22 @@ export default function NationalMap() {
         </div>
 
         {/* map */}
-        <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
-          {filtered ? <MapView data={filtered} /> : <div className="loading">Loading map…</div>}
+        <div className="nm-map" style={{ flex: 1, minWidth: 0, position: "relative" }}>
+          {error ? (
+            <div className="loading">
+              Failed to load site data.<br />
+              <span className="faint" style={{ fontSize: 12 }}>{error}</span><br />
+              <button className="btn btn-blue" style={{ marginTop: 12 }} onClick={() => window.location.reload()}>Retry</button>
+            </div>
+          ) : filtered ? (
+            <MapView data={filtered} bounds={bounds} />
+          ) : (
+            <div className="loading">Loading map…</div>
+          )}
         </div>
 
         {/* top opportunities */}
-        <div style={{ width: 300, flexShrink: 0, background: "#fff", borderLeft: "1px solid var(--border)", padding: 18, overflowY: "auto" }}>
+        <div className="nm-side" style={{ width: 300, flexShrink: 0, background: "#fff", borderLeft: "1px solid var(--border)", padding: 18, overflowY: "auto" }}>
           <h3 className="card-title">Top 5 Opportunities</h3>
           {national?.top_opportunities.map((o, i) => (
             <Link key={o.id} to={`/plant/${o.id}`} style={{ display: "block", color: "inherit" }}>
@@ -129,6 +197,9 @@ export default function NationalMap() {
               </div>
             </Link>
           ))}
+          <Link to="/opportunities" className="btn btn-ghost" style={{ width: "100%", justifyContent: "center", marginTop: 12 }}>
+            All opportunities →
+          </Link>
           {national && (
             <>
               <h3 className="card-title" style={{ marginTop: 22 }}>Viable Sites by State</h3>

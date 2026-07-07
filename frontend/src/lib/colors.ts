@@ -32,3 +32,14 @@ export const TURBINE_LABEL: Record<string, string> = {
   Crossflow: "Crossflow",
   in_conduit_micro: "In-conduit",
 };
+
+/** Manufacturer / supplier pages for each recommended turbine type. */
+export const TURBINE_VENDOR: Record<string, { vendor: string; url: string }> = {
+  Kaplan: { vendor: "Mavel (Kaplan micro-hydro)", url: "https://www.mavel.cz" },
+  Francis: { vendor: "Canyon Hydro (Francis)", url: "https://www.canyonhydro.com" },
+  Crossflow: { vendor: "Ossberger (Crossflow)", url: "https://ossberger.de/en/" },
+  in_conduit_micro: { vendor: "InPipe Energy (in-conduit)", url: "https://www.inpipeenergy.com" },
+};
+
+export const DOE_FUNDING_URL =
+  "https://www.energy.gov/eere/water/water-power-technologies-office";

@@ -1,4 +1,6 @@
-/* Semicircular gauge for P10 / P50 / P90 energy recovery. */
+/* Semicircular gauge for P10 / P50 / P90 energy recovery.
+   Scale spans exactly P10 (left end) to P90 (right end) so the axis
+   labels match the arc endpoints. */
 export default function Gauge({
   p10,
   p50,
@@ -15,9 +17,9 @@ export default function Gauge({
   const cx = W / 2;
   const cy = 160;
   const r = 130;
-  const lo = p10 * 0.85;
-  const hi = p90 * 1.15;
-  const frac = Math.min(1, Math.max(0, (p50 - lo) / (hi - lo)));
+  const lo = p10;
+  const hi = p90;
+  const frac = hi > lo ? Math.min(1, Math.max(0, (p50 - lo) / (hi - lo))) : 0.5;
   const angle = Math.PI * (1 - frac); // pi (left) -> 0 (right)
   const nx = cx + r * Math.cos(angle);
   const ny = cy - r * Math.sin(angle);
@@ -39,14 +41,13 @@ export default function Gauge({
         <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="#0f1b2d" strokeWidth={4} strokeLinecap="round" />
         <circle cx={cx} cy={cy} r={7} fill="#0f1b2d" />
         <text x={cx - r} y={cy + 18} fontSize={11} fill="#5b6b80" textAnchor="middle">P10</text>
-        <text x={cx} y={20} fontSize={11} fill="#5b6b80" textAnchor="middle">P50</text>
         <text x={cx + r} y={cy + 18} fontSize={11} fill="#5b6b80" textAnchor="middle">P90</text>
       </svg>
       <div style={{ marginTop: -8 }}>
         <div style={{ fontSize: 30, fontWeight: 800, color: "#0f1b2d", lineHeight: 1 }}>
           {Math.round(p50).toLocaleString()}
         </div>
-        <div className="muted" style={{ fontSize: 12 }}>{unit}</div>
+        <div className="muted" style={{ fontSize: 12 }}>P50 · {unit}</div>
       </div>
     </div>
   );
