@@ -5769,3 +5769,28 @@ Assessment of what the repo already provides for a research paper vs. what still
 ---
 
 ---
+
+### Session: 2026-07-06 (PM #4) — Frontend Dashboard Landing + Static Web-Data Export — Tom
+
+*(Entry reconstructed next session from commits `e2b62d9` / `fde2d17` + live verification — the frontend session itself ended without journaling.)*
+
+**What was done:**
+- Pulled teammate's frontend app into `tom` by cherry-picking paths only (no branch merge): `frontend/` (vite + react + maplibre, TypeScript) and `scripts/export_web_data.py`. Purely additive — no existing `tom` files modified or deleted. Committed `e2b62d9`; follow-up `fde2d17` cleaned peer-dep flags out of `package-lock.json`. Both pushed.
+- **`scripts/export_web_data.py`** (308 lines): reads the four production parquets (P1 `ranked_candidates`, P2 `energy_yield_estimates`, P3 `turbine_sizing`, P4 `financial_scorecards`) and emits static JSON/GeoJSON under `frontend/public/data/` — no backend, frontend fetches files directly. Outputs: `plants.geojson` (one point per scored site, slim map props), `national.json` (KPIs + viable-by-state histogram + top opportunities), `portfolio/<STATE>.json` (per-state ranked tables), `plants/<npdes_id>.json` (full per-site detail). `public/data/` is gitignored — regenerate with `python -m scripts.export_web_data`.
+- **Frontend app:** three views — `NationalMap` (maplibre, econ coloring/filters), `StatePortfolio` (ranked tables), `PlantDetail` (per-site panel with charts/gauge). Shell + KPI tiles + chart components.
+
+**Verified (next-session review, live):**
+- Web data regenerated from the *current* re-baselined parquets — numbers match the P2-SEED baseline exactly: `national.json` = 17,148 analyzed · 3,778 scored · **1,138 viable** · 409,170 MWh (= 409.17 GWh); portfolio NPV $310.1M, CapEx $211.3M, savings $41.2M/yr, median payback 9.8 yr. `plants.geojson` = 3,778 features (13 slim props); `plants/` = 3,778 files; `portfolio/` = 54 states/territories.
+- `npm run build` clean (vite 7.3.5, 2.6 s). Chunk-size warning on the maplibre bundle (1.05 MB minified) — cosmetic for a demo, ignore.
+
+**Files modified / created:**
+- `frontend/` — full app (24 files: views, components, lib, configs) + `frontend/.gitignore` (node_modules, dist, public/data).
+- `scripts/export_web_data.py` — new exporter.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry (written next session).
+
+**Next steps after this session:**
+1. **QA the dashboard in a browser** — build passes but no visual/interaction QA has been done on the merged copy (map renders? detail panel fetches? state tables sort?).
+2. **Sync check with teammate** — their `front-end` branch may drift from the cherry-picked copy; agree on which branch owns `frontend/` going forward.
+3. **Research-paper track** — per the readiness map above: figures script (~1 session), lit review, head-error analysis, venue choice.
+
+---
