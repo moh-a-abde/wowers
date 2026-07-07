@@ -1,26 +1,32 @@
 """GeoJSON export for the WOWERS frontend map demo.
 
-Reads the Phase 4 financial scorecard + Phase 1 facility coordinates and
-exports the 1,138 project-viable sites (post P2-SEED re-baseline) as a GeoJSON FeatureCollection.
+Reads Phase 1–4 parquets and exports the 1,138 project-viable sites
+(post P2-SEED re-baseline) as a GeoJSON FeatureCollection.
 
-The output file (exports/viable_sites.geojson) is git-tracked and intended
-as the static data source for the vite+react+maplibre frontend map.
+The output ``exports/viable_sites.geojson`` is git-tracked and is the
+*single static data source* for the vite+react+maplibre frontend.
+The frontend derives national KPIs, per-state portfolios, and per-plant
+detail views entirely client-side from this one file.
 
 COORDINATE ORDER: [longitude, latitude] per GeoJSON spec (RFC 7946 §3.1.1).
-``geometry.coordinates = [longitude, latitude]`` — NOT [lat, lon].
 
 ROUNDING:
-  USD and kWh columns  → rounded to integer
-  Ratio columns (irr, lcoe_per_kwh, capacity_factor, energy_offset_pct)
-                       → rounded to 4 decimal places
-  Coordinates          → rounded to 5 decimal places (≈ 1 m precision)
-  Null / inf / NaN     → JSON null (frontend handles gracefully)
+  USD + kWh + int counts  → integer (round to 0 d.p.)
+  Ratio columns           → 4 d.p.  (irr, lcoe, CF, energy_offset_pct, etc.)
+  1 d.p. columns          → 1 d.p.  (MGD flows, metres, m³/s, efficiency %)
+  Coordinates             → 5 d.p.  (≈ 1 m precision)
+  NaN / inf               → JSON null
+
+META FOREIGN MEMBER (RFC 7946 §6.1):
+  "meta": {"plants_analyzed": N, "scored_sites": N, "baseline": "..."}
+  Computed from parquet row counts — NOT hardcoded — so output is
+  byte-deterministic across runs as long as parquets don't change.
 
 USAGE:
-    python scripts/export_geojson.py                   # viable only (default)
-    python scripts/export_geojson.py --all             # all 3,778 scored sites (post P2-SEED)
+    python scripts/export_geojson.py
+    python scripts/export_geojson.py --all
+    python scripts/export_geojson.py --scorecard path --p1 path --p2 path --p3 path
     python scripts/export_geojson.py --out path.geojson
-    python scripts/export_geojson.py --scorecard path --p1 path
 """
 
 from __future__ import annotations
@@ -43,11 +49,14 @@ log = logging.getLogger("wowers.export_geojson")
 
 _DEFAULT_SCORECARD = ROOT / "data/processed/phase4/financial_scorecards.parquet"
 _DEFAULT_P1        = ROOT / "data/processed/phase1/ranked_candidates.parquet"
+_DEFAULT_P2        = ROOT / "data/processed/phase2/energy_yield_estimates.parquet"
+_DEFAULT_P3        = ROOT / "data/processed/phase3/turbine_sizing.parquet"
 _DEFAULT_OUT       = ROOT / "exports/viable_sites.geojson"
 
-# ── Property list (exact order as specified) ──────────────────────────────────
+# ── Property list: original 24 + 34 new = 58 total ────────────────────────────
 
 PROPERTIES: list[str] = [
+    # ── original 24 ──────────────────────────────────────────────────────────
     "npdes_id",
     "facility_name",
     "city",
@@ -72,10 +81,52 @@ PROPERTIES: list[str] = [
     "econ_cat_irr",
     "data_quality_tier",
     "project_viable",
+    # ── new: P1 flow stats ────────────────────────────────────────────────────
+    "mean_flow_mgd",
+    "p10_flow_mgd",
+    "p90_flow_mgd",
+    "n_months_data",
+    "utilization_ratio",
+    # ── new: P2 Monte-Carlo energy band ──────────────────────────────────────
+    "energy_p10_kwh_yr",
+    "energy_p50_kwh_yr",
+    "energy_p90_kwh_yr",
+    "equivalent_homes_p50",
+    # ── new: P3 elevation + turbine detail ───────────────────────────────────
+    "head_net_m",
+    "head_gross_m",
+    "elevation_m",
+    "elev_outfall_m",
+    "head_source",
+    "head_confidence",
+    "q_rated_m3s",
+    "peak_efficiency_pct",
+    # ── new: P4 capex breakdown, grant, opex, rate ────────────────────────────
+    "npv_with_50pct_grant_usd",
+    "annual_opex_usd",
+    "elec_rate_per_kwh",
+    "equipment_capex_usd",
+    "installation_capex_usd",
+    "interconnection_capex_usd",
+    "permitting_capex_usd",
+    "permitting_tier",
+    # ── new: P4 sensitivity + provenance ─────────────────────────────────────
+    "sensitivity_head_npv_low",
+    "sensitivity_head_npv_high",
+    "sensitivity_flow_npv_low",
+    "sensitivity_flow_npv_high",
+    "sensitivity_rate_npv_low",
+    "sensitivity_rate_npv_high",
+    "dominant_sensitivity",
+    "data_quality",
+    "project_viable_high_confidence",
 ]
 
-# Columns whose values are rounded to integer (USD magnitudes + kWh magnitudes)
+# ── Rounding sets ─────────────────────────────────────────────────────────────
+
+# Integer (USD magnitudes, kWh magnitudes, integer counts)
 _INT_COLS: frozenset[str] = frozenset({
+    # original
     "rated_power_kw",
     "annual_energy_kwh",
     "energy_kwh_calib_floor_p25",
@@ -84,17 +135,61 @@ _INT_COLS: frozenset[str] = frozenset({
     "total_capex_usd",
     "npv_usd",
     "annual_revenue_usd",
+    # new P2
+    "energy_p10_kwh_yr",
+    "energy_p50_kwh_yr",
+    "energy_p90_kwh_yr",
+    "equivalent_homes_p50",
+    # new P4 USD
+    "npv_with_50pct_grant_usd",
+    "annual_opex_usd",
+    "equipment_capex_usd",
+    "installation_capex_usd",
+    "interconnection_capex_usd",
+    "permitting_capex_usd",
+    # new P4 sensitivity (NPV impact → USD)
+    "sensitivity_head_npv_low",
+    "sensitivity_head_npv_high",
+    "sensitivity_flow_npv_low",
+    "sensitivity_flow_npv_high",
+    "sensitivity_rate_npv_low",
+    "sensitivity_rate_npv_high",
+    # new P1 integer count
+    "n_months_data",
 })
 
-# Columns whose values are rounded to 4 decimal places (ratios / rates)
+# Ratio (4 d.p.)
 _RATIO_COLS: frozenset[str] = frozenset({
+    # original
     "irr",
     "lcoe_per_kwh",
     "capacity_factor",
     "energy_offset_pct",
+    # new
+    "utilization_ratio",
+    "elec_rate_per_kwh",
+})
+
+# 1 decimal place (metres, MGD, m³/s, efficiency %)
+_DP1_COLS: frozenset[str] = frozenset({
+    # P1 flows
+    "mean_flow_mgd",
+    "p10_flow_mgd",
+    "p90_flow_mgd",
+    # P3 elevation
+    "head_net_m",
+    "head_gross_m",
+    "elevation_m",
+    "elev_outfall_m",
+    # P3 turbine
+    "q_rated_m3s",
+    "peak_efficiency_pct",
 })
 
 _COORD_PRECISION: int = 5
+
+# Baseline string embedded in meta (deterministic — no timestamp)
+_BASELINE: str = "P2-SEED re-baseline 2026-07-06"
 
 
 # ── Pure functions (unit-testable) ────────────────────────────────────────────
@@ -109,12 +204,14 @@ def _to_python(val: Any) -> Any:
 def round_property(col: str, val: Any) -> Any:
     """Apply per-column rounding rules; return JSON-safe Python value.
 
-    - _INT_COLS  → int (or null if not finite)
-    - _RATIO_COLS→ float rounded to 4 d.p. (or null if not finite)
-    - bool       → bool (preserved before int check; bool is subclass of int)
-    - int        → int as-is
-    - float      → pass-through (None if NaN/inf)
-    - other      → pass-through unchanged
+    Priority order:
+      bool        → preserved as-is (bool is subclass of int, check first)
+      _INT_COLS   → int  (None if not finite)
+      _RATIO_COLS → float, 4 d.p. (None if not finite)
+      _DP1_COLS   → float, 1 d.p. (None if not finite)
+      int         → int as-is
+      float       → pass-through  (None if NaN/inf)
+      other       → pass-through unchanged
     """
     val = _to_python(val)
     if val is None:
@@ -131,6 +228,12 @@ def round_property(col: str, val: Any) -> Any:
         try:
             f = float(val)
             return None if (math.isnan(f) or math.isinf(f)) else round(f, 4)
+        except (TypeError, ValueError):
+            return val
+    if col in _DP1_COLS:
+        try:
+            f = float(val)
+            return None if (math.isnan(f) or math.isinf(f)) else round(f, 1)
         except (TypeError, ValueError):
             return val
     if isinstance(val, int):
@@ -178,17 +281,17 @@ def build_feature_collection(
     df: pl.DataFrame,
     *,
     viable_only: bool = True,
+    meta: dict | None = None,
 ) -> tuple[dict, list[str]]:
-    """Build a GeoJSON FeatureCollection from the joined scorecard+coords frame.
+    """Build a GeoJSON FeatureCollection from the joined frame.
 
     Args:
-        df:          Joined DataFrame containing all PROPERTIES columns plus
-                     ``latitude``, ``longitude``, ``project_viable``.
+        df:          Joined DataFrame with all PROPERTIES columns + lat/lon.
         viable_only: Include only project_viable == True rows when True.
+        meta:        Optional ``meta`` foreign member (RFC 7946 §6.1).
 
     Returns:
         (feature_collection_dict, dropped_npdes_ids)
-        where dropped_npdes_ids lists sites excluded for null/invalid coords.
     """
     if viable_only:
         df = df.filter(pl.col("project_viable"))
@@ -209,29 +312,76 @@ def build_feature_collection(
             len(dropped), dropped[:20],
         )
 
-    return {"type": "FeatureCollection", "features": features}, dropped
+    fc: dict[str, Any] = {"type": "FeatureCollection", "features": features}
+    if meta is not None:
+        fc["meta"] = meta
+
+    return fc, dropped
 
 
 def load_and_join(
     scorecard_path: Path,
     p1_path: Path,
-) -> pl.DataFrame:
-    """Load Phase 4 scorecard + Phase 1 facility metadata; left-join on npdes_id.
+    p2_path: Path | None = None,
+    p3_path: Path | None = None,
+) -> tuple[pl.DataFrame, dict]:
+    """Load parquets and left-join all phases on npdes_id.
 
-    Phase 1 supplies: facility_name, city, latitude, longitude.
-    These are NOT in the scorecard parquet.
+    Returns:
+        (joined_df, meta_dict)
+        meta contains plants_analyzed (P1 row count) and scored_sites (P4 row count).
+
+    STOP-on-surprise: any column listed in §1.1 that is missing from the
+    parquet will cause a KeyError, which propagates loudly. Do not rename
+    or guess alternative column names.
     """
-    scorecard = pl.read_parquet(scorecard_path)
-    p1 = pl.read_parquet(p1_path).select(
-        ["npdes_id", "facility_name", "city", "latitude", "longitude"]
-    )
-    return scorecard.join(p1, on="npdes_id", how="left")
+    p4 = pl.read_parquet(scorecard_path)
+    p1_full = pl.read_parquet(p1_path)
+
+    plants_analyzed: int = p1_full.height
+    scored_sites: int    = p4.height
+
+    meta: dict = {
+        "plants_analyzed": plants_analyzed,
+        "scored_sites":    scored_sites,
+        "baseline":        _BASELINE,
+    }
+
+    # P1: coords + name/city + flow stats
+    p1_sub = p1_full.select([
+        "npdes_id", "facility_name", "city", "latitude", "longitude",
+        "mean_flow_mgd", "p10_flow_mgd", "p90_flow_mgd",
+        "n_months_data", "utilization_ratio",
+    ])
+    df = p4.join(p1_sub, on="npdes_id", how="left")
+
+    # P2: Monte-Carlo energy band
+    if p2_path is not None:
+        p2_sub = pl.read_parquet(p2_path).select([
+            "npdes_id",
+            "energy_p10_kwh_yr", "energy_p50_kwh_yr", "energy_p90_kwh_yr",
+            "equivalent_homes_p50",
+        ])
+        df = df.join(p2_sub, on="npdes_id", how="left")
+
+    # P3: elevation + turbine detail
+    if p3_path is not None:
+        p3_sub = pl.read_parquet(p3_path).select([
+            "npdes_id",
+            "head_net_m", "head_gross_m", "elevation_m", "elev_outfall_m",
+            "head_source", "head_confidence",
+            "q_rated_m3s", "peak_efficiency_pct",
+        ])
+        df = df.join(p3_sub, on="npdes_id", how="left")
+
+    return df, meta
 
 
 def validate_geojson(fc: dict, expected_features: int) -> None:
-    """Assert basic GeoJSON structure, feature count, and coordinate order.
+    """Assert GeoJSON structure, feature count, coordinates, and meta.
 
-    Raises AssertionError on any mismatch — used in export() and tests.
+    If ``meta`` is present in fc, also asserts that ``plants_analyzed``
+    and ``scored_sites`` are positive integers and ``baseline`` is a string.
     """
     assert fc.get("type") == "FeatureCollection", "type must be FeatureCollection"
     feats = fc.get("features", [])
@@ -246,23 +396,39 @@ def validate_geojson(fc: dict, expected_features: int) -> None:
         assert -180.0 <= lon <= 180.0, f"longitude {lon} out of range"
         assert  -90.0 <= lat <=  90.0, f"latitude {lat} out of range"
 
+    meta = fc.get("meta")
+    if meta is not None:
+        assert isinstance(meta.get("plants_analyzed"), int), (
+            "meta.plants_analyzed must be int"
+        )
+        assert meta["plants_analyzed"] > 0, "meta.plants_analyzed must be positive"
+        assert isinstance(meta.get("scored_sites"), int), (
+            "meta.scored_sites must be int"
+        )
+        assert meta["scored_sites"] > 0, "meta.scored_sites must be positive"
+        assert isinstance(meta.get("baseline"), str), (
+            "meta.baseline must be str"
+        )
+
 
 # ── IO orchestrator ───────────────────────────────────────────────────────────
 
 def export(
     scorecard_path: Path = _DEFAULT_SCORECARD,
     p1_path: Path = _DEFAULT_P1,
+    p2_path: Path | None = _DEFAULT_P2,
+    p3_path: Path | None = _DEFAULT_P3,
     out_path: Path = _DEFAULT_OUT,
     *,
     viable_only: bool = True,
 ) -> tuple[Path, int, int]:
-    """End-to-end export: load → join → build → validate → write.
+    """End-to-end: load → join → build → validate → write.
 
     Returns:
         (out_path, n_features_written, n_dropped_for_null_coords)
     """
-    df = load_and_join(scorecard_path, p1_path)
-    fc, dropped = build_feature_collection(df, viable_only=viable_only)
+    df, meta = load_and_join(scorecard_path, p1_path, p2_path, p3_path)
+    fc, dropped = build_feature_collection(df, viable_only=viable_only, meta=meta)
     n_features = len(fc["features"])
     validate_geojson(fc, n_features)
 
@@ -281,29 +447,25 @@ def export(
 
 def main() -> None:
     ap = argparse.ArgumentParser(
-        description="Export WOWERS viable sites as GeoJSON for the frontend map."
+        description="Export WOWERS viable sites as GeoJSON (single-file frontend data source)."
     )
-    ap.add_argument(
-        "--scorecard", type=Path, default=_DEFAULT_SCORECARD,
-        help="Path to financial_scorecards.parquet (default: Part A output)",
-    )
-    ap.add_argument(
-        "--p1", type=Path, default=_DEFAULT_P1,
-        help="Path to Phase 1 ranked_candidates.parquet",
-    )
-    ap.add_argument(
-        "--out", type=Path, default=_DEFAULT_OUT,
-        help=f"Output GeoJSON path (default: {_DEFAULT_OUT})",
-    )
-    ap.add_argument(
-        "--all", dest="all_sites", action="store_true",
-        help="Export all scored sites, not just project_viable==True",
-    )
+    ap.add_argument("--scorecard", type=Path, default=_DEFAULT_SCORECARD)
+    ap.add_argument("--p1", type=Path, default=_DEFAULT_P1,
+                    help="Phase 1 ranked_candidates.parquet")
+    ap.add_argument("--p2", type=Path, default=_DEFAULT_P2,
+                    help="Phase 2 energy_yield_estimates.parquet")
+    ap.add_argument("--p3", type=Path, default=_DEFAULT_P3,
+                    help="Phase 3 turbine_sizing.parquet")
+    ap.add_argument("--out", type=Path, default=_DEFAULT_OUT)
+    ap.add_argument("--all", dest="all_sites", action="store_true",
+                    help="Export all scored sites, not just project_viable==True")
     args = ap.parse_args()
 
     out_path, n_features, n_dropped = export(
         scorecard_path=args.scorecard,
         p1_path=args.p1,
+        p2_path=args.p2,
+        p3_path=args.p3,
         out_path=args.out,
         viable_only=not args.all_sites,
     )

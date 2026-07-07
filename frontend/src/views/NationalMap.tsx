@@ -26,7 +26,7 @@ export default function NationalMap() {
       if (state && p.state !== state) return false;
       if (p.turbine && !turbines.includes(p.turbine)) return false;
       if (highOnly && p.confidence !== "High") return false;
-      if (p.payback == null) return maxPayback >= 20;
+      if (p.payback == null) return false;
       return p.payback <= maxPayback;
     });
     return { type: "FeatureCollection", features: feats };

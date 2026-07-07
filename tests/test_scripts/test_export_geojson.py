@@ -30,6 +30,7 @@ from export_geojson import (
     PROPERTIES,
     _INT_COLS,
     _RATIO_COLS,
+    _DP1_COLS,
     build_feature,
     build_feature_collection,
     round_property,
@@ -38,6 +39,8 @@ from export_geojson import (
     export,
     _DEFAULT_SCORECARD,
     _DEFAULT_P1,
+    _DEFAULT_P2,
+    _DEFAULT_P3,
     _DEFAULT_OUT,
 )
 
@@ -157,6 +160,63 @@ class TestRoundProperty:
             assert isinstance(result, int)
             assert result == 500_001
 
+    # ── new rounding classes ────────────────────────────────────────────────
+
+    def test_dp1_col_rounds_to_1dp(self):
+        """mean_flow_mgd, head_net_m etc. → 1 decimal place."""
+        for col in ("mean_flow_mgd", "p10_flow_mgd", "p90_flow_mgd",
+                    "head_net_m", "head_gross_m", "elevation_m", "elev_outfall_m",
+                    "q_rated_m3s", "peak_efficiency_pct"):
+            result = round_property(col, 12.3456)
+            assert result == pytest.approx(12.3), f"{col}: expected 12.3, got {result}"
+            assert isinstance(result, float)
+
+    def test_dp1_col_nan_returns_none(self):
+        assert round_property("mean_flow_mgd", float("nan")) is None
+
+    def test_dp1_col_inf_returns_none(self):
+        assert round_property("head_net_m", float("inf")) is None
+
+    def test_new_int_cols_energy_kwh_yr(self):
+        """energy_p10/50/90_kwh_yr, equivalent_homes_p50 → int."""
+        for col in ("energy_p10_kwh_yr", "energy_p50_kwh_yr", "energy_p90_kwh_yr",
+                    "equivalent_homes_p50"):
+            result = round_property(col, 1_234_567.8)
+            assert isinstance(result, int)
+            assert result == 1_234_568
+
+    def test_new_int_cols_capex_breakdown(self):
+        """All capex breakdown columns → int."""
+        for col in ("equipment_capex_usd", "installation_capex_usd",
+                    "interconnection_capex_usd", "permitting_capex_usd",
+                    "npv_with_50pct_grant_usd", "annual_opex_usd"):
+            result = round_property(col, 99_999.6)
+            assert isinstance(result, int)
+            assert result == 100_000
+
+    def test_new_int_cols_sensitivity(self):
+        """sensitivity_*_npv_* columns → int."""
+        for col in ("sensitivity_head_npv_low", "sensitivity_head_npv_high",
+                    "sensitivity_flow_npv_low", "sensitivity_flow_npv_high",
+                    "sensitivity_rate_npv_low", "sensitivity_rate_npv_high"):
+            result = round_property(col, -50_000.5)
+            assert isinstance(result, int)
+
+    def test_new_ratio_cols(self):
+        """utilization_ratio, elec_rate_per_kwh → 4 d.p."""
+        for col in ("utilization_ratio", "elec_rate_per_kwh"):
+            result = round_property(col, 0.123456789)
+            assert result == pytest.approx(0.1235)
+
+    def test_bool_passthrough_project_viable_high_confidence(self):
+        assert round_property("project_viable_high_confidence", True) is True
+        assert round_property("project_viable_high_confidence", False) is False
+
+    def test_string_passthrough_new_cols(self):
+        for col in ("head_source", "head_confidence", "permitting_tier",
+                    "dominant_sensitivity", "data_quality"):
+            assert round_property(col, "usgs_3dep") == "usgs_3dep"
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # build_feature — coordinate order and property list
@@ -231,6 +291,14 @@ class TestBuildFeature:
         cen = feat["properties"]["energy_kwh_calib_central"]
         assert isinstance(cen, int)
         assert cen == round(1_000_000.0 * 0.688)
+
+    def test_property_count_is_58(self):
+        """Total property count must be exactly 58 (original 24 + 34 new)."""
+        feat = build_feature(_make_row())
+        assert len(feat["properties"]) == 58, (
+            f"Expected 58 properties, got {len(feat['properties'])}"
+        )
+        assert len(PROPERTIES) == 58
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -312,6 +380,29 @@ class TestValidateGeojson:
     def test_passes_valid_fc(self):
         validate_geojson(self._make_fc(3), 3)   # should not raise
 
+    def test_fc_with_meta_passes(self):
+        fc = self._make_fc(2)
+        fc["meta"] = {"plants_analyzed": 17148, "scored_sites": 3778, "baseline": "test"}
+        validate_geojson(fc, 2)   # should not raise
+
+    def test_meta_missing_plants_analyzed_raises(self):
+        fc = self._make_fc(1)
+        fc["meta"] = {"scored_sites": 3778, "baseline": "test"}
+        with pytest.raises((AssertionError, KeyError)):
+            validate_geojson(fc, 1)
+
+    def test_meta_zero_plants_analyzed_raises(self):
+        fc = self._make_fc(1)
+        fc["meta"] = {"plants_analyzed": 0, "scored_sites": 3778, "baseline": "test"}
+        with pytest.raises(AssertionError):
+            validate_geojson(fc, 1)
+
+    def test_meta_non_int_scored_sites_raises(self):
+        fc = self._make_fc(1)
+        fc["meta"] = {"plants_analyzed": 17148, "scored_sites": "3778", "baseline": "test"}
+        with pytest.raises(AssertionError):
+            validate_geojson(fc, 1)
+
     def test_wrong_count_raises(self):
         with pytest.raises(AssertionError):
             validate_geojson(self._make_fc(3), 5)
@@ -363,6 +454,24 @@ class TestExportIntegration:
         assert len(fc["features"]) == 1138, (
             f"Expected 1138 features, got {len(fc['features'])}"
         )
+
+    def test_geojson_has_58_properties(self):
+        """Each feature must have exactly 58 properties after GEOJSON-UNIFY."""
+        with open(_EXPORT_PATH) as f:
+            fc = json.load(f)
+        for feat in fc["features"][:5]:
+            n = len(feat["properties"])
+            assert n == 58, f"Expected 58 properties, got {n}"
+
+    def test_geojson_meta_present_and_correct(self):
+        """meta foreign member must have plants_analyzed=17148, scored_sites=3778."""
+        with open(_EXPORT_PATH) as f:
+            fc = json.load(f)
+        meta = fc.get("meta")
+        assert meta is not None, "meta foreign member missing from GeoJSON"
+        assert meta["plants_analyzed"] == 17148
+        assert meta["scored_sites"] == 3778
+        assert isinstance(meta["baseline"], str)
 
     def test_all_features_have_required_properties(self):
         with open(_EXPORT_PATH) as f:

@@ -5794,3 +5794,30 @@ Assessment of what the repo already provides for a research paper vs. what still
 3. **Research-paper track** — per the readiness map above: figures script (~1 session), lit review, head-error analysis, venue choice.
 
 ---
+
+### Session: 2026-07-06 (PM #5) — GEOJSON-UNIFY: Single-File Frontend Data Layer — Tom
+
+**What was done:**
+- Scoped, dispatched, and reviewed GEOJSON-UNIFY: make the git-tracked `exports/viable_sites.geojson` the frontend's only data source (replacing the four `export_web_data.py` outputs), which also removes non-viable/grey-dot sites from the dashboard by construction. Prompt: `GEOJSON_UNIFY_PROMPT.md`; agent delivery reviewed against live code + parquets. **APPROVED — first zero-falsified-claims round** (after 7 prior instances); every claims-table entry reproduced live.
+- **Exporter (`scripts/export_geojson.py`):** 24 → 58 properties (P1 flow stats, P2 MC energy p10/50/90 + homes, P3 elevation/turbine block, P4 capex breakdown + sensitivity + grant/opex/rate + `data_quality` + high-conf flag); new `_DP1_COLS` 1-d.p. rounding class; P2/P3 left-joins with `--p2`/`--p3` CLI args; RFC 7946 `meta` foreign member `{plants_analyzed: 17148, scored_sites: 3778, baseline}` computed from parquet row counts. Output verified: 1,138 features · 58 props uniform · byte-deterministic (SHA `f359b413…` across two reviewer runs) · aggregates match published baseline (NPV diff $5, CapEx $1, revenue $32, energy exact, 848 high-conf, median payback 9.8, 0 sentinels). File 1.85 MB.
+- **Frontend:** `data.ts` rewritten as adapter — `import sitesUrl from "../../../exports/viable_sites.geojson?url"` (single repo copy, no `public/data` duplication), module-cached fetch, all four legacy shapes (`National`, `PlantCollection`, `Portfolio`, `PlantDetail`) derived client-side; band/confidence logic mirrors `export_web_data.py` (verified: CA 13 High / 134 Lower identical to old output). `NationalMap.tsx:29` null-payback branch → `return false`. `vite-env.d.ts` new (`*.geojson?url` declaration); `vite.config.ts` `server.fs.allow: [".."]`. Views otherwise untouched. `git clone` + `npm install` + `npm run dev` now shows the full dashboard with zero Python steps.
+- **Verification:** pytest 717 passed / 1 skipped (+16 new, non-tautological); `tsc -b --noEmit` clean; build clean (geojson asset in `dist/assets/`); dev server `/@fs` serving confirmed (200, 1,138 features — note: repo path contains a space, curl needs `%20`, browsers fine). **Live headless-browser QA:** dashboard KPIs 17,148 / 1,138 / $310.1M / 9.8 yr, "1,138 sites shown", Top-5 populated; plant detail OH0024732 fully populated (all cards match geojson values); CA portfolio 147 sites / $125.9M, table + summary + charts render. Maplibre canvas itself not verifiable headless (no WebGL in SwiftShader) — **Tom: eyeball map dots once in a real browser.**
+- **Nits (non-blocking, on record in the review prompt banner):** exporter docstring references prompt "§1.1" + says `KeyError` where polars raises `ColumnNotFoundError`; adapter has no sentinel-payback guard (harmless for viable-only data).
+
+**Files modified / created:**
+- `scripts/export_geojson.py`, `tests/test_scripts/test_export_geojson.py` — exporter + 16 tests (agent).
+- `exports/viable_sites.geojson` — regenerated, 58 props + meta (agent; reviewer re-ran, byte-identical).
+- `frontend/src/lib/data.ts` (rewritten), `frontend/src/vite-env.d.ts` (new), `frontend/vite.config.ts`, `frontend/src/views/NationalMap.tsx` (agent).
+- `GEOJSON_UNIFY_PROMPT.md` (this session's coding-agent prompt), `GEOJSON_UNIFY_REVIEW_PROMPT.md` (agent) + REVIEW OUTCOME banner (review).
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Resources used:**
+- Live parquets (baseline recompute), `frontend/public/data/national.json` + `portfolio/CA.json` (old-exporter cross-checks), gstack `/browse` headless QA.
+
+**Next steps after this session:**
+1. **Tom: eyeball the map in a real browser** (WebGL) — dots, hover popup, click-through.
+2. **Retire `scripts/export_web_data.py` + `frontend/public/data/`?** Frontend no longer reads them; decide with teammate before deleting (their branch may still use them).
+3. **Tell teammate:** frontend now reads `exports/viable_sites.geojson` directly — pull `tom`, `npm install`, done; no Python needed.
+4. **Research-paper track** (figures script, lit review, venue) — unchanged.
+
+---
