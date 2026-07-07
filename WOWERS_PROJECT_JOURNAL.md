@@ -5838,6 +5838,8 @@ Assessment of what the repo already provides for a research paper vs. what still
 - `tests/test_scripts/test_export_geojson.py` — +1 integration test.
 - `WOWERS_PROJECT_JOURNAL.md` — this entry.
 
+**Follow-up (same session):** Tom asked for ALL 3,778 sites visible at the default slider position (old behavior hid the 952 finite->20-yr sites at the 20-yr max; only sentinels showed grey). `NationalMap.tsx`: slider at 20 now disables the payback filter entirely (label reads "no limit"); below 20 it filters as before (null-payback hidden). Verified live: "3,778 sites shown" at default. Deliberate behavior CHANGE vs the old plants.geojson map, not a parity restore.
+
 **Next steps:** unchanged from PM #5 (Tom eyeballs map in real browser — now expect grey dots too; export_web_data.py retirement decision; teammate pull note; paper track).
 
 ---
