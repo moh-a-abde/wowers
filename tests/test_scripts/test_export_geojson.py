@@ -49,6 +49,7 @@ from export_geojson import (
 _SCORECARD_PATH = Path("data/processed/phase4/financial_scorecards.parquet")
 _P1_PATH        = Path("data/processed/phase1/ranked_candidates.parquet")
 _EXPORT_PATH    = Path("exports/viable_sites.geojson")
+_EXPORT_ALL_PATH = Path("exports/scored_sites.geojson")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -472,6 +473,25 @@ class TestExportIntegration:
         assert meta["plants_analyzed"] == 17148
         assert meta["scored_sites"] == 3778
         assert isinstance(meta["baseline"], str)
+
+    def test_scored_geojson_has_3778_features_58_props_and_meta(self):
+        """exports/scored_sites.geojson (frontend data source) — all scored sites."""
+        assert _EXPORT_ALL_PATH.exists(), (
+            f"{_EXPORT_ALL_PATH} not found — run: python scripts/export_geojson.py"
+        )
+        with open(_EXPORT_ALL_PATH) as f:
+            fc = json.load(f)
+        assert len(fc["features"]) == 3778, (
+            f"Expected 3778 features, got {len(fc['features'])}"
+        )
+        for feat in fc["features"][:5]:
+            assert len(feat["properties"]) == 58
+        meta = fc.get("meta")
+        assert meta is not None
+        assert meta["plants_analyzed"] == 17148
+        assert meta["scored_sites"] == 3778
+        n_viable = sum(1 for feat in fc["features"] if feat["properties"]["project_viable"])
+        assert n_viable == 1138, f"Expected 1138 viable among scored, got {n_viable}"
 
     def test_all_features_have_required_properties(self):
         with open(_EXPORT_PATH) as f:

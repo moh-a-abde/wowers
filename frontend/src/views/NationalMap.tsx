@@ -26,7 +26,9 @@ export default function NationalMap() {
       if (state && p.state !== state) return false;
       if (p.turbine && !turbines.includes(p.turbine)) return false;
       if (highOnly && p.confidence !== "High") return false;
-      if (p.payback == null) return false;
+      // null payback = "never pays back" (sentinel): only show when the
+      // slider is at its 20-yr max, matching the pre-UNIFY behavior.
+      if (p.payback == null) return maxPayback >= 20;
       return p.payback <= maxPayback;
     });
     return { type: "FeatureCollection", features: feats };

@@ -1,12 +1,17 @@
 """GeoJSON export for the WOWERS frontend map demo.
 
-Reads Phase 1–4 parquets and exports the 1,138 project-viable sites
-(post P2-SEED re-baseline) as a GeoJSON FeatureCollection.
+Reads Phase 1–4 parquets and exports GeoJSON FeatureCollections
+(post P2-SEED re-baseline). The default run writes BOTH git-tracked files:
 
-The output ``exports/viable_sites.geojson`` is git-tracked and is the
-*single static data source* for the vite+react+maplibre frontend.
+  exports/viable_sites.geojson  — 1,138 project-viable sites (reports/paper)
+  exports/scored_sites.geojson  — all 3,778 scored sites; the *single static
+                                  data source* for the vite+react+maplibre
+                                  frontend (non-viable sites render as the
+                                  grey "> 20 yr" band on the map)
+
 The frontend derives national KPIs, per-state portfolios, and per-plant
-detail views entirely client-side from this one file.
+detail views entirely client-side from scored_sites.geojson, filtering to
+``project_viable`` for the KPI aggregates.
 
 COORDINATE ORDER: [longitude, latitude] per GeoJSON spec (RFC 7946 §3.1.1).
 
@@ -23,10 +28,10 @@ META FOREIGN MEMBER (RFC 7946 §6.1):
   byte-deterministic across runs as long as parquets don't change.
 
 USAGE:
-    python scripts/export_geojson.py
-    python scripts/export_geojson.py --all
+    python scripts/export_geojson.py                 # writes BOTH default files
+    python scripts/export_geojson.py --all           # all sites → --out (single file)
     python scripts/export_geojson.py --scorecard path --p1 path --p2 path --p3 path
-    python scripts/export_geojson.py --out path.geojson
+    python scripts/export_geojson.py --out path.geojson   # viable only → custom path
 """
 
 from __future__ import annotations
@@ -52,6 +57,7 @@ _DEFAULT_P1        = ROOT / "data/processed/phase1/ranked_candidates.parquet"
 _DEFAULT_P2        = ROOT / "data/processed/phase2/energy_yield_estimates.parquet"
 _DEFAULT_P3        = ROOT / "data/processed/phase3/turbine_sizing.parquet"
 _DEFAULT_OUT       = ROOT / "exports/viable_sites.geojson"
+_DEFAULT_OUT_ALL   = ROOT / "exports/scored_sites.geojson"
 
 # ── Property list: original 24 + 34 new = 58 total ────────────────────────────
 
@@ -461,17 +467,26 @@ def main() -> None:
                     help="Export all scored sites, not just project_viable==True")
     args = ap.parse_args()
 
-    out_path, n_features, n_dropped = export(
-        scorecard_path=args.scorecard,
-        p1_path=args.p1,
-        p2_path=args.p2,
-        p3_path=args.p3,
-        out_path=args.out,
-        viable_only=not args.all_sites,
+    # Default invocation (no --out, no --all): write BOTH tracked files so
+    # viable_sites.geojson and scored_sites.geojson can never drift apart.
+    default_run = args.out == _DEFAULT_OUT and not args.all_sites
+    runs = (
+        [(True, _DEFAULT_OUT), (False, _DEFAULT_OUT_ALL)]
+        if default_run
+        else [(not args.all_sites, args.out)]
     )
-    print(f"Features written  : {n_features:,}")
-    print(f"Dropped (no coord): {n_dropped}")
-    print(f"Output            : {out_path}")
+    for viable_only, out in runs:
+        out_path, n_features, n_dropped = export(
+            scorecard_path=args.scorecard,
+            p1_path=args.p1,
+            p2_path=args.p2,
+            p3_path=args.p3,
+            out_path=out,
+            viable_only=viable_only,
+        )
+        print(f"Features written  : {n_features:,}")
+        print(f"Dropped (no coord): {n_dropped}")
+        print(f"Output            : {out_path}")
 
 
 if __name__ == "__main__":

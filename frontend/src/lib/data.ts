@@ -1,10 +1,13 @@
 /**
  * WOWERS data layer — single-file adapter (GEOJSON-UNIFY).
  *
- * Imports ``exports/viable_sites.geojson`` (git-tracked, 1,138 features, 58
- * properties each) as a ?url import and fetches it *once* via a module-level
- * cached promise.  All four legacy shapes — PlantCollection, National,
- * Portfolio, PlantDetail — are derived client-side from that one file.
+ * Imports ``exports/scored_sites.geojson`` (git-tracked, all 3,778 scored
+ * sites — viable and non-viable — 58 properties each) as a ?url import and
+ * fetches it *once* via a module-level cached promise.  All four legacy
+ * shapes — PlantCollection, National, Portfolio, PlantDetail — are derived
+ * client-side from that one file.  The map shows every scored site (band
+ * coloring includes the grey non-viable dots); national/portfolio KPI
+ * aggregates filter to ``project_viable`` first, matching export_web_data.py.
  *
  * The view components (NationalMap, StatePortfolio, PlantDetail, MapView)
  * are unchanged: they call the same function names with the same signatures.
@@ -24,7 +27,7 @@ import type {
 
 // ── GeoJSON URL import (resolved by Vite at build/dev time) ──────────────────
 
-import sitesUrl from "../../../exports/viable_sites.geojson?url";
+import sitesUrl from "../../../exports/scored_sites.geojson?url";
 
 // ── Internal shape for the raw geojson properties (58 fields) ────────────────
 
@@ -121,6 +124,13 @@ function loadSites(): Promise<SiteCollection> {
 
 // ── Classification helpers (mirrors export_web_data.py logic) ─────────────────
 
+// Pipeline uses 1e6 as a "never pays back" sentinel; treat >= 1e5 as null
+// and round to 2 d.p. — export_web_data.py did both BEFORE banding, so the
+// band thresholds must see the rounded value (4.9996 → 5.0 → moderate).
+function payback(v: number | null): number | null {
+  return v != null && v < 1e5 ? Math.round(v * 100) / 100 : null;
+}
+
 function viabilityBand(pb: number | null): Band {
   if (pb === null) return "nonviable";
   if (pb < 5) return "high";
@@ -173,7 +183,7 @@ export async function fetchPlants(): Promise<PlantCollection> {
   const sites = await loadSites();
   const features = sites.features.map((f) => {
     const p = f.properties;
-    const pb = p.payback_years;
+    const pb = payback(p.payback_years);
     return {
       type: "Feature" as const,
       geometry: f.geometry,
@@ -204,12 +214,14 @@ export async function fetchPlants(): Promise<PlantCollection> {
 
 export async function fetchNational(): Promise<National> {
   const sites = await loadSites();
-  const fs = sites.features;
-  const ps = fs.map((f) => f.properties);
+  const all = sites.features.map((f) => f.properties);
+  // KPI aggregates are over viable sites only (mirrors export_web_data.py);
+  // tier_a_sites is over all scored sites, matching the old national.json.
+  const vs = all.filter((p) => p.project_viable);
 
   // by_state: count viable per state, sorted desc
   const stateMap = new Map<string, number>();
-  for (const p of ps) {
+  for (const p of vs) {
     const s = p.state_code;
     if (s) stateMap.set(s, (stateMap.get(s) ?? 0) + 1);
   }
@@ -217,38 +229,35 @@ export async function fetchNational(): Promise<National> {
     .map(([state, viable]) => ({ state, viable }))
     .sort((a, b) => b.viable - a.viable);
 
-  // top 5 by npv_usd
-  const sorted = [...fs].sort(
-    (a, b) => (b.properties.npv_usd ?? -Infinity) - (a.properties.npv_usd ?? -Infinity),
+  // top 5 viable by npv_usd
+  const sorted = [...vs].sort(
+    (a, b) => (b.npv_usd ?? -Infinity) - (a.npv_usd ?? -Infinity),
   );
-  const top_opportunities: TopOpportunity[] = sorted.slice(0, 5).map((f) => {
-    const p = f.properties;
-    return {
-      id: p.npdes_id,
-      name: p.facility_name,
-      city: p.city,
-      state: p.state_code,
-      energy_mwh:
-        p.annual_energy_kwh != null ? Math.round(p.annual_energy_kwh / 1e3) : null,
-      payback: p.payback_years,
-      npv_usd: p.npv_usd,
-    };
-  });
+  const top_opportunities: TopOpportunity[] = sorted.slice(0, 5).map((p) => ({
+    id: p.npdes_id,
+    name: p.facility_name,
+    city: p.city,
+    state: p.state_code,
+    energy_mwh:
+      p.annual_energy_kwh != null ? Math.round(p.annual_energy_kwh / 1e3) : null,
+    payback: payback(p.payback_years),
+    npv_usd: p.npv_usd,
+  }));
 
-  const paybacks = ps
-    .map((p) => p.payback_years)
+  const paybacks = vs
+    .map((p) => payback(p.payback_years))
     .filter((v): v is number => v != null);
 
   return {
     plants_analyzed: sites.meta.plants_analyzed,
     scored_sites: sites.meta.scored_sites,
-    viable_projects: ps.length,
-    tier_a_sites: ps.filter((p) => p.site_tier === "A").length,
-    high_confidence_sites: ps.filter((p) => p.project_viable_high_confidence).length,
-    portfolio_npv_usd: Math.round(_sum(ps.map((p) => p.npv_usd))),
-    portfolio_capex_usd: Math.round(_sum(ps.map((p) => p.total_capex_usd))),
-    annual_savings_usd: Math.round(_sum(ps.map((p) => p.annual_revenue_usd))),
-    viable_energy_mwh: Math.round(_sum(ps.map((p) => p.annual_energy_kwh)) / 1e3),
+    viable_projects: vs.length,
+    tier_a_sites: all.filter((p) => p.site_tier === "A").length,
+    high_confidence_sites: vs.filter((p) => p.project_viable_high_confidence).length,
+    portfolio_npv_usd: Math.round(_sum(vs.map((p) => p.npv_usd))),
+    portfolio_capex_usd: Math.round(_sum(vs.map((p) => p.total_capex_usd))),
+    annual_savings_usd: Math.round(_sum(vs.map((p) => p.annual_revenue_usd))),
+    viable_energy_mwh: Math.round(_sum(vs.map((p) => p.annual_energy_kwh)) / 1e3),
     median_payback: _median1dp(paybacks),
     by_state,
     top_opportunities,
@@ -265,19 +274,21 @@ export async function fetchPortfolio(state: string): Promise<Portfolio> {
     throw new Error(`No portfolio data for state: ${state}`);
   }
 
-  // Sort by npv_usd desc (mirrors export_web_data.py)
+  // Sort by npv_usd desc (mirrors export_web_data.py); table rows include
+  // every scored site in the state, aggregates are viable-only.
   const sorted = [...fs].sort(
     (a, b) => (b.properties.npv_usd ?? -Infinity) - (a.properties.npv_usd ?? -Infinity),
   );
 
   const ps = sorted.map((f) => f.properties);
-  const validPaybacks = ps
-    .map((p) => p.payback_years)
+  const vs = ps.filter((p) => p.project_viable);
+  const validPaybacks = vs
+    .map((p) => payback(p.payback_years))
     .filter((v): v is number => v != null);
 
   const rows: TableRow[] = sorted.map((f, i) => {
     const p = f.properties;
-    const pb = p.payback_years;
+    const pb = payback(p.payback_years);
     return {
       id: p.npdes_id,
       rank: i + 1,
@@ -306,14 +317,13 @@ export async function fetchPortfolio(state: string): Promise<Portfolio> {
 
   return {
     state,
-    // n_scored is unknowable from viable-only data; set equal to n_viable
     n_scored: ps.length,
-    n_viable: ps.length,
-    combined_npv_usd: Math.round(_sum(ps.map((p) => p.npv_usd))),
-    annual_savings_usd: Math.round(_sum(ps.map((p) => p.annual_revenue_usd))),
-    total_capex_usd: Math.round(_sum(ps.map((p) => p.total_capex_usd))),
+    n_viable: vs.length,
+    combined_npv_usd: Math.round(_sum(vs.map((p) => p.npv_usd))),
+    annual_savings_usd: Math.round(_sum(vs.map((p) => p.annual_revenue_usd))),
+    total_capex_usd: Math.round(_sum(vs.map((p) => p.total_capex_usd))),
     avg_payback: avgPayback,
-    high_confidence_sites: ps.filter((p) => p.project_viable_high_confidence).length,
+    high_confidence_sites: vs.filter((p) => p.project_viable_high_confidence).length,
     rows,
   };
 }
@@ -376,7 +386,7 @@ export async function fetchPlant(id: string): Promise<PlantDetail> {
       npv_usd: p.npv_usd,
       npv_with_grant_usd: p.npv_with_50pct_grant_usd,
       irr: p.irr,
-      payback_years: p.payback_years,
+      payback_years: payback(p.payback_years),
       lcoe_per_kwh: p.lcoe_per_kwh,
       annual_revenue_usd: p.annual_revenue_usd,
       annual_opex_usd: p.annual_opex_usd,

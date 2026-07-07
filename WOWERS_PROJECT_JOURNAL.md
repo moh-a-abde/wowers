@@ -5821,3 +5821,23 @@ Assessment of what the repo already provides for a research paper vs. what still
 4. **Research-paper track** (figures script, lit review, venue) — unchanged.
 
 ---
+
+### Session: 2026-07-06 (PM #5 addendum) — GEOJSON-UNIFY fix: restore non-viable sites on map — Tom
+
+**What was done:**
+- **Scoping correction:** PM #5 misread the original request — Tom wanted the frontend off the git-tracked geojson *without* losing the non-viable/marginal map dots (grey "> 20 yr" band). The viable-only file removed them; user caught it on first look.
+- **Fix (inline, no agent):** new git-tracked `exports/scored_sites.geojson` — all 3,778 scored sites, same 58 props + meta (exporter's existing `viable_only=False` path). `viable_sites.geojson` unchanged (1,138 — reports/paper still reference it). Default `python scripts/export_geojson.py` now writes BOTH files so they can't drift; `--out`/`--all` single-file behavior preserved.
+- **Adapter (`data.ts`):** imports `scored_sites.geojson`; new `payback()` helper — sentinel ≥1e5 → null AND round 2 d.p. *before* banding (both exactly as `export_web_data.py`; the 2 d.p. rounding matters — one boundary site 4.9996 yr banded `high` on raw vs `moderate` on rounded). National/portfolio KPI aggregates filter `project_viable` first; `tier_a_sites` over all scored (old national.json semantics); portfolio rows include all scored in state, `n_scored` real again. `NationalMap.tsx:29` reverted to old semantics (null payback shown when slider at 20).
+- **Verified live (headless):** map default "2,826 sites shown" — byte-matches old `plants.geojson` default-filter count; band distribution exact (93 high / 1,260 moderate / 650 marginal / 1,775 nonviable); KPIs unchanged (17,148 / 1,138 / $310.1M / 9.8 yr); non-viable detail page renders (OH0024058, Tier C, 28.5 yr); CA portfolio 147 viable / 156 scored rows (matches parquet). Both geojsons byte-deterministic (scored SHA `420ad5f4…`). pytest **718 passed / 1 skipped** (+1 scored-file integration test); `tsc` clean; build clean (6.1 MB asset). Sentinel guard nit from the PM #5 review banner is now closed (823 sentinels live in the scored file).
+
+**Files modified / created:**
+- `exports/scored_sites.geojson` — new (3,778 features).
+- `scripts/export_geojson.py` — dual default output + docstring.
+- `frontend/src/lib/data.ts` — scored-file import, `payback()` sentinel+2dp helper, viable-filtered aggregates.
+- `frontend/src/views/NationalMap.tsx` — payback-filter revert.
+- `tests/test_scripts/test_export_geojson.py` — +1 integration test.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Next steps:** unchanged from PM #5 (Tom eyeballs map in real browser — now expect grey dots too; export_web_data.py retirement decision; teammate pull note; paper track).
+
+---
