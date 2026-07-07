@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchPortfolio, useAsync } from "../lib/data";
-import type { TableRow } from "../lib/types";
+import type { Confidence, TableRow } from "../lib/types";
 import { BAND_COLOR, CONF_PILL } from "../lib/colors";
+import { downloadCsv } from "../lib/csv";
 import { num, usd, years } from "../lib/format";
 import { EnergyBar, RiskReturn } from "../components/charts/Charts";
 
@@ -20,30 +21,48 @@ const COLS: { key: Key; label: string; n?: boolean }[] = [
   { key: "confidence", label: "Confidence" },
 ];
 
+const CONF_RANK: Record<Confidence, number> = { High: 3, Medium: 2, Lower: 1 };
+const PAGE_SIZE = 50;
+
 export default function StatePortfolio() {
   const { code = "" } = useParams();
-  const { data, error } = useAsync(() => fetchPortfolio(code), [code]);
+  const { data, error } = useAsync(() => fetchPortfolio(code.toUpperCase()), [code]);
   const [sort, setSort] = useState<{ key: Key; dir: 1 | -1 }>({ key: "npv_usd", dir: -1 });
   const [q, setQ] = useState("");
+  const [page, setPage] = useState(0);
 
   const rows = useMemo(() => {
     if (!data) return [];
     let r = data.rows;
     if (q) r = r.filter((x) => (x.name ?? "").toLowerCase().includes(q.toLowerCase()) || (x.city ?? "").toLowerCase().includes(q.toLowerCase()));
     return [...r].sort((a, b) => {
-      const av = a[sort.key], bv = b[sort.key];
+      // Confidence sorts by rank (High > Medium > Lower), not alphabetically.
+      const av = sort.key === "confidence" ? CONF_RANK[a.confidence] : a[sort.key];
+      const bv = sort.key === "confidence" ? CONF_RANK[b.confidence] : b[sort.key];
       if (av == null) return 1;
       if (bv == null) return -1;
       return av > bv ? sort.dir : av < bv ? -sort.dir : 0;
     });
   }, [data, sort, q]);
 
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const cur = Math.min(page, pages - 1);
+  const slice = rows.slice(cur * PAGE_SIZE, (cur + 1) * PAGE_SIZE);
+
   const energyData = useMemo(
-    () => rows.slice(0, 10).map((r) => ({ name: r.name ?? r.id, mwh: r.energy_mwh ?? 0 })),
+    () =>
+      rows.slice(0, 10).map((r) => {
+        const full = r.name ?? r.id;
+        // Long names wrap and collide on the category axis — truncate.
+        const name = full.length > 20 ? `${full.slice(0, 19)}…` : full;
+        return { name, mwh: r.energy_mwh ?? 0 };
+      }),
     [rows],
   );
+  // Chart x-domain is 0–20 yr; exclude finite paybacks beyond it so points
+  // don't render outside the plot area.
   const scatterData = useMemo(
-    () => rows.filter((r) => r.payback != null && r.npv_usd != null)
+    () => rows.filter((r) => r.payback != null && r.payback <= 20 && r.npv_usd != null)
       .map((r) => ({ payback: r.payback!, npv: r.npv_usd!, band: r.band, name: r.name ?? r.id })),
     [rows],
   );
@@ -51,8 +70,17 @@ export default function StatePortfolio() {
   if (error) return <div className="loading">No portfolio data for “{code}”. <Link to="/">← Back to map</Link></div>;
   if (!data) return <div className="loading">Loading {code} portfolio…</div>;
 
-  const setKey = (key: Key) =>
+  const setKey = (key: Key) => {
+    setPage(0);
     setSort((s) => (s.key === key ? { key, dir: (-s.dir) as 1 | -1 } : { key, dir: -1 }));
+  };
+
+  const exportCsv = () =>
+    downloadCsv(
+      `wowers_${data.state}_portfolio.csv`,
+      ["rank", "npdes_id", "name", "city", "flow_mgd", "turbine", "capex_usd", "annual_savings_usd", "payback_yr", "npv_usd", "energy_mwh_yr", "viable", "confidence"],
+      rows.map((r) => [r.rank, r.id, r.name, r.city, r.flow_mgd, r.turbine, r.capex_usd, r.annual_savings_usd, r.payback, r.npv_usd, r.energy_mwh, r.viable, r.confidence]),
+    );
 
   return (
     <div style={{ padding: 22 }}>
@@ -64,24 +92,33 @@ export default function StatePortfolio() {
         {num(data.n_viable)} viable sites &nbsp;|&nbsp; {usd(data.combined_npv_usd)} combined NPV &nbsp;|&nbsp; {usd(data.annual_savings_usd)}/yr savings
       </div>
 
-      <div style={{ display: "flex", gap: 18, alignItems: "flex-start" }}>
+      <div className="sp-body" style={{ display: "flex", gap: 18, alignItems: "flex-start" }}>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 18 }}>
           {/* table */}
           <div className="card card-pad">
-            <input type="text" placeholder="Search plants…" value={q} onChange={(e) => setQ(e.target.value)} style={{ width: 240, marginBottom: 12 }} />
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+              <input type="text" placeholder="Search plants…" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} style={{ width: 240 }} />
+              <span className="faint" style={{ fontSize: 12 }}>{num(rows.length)} sites</span>
+              <button className="btn btn-ghost" style={{ marginLeft: "auto" }} onClick={exportCsv}>⇩ Export CSV</button>
+            </div>
             <div style={{ overflowX: "auto" }}>
               <table className="tbl">
                 <thead>
                   <tr>
                     {COLS.map((c) => (
-                      <th key={c.key} className={c.n ? "num" : ""} onClick={() => setKey(c.key)}>
+                      <th
+                        key={c.key}
+                        className={c.n ? "num" : ""}
+                        onClick={() => setKey(c.key)}
+                        aria-sort={sort.key === c.key ? (sort.dir === -1 ? "descending" : "ascending") : "none"}
+                      >
                         {c.label}{sort.key === c.key ? (sort.dir === -1 ? " ▾" : " ▴") : ""}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.slice(0, 100).map((r) => (
+                  {slice.map((r) => (
                     <tr key={r.id}>
                       <td>{r.rank}</td>
                       <td><Link to={`/plant/${r.id}`}>{r.name}</Link></td>
@@ -98,11 +135,17 @@ export default function StatePortfolio() {
                 </tbody>
               </table>
             </div>
-            {rows.length > 100 && <div className="faint" style={{ fontSize: 11, marginTop: 8 }}>Showing top 100 of {num(rows.length)}.</div>}
+            {pages > 1 && (
+              <div className="pager">
+                <button className="btn btn-ghost" disabled={cur === 0} onClick={() => setPage(cur - 1)}>← Prev</button>
+                <span className="muted" style={{ fontSize: 12 }}>Page {cur + 1} of {num(pages)}</span>
+                <button className="btn btn-ghost" disabled={cur >= pages - 1} onClick={() => setPage(cur + 1)}>Next →</button>
+              </div>
+            )}
           </div>
 
           {/* charts */}
-          <div style={{ display: "flex", gap: 18 }}>
+          <div className="sp-charts" style={{ display: "flex", gap: 18 }}>
             <div className="card card-pad" style={{ flex: 1, minWidth: 0 }}>
               <h3 className="card-title">Annual Energy by Site (Top 10)</h3>
               <EnergyBar data={energyData} />
@@ -115,7 +158,7 @@ export default function StatePortfolio() {
         </div>
 
         {/* summary sidebar */}
-        <div className="card card-pad" style={{ width: 250, flexShrink: 0 }}>
+        <div className="card card-pad sp-summary" style={{ width: 250, flexShrink: 0 }}>
           <h3 className="card-title">Portfolio Summary</h3>
           {[
             ["Viable sites", num(data.n_viable)],

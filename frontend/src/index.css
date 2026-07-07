@@ -105,3 +105,34 @@ input[type="text"], select {
   background: #fff; color: var(--text); font-size: 13px;
 }
 .loading { padding: 40px; text-align: center; color: var(--text-dim); }
+
+/* ---- Pagination ---- */
+.pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 12px; }
+.pager .btn:disabled { opacity: .45; cursor: default; }
+
+/* ---- Analytics grid ---- */
+.an-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+/* ---- Responsive ---- */
+@media (max-width: 1100px) {
+  .an-grid { grid-template-columns: 1fr; }
+  .pd-grid { grid-template-columns: 1fr !important; }
+  .sp-charts { flex-direction: column; }
+}
+
+@media (max-width: 900px) {
+  .app { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: static; }
+  .sidebar .brand { padding: 14px 16px 10px; }
+  .nav { flex-direction: row; flex-wrap: wrap; padding: 8px 10px; }
+  .nav a { padding: 7px 10px; font-size: 13px; }
+
+  /* National map: stack panels, map keeps a fixed usable height */
+  .nm-body { flex-direction: column; overflow-y: auto; }
+  .nm-filters, .nm-side { width: 100% !important; border-right: none !important; border-left: none !important; border-bottom: 1px solid var(--border); }
+  .nm-map { min-height: 420px; }
+
+  /* State portfolio: summary drops below table */
+  .sp-body { flex-direction: column; }
+  .sp-summary { width: 100% !important; }
+}

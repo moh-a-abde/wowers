@@ -1,4 +1,6 @@
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -18,13 +20,16 @@ import { usd } from "../../lib/format";
 
 const AXIS = { fontSize: 11, fill: "#5b6b80" };
 
+const kFmt = (v: number) =>
+  Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}K` : `${v}`;
+
 /* Horizontal bar: Annual energy by site (top N) */
 export function EnergyBar({ data }: { data: { name: string; mwh: number }[] }) {
   return (
     <ResponsiveContainer width="100%" height={Math.max(220, data.length * 30)}>
       <BarChart data={data} layout="vertical" margin={{ left: 10, right: 30, top: 4, bottom: 4 }}>
         <CartesianGrid horizontal={false} stroke="#eef1f6" />
-        <XAxis type="number" tick={AXIS} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
+        <XAxis type="number" tick={AXIS} tickFormatter={kFmt} />
         <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11, fill: "#0f1b2d" }} />
         <Tooltip formatter={(v) => [`${Number(v).toLocaleString()} MWh/yr`, "Energy"]} />
         <Bar dataKey="mwh" radius={[0, 4, 4, 0]}>
@@ -38,9 +43,9 @@ export function EnergyBar({ data }: { data: { name: string; mwh: number }[] }) {
 }
 
 /* Vertical bar: viable sites by state */
-export function StateBar({ data }: { data: { state: string; viable: number }[] }) {
+export function StateBar({ data, height = 230 }: { data: { state: string; viable: number }[]; height?: number }) {
   return (
-    <ResponsiveContainer width="100%" height={230}>
+    <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
         <CartesianGrid vertical={false} stroke="#eef1f6" />
         <XAxis dataKey="state" tick={{ fontSize: 9, fill: "#5b6b80" }} interval={0} />
@@ -52,7 +57,8 @@ export function StateBar({ data }: { data: { state: string; viable: number }[] }
   );
 }
 
-/* Scatter: risk vs return (payback x, NPV y), colored by band */
+/* Scatter: risk vs return (payback x, NPV y), colored by band.
+   Points with payback > 20 yr are excluded by the caller (domain is 0–20). */
 export function RiskReturn({
   data,
 }: {
@@ -77,7 +83,8 @@ export function RiskReturn({
           dataKey="npv"
           name="NPV"
           tick={AXIS}
-          tickFormatter={(v) => `$${(v / 1e6).toFixed(0)}M`}
+          tickFormatter={(v) => usd(Number(v))}
+          width={56}
           label={{ value: "Net Present Value", angle: -90, position: "insideLeft", fontSize: 11, fill: "#5b6b80" }}
         />
         <ZAxis range={[35, 35]} />
@@ -125,24 +132,70 @@ export function Tornado({
   );
 }
 
-/* Line: turbine efficiency curve (synthesized around rated point) */
+/* Area: turbine efficiency curve (synthesized around rated point) */
 export function EfficiencyCurve({ qRated, peakPct }: { qRated: number; peakPct: number }) {
   const pts = [];
-  for (let i = 0; i <= 20; i++) {
-    const q = (i / 20) * qRated * 1.4;
+  for (let i = 0; i <= 40; i++) {
+    const q = (i / 40) * qRated * 1.4;
     const x = q / qRated;
     // simple unimodal efficiency shape peaking near rated flow
     const eff = peakPct * Math.max(0, 1 - 1.1 * Math.pow(x - 1, 2)) * (x < 0.15 ? x / 0.15 : 1);
-    pts.push({ q: +q.toFixed(1), eff: +Math.max(0, eff).toFixed(0) });
+    pts.push({ q: +q.toFixed(2), eff: +Math.max(0, eff).toFixed(1) });
   }
   return (
     <ResponsiveContainer width="100%" height={170}>
-      <BarChart data={pts} margin={{ left: 0, right: 10, top: 8, bottom: 4 }}>
+      <AreaChart data={pts} margin={{ left: 0, right: 10, top: 8, bottom: 4 }}>
         <CartesianGrid stroke="#eef1f6" />
         <XAxis dataKey="q" tick={AXIS} label={{ value: "Flow (m³/s)", position: "insideBottom", offset: -2, fontSize: 10, fill: "#5b6b80" }} />
-        <YAxis tick={AXIS} domain={[0, 100]} width={32} unit="%" />
-        <Tooltip formatter={(v) => `${Number(v)}%`} />
-        <Bar dataKey="eff" fill="#2563eb" />
+        <YAxis tick={AXIS} domain={[0, 100]} width={42} unit="%" />
+        <Tooltip formatter={(v) => [`${Number(v)}%`, "Efficiency"]} labelFormatter={(l) => `${l} m³/s`} />
+        <Area dataKey="eff" stroke="#2563eb" strokeWidth={2} fill="#2563eb" fillOpacity={0.12} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* Vertical bar histogram: distribution over labelled buckets */
+export function Histogram({
+  data,
+  color = "#2563eb",
+  unit = "sites",
+}: {
+  data: { bucket: string; count: number }[];
+  color?: string;
+  unit?: string;
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={240}>
+      <BarChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+        <CartesianGrid vertical={false} stroke="#eef1f6" />
+        <XAxis dataKey="bucket" tick={{ fontSize: 10, fill: "#5b6b80" }} interval={0} />
+        <YAxis tick={AXIS} width={40} tickFormatter={kFmt} />
+        <Tooltip formatter={(v) => [`${Number(v).toLocaleString()} ${unit}`, "Count"]} />
+        <Bar dataKey="count" fill={color} radius={[3, 3, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/* Horizontal bar: category mix (e.g. turbine types) with per-row colors */
+export function MixBar({
+  data,
+}: {
+  data: { label: string; count: number; color?: string }[];
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={Math.max(160, data.length * 38)}>
+      <BarChart data={data} layout="vertical" margin={{ left: 10, right: 30, top: 4, bottom: 4 }}>
+        <CartesianGrid horizontal={false} stroke="#eef1f6" />
+        <XAxis type="number" tick={AXIS} tickFormatter={kFmt} />
+        <YAxis type="category" dataKey="label" width={110} tick={{ fontSize: 11, fill: "#0f1b2d" }} />
+        <Tooltip formatter={(v) => [Number(v).toLocaleString(), "Sites"]} />
+        <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+          {data.map((d, i) => (
+            <Cell key={i} fill={d.color ?? "#16356a"} />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );

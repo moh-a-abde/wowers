@@ -5843,3 +5843,31 @@ Assessment of what the repo already provides for a research paper vs. what still
 **Next steps:** unchanged from PM #5 (Tom eyeballs map in real browser — now expect grey dots too; export_web_data.py retirement decision; teammate pull note; paper track).
 
 ---
+
+### Session: 2026-07-07 — Frontend bug-fix + feature sweep: real nav views, live KPIs, URL filters, CSV exports, vendor links — Tom
+
+**What was done:**
+- **Full frontend review then fix/build sweep** (Fable 5, inline — no agent). Started as "find bugs / missing features"; Tom approved fixing all of it in one pass.
+- **8 bugs fixed:**
+  1. Dead sidebar nav (Opportunities/Plants/Analytics/Reports silently redirected to `/`) — four real views built (below).
+  2. Dead "Next Steps" buttons on plant detail — now real links: **Get Turbine Quotes** → per-turbine manufacturer (Kaplan → Mavel, Francis → Canyon Hydro, Crossflow → Ossberger, in-conduit → InPipe Energy; supplier name shown), **DOE Water Power Funding** → energy.gov WPTO, **View Similar Sites** → `/plants?state=X&turbine=Y`.
+  3. GeoJSON fetch error swallowed (`useAsync` error ignored → eternal "Loading map…"); dashboard now shows error + Retry, and `data.ts` no longer caches a rejected promise.
+  4. Risk-vs-Return scatter: finite paybacks > 20 yr rendered outside the hardcoded [0,20] domain — now excluded; NPV axis $M/$K adaptive.
+  5. Confidence column sorted alphabetically (High < Lower < Medium) — now ranked High > Medium > Lower.
+  6. Gauge scale spanned p10·0.85→p90·1.15 while endpoint labels said P10/P90 — scale now exactly P10→P90, divide-by-zero guarded.
+  7. Deselect-all-turbines still showed null-turbine sites — explicit "Unassigned" checkbox added.
+  8. Chart nits: "0K" energy ticks, efficiency "curve" drawn as bars (now AreaChart), long y-axis plant names colliding (truncated ≥20 chars).
+- **Features added:** filter-aware header KPIs (recompute from filtered set); URL-persisted dashboard filters (`?state=&turb=&pb=&hc=` — shareable/refresh-safe); zoom-to-state (map fitBounds to state bbox; found+fixed deep-link race — fitBounds before map load — gated on `onLoad`); table pagination (50/page, was hard 100-row cut); CSV export everywhere (state portfolio, plant directory, opportunities, Reports bulk: all/viable/state-summary); satellite mini-map with pin on plant detail (lat/lon were fetched but never rendered); `aria-sort` on sortable headers; responsive CSS (panels stack <900px, chart grids collapse <1100px).
+- **New views:** `/opportunities` (1,138 viable ranked, band-chip filters, combined KPIs), `/plants` (all 3,778, state/turbine/viable filters via URL params — deep-link target for "similar sites"), `/analytics` (payback histogram, all-states bar, turbine mix, viability+confidence breakdown), `/reports` (national summary grid, CSV downloads, data-sources note).
+- **Verified live in Chrome** (dev server + browser automation): dashboard KPIs react to filters (MN → 87/22/$6.3M/11.3 yr), `?state=MN&pb=15&hc=1` deep link restores state and zooms to MN, all four new views render, plant detail mini-map shows Met Council WWTP on the Mississippi, CA portfolio paginates 4 pages, scatter contained. Zero console errors. `tsc -b` + `vite build` clean.
+
+**Files modified:** `frontend/src/App.tsx` (routes), `components/MapView.tsx` (bounds prop + MiniMap + onLoad gate), `components/charts/Charts.tsx` (scatter/ticks/AreaChart + Histogram/MixBar), `components/charts/Gauge.tsx`, `views/NationalMap.tsx` (URL filters, live KPIs, error UI, bbox), `views/StatePortfolio.tsx` (pagination, conf-rank sort, CSV), `views/PlantDetail.tsx` (links, mini-map), `lib/colors.ts` (TURBINE_VENDOR, DOE_FUNDING_URL), `lib/data.ts` (cache reset), `index.css` (pager, an-grid, media queries).
+**Files created:** `components/SiteTable.tsx` (shared sortable/paginated/CSV table), `lib/csv.ts`, `views/Opportunities.tsx`, `views/Plants.tsx`, `views/Analytics.tsx`, `views/Reports.tsx`.
+
+**Next steps:**
+1. Consider code-splitting (`index.js` 707 kB; maplibre chunk 1 MB — route-level `lazy()` would cut initial load).
+2. Map clustering at low zoom (Northeast overplots; zoom-to-state mitigates but doesn't solve national view).
+3. Verify vendor URLs still live before any external demo (Mavel/Canyon/Ossberger/InPipe chosen as representative manufacturers, not endorsements).
+4. Paper track unchanged.
+
+---

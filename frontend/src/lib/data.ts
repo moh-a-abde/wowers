@@ -114,10 +114,15 @@ let _cache: Promise<SiteCollection> | null = null;
 
 function loadSites(): Promise<SiteCollection> {
   if (!_cache) {
-    _cache = fetch(sitesUrl).then((r) => {
-      if (!r.ok) throw new Error(`GeoJSON fetch failed: ${r.status} ${r.url}`);
-      return r.json() as Promise<SiteCollection>;
-    });
+    _cache = fetch(sitesUrl)
+      .then((r) => {
+        if (!r.ok) throw new Error(`GeoJSON fetch failed: ${r.status} ${r.url}`);
+        return r.json() as Promise<SiteCollection>;
+      })
+      .catch((e) => {
+        _cache = null; // don't cache the rejection — a retry can succeed
+        throw e;
+      });
   }
   return _cache;
 }
