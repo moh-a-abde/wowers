@@ -22,6 +22,25 @@ const SATELLITE: StyleSpecification = {
   layers: [{ id: "esri", type: "raster", source: "esri" }],
 };
 
+/* Light 2D basemap with state/admin borders (CARTO Positron raster, no API key). */
+const POSITRON: StyleSpecification = {
+  version: 8,
+  sources: {
+    carto: {
+      type: "raster",
+      tiles: [
+        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+        "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+        "https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
+      ],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors © CARTO",
+    },
+  },
+  layers: [{ id: "carto", type: "raster", source: "carto" }],
+};
+
 const NATIONAL_VIEW = { longitude: -96, latitude: 38.5, zoom: 3.6 };
 
 export type LngLatBounds = [[number, number], [number, number]]; // [[w, s], [e, n]]
@@ -38,6 +57,7 @@ export default function MapView({
   const mapRef = useRef<MapRef>(null);
   const [loaded, setLoaded] = useState(false);
   const [hover, setHover] = useState<{ lng: number; lat: number; p: MapProps } | null>(null);
+  const [basemap, setBasemap] = useState<"map" | "satellite">("map");
 
   // Runs once the map instance exists (onLoad) and again on bounds changes,
   // so a deep-linked ?state=XX zooms correctly on first paint.
@@ -78,7 +98,7 @@ export default function MapView({
       ref={mapRef}
       initialViewState={NATIONAL_VIEW}
       onLoad={() => setLoaded(true)}
-      mapStyle={SATELLITE}
+      mapStyle={basemap === "satellite" ? SATELLITE : POSITRON}
       interactiveLayerIds={["plants"]}
       onClick={onClick}
       onMouseMove={onMove}
@@ -86,6 +106,28 @@ export default function MapView({
       cursor={hover ? "pointer" : "grab"}
       style={{ width: "100%", height: "100%" }}
     >
+      <div
+        style={{
+          position: "absolute", top: 10, right: 10, zIndex: 1, display: "flex",
+          background: "#fff", border: "1px solid var(--border)", borderRadius: 8,
+          overflow: "hidden", boxShadow: "var(--shadow)",
+        }}
+      >
+        {(["map", "satellite"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setBasemap(m)}
+            style={{
+              border: "none", cursor: "pointer", padding: "6px 13px",
+              fontSize: 12, fontWeight: 600,
+              background: basemap === m ? "var(--navy)" : "#fff",
+              color: basemap === m ? "#fff" : "var(--text-dim)",
+            }}
+          >
+            {m === "map" ? "Map" : "Satellite"}
+          </button>
+        ))}
+      </div>
       <Source id="plants" type="geojson" data={data}>
         <Layer
           id="plants"
