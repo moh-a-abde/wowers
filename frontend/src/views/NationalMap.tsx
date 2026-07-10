@@ -94,9 +94,14 @@ export default function NationalMap() {
     return e >= w ? [[w, s], [e, n]] : null;
   }, [state, plants]);
 
+  // Derive from all scored sites, not national.by_state — that list only has
+  // states with viable sites, dropping territories like AS/MP/VI entirely.
   const states = useMemo(
-    () => (national ? national.by_state.map((s) => s.state).sort() : []),
-    [national],
+    () =>
+      plants
+        ? [...new Set(plants.features.map((f) => f.properties.state).filter((s): s is string => !!s))].sort()
+        : [],
+    [plants],
   );
 
   const error = nErr ?? pErr;
