@@ -155,24 +155,44 @@ export function EfficiencyCurve({ qRated, peakPct }: { qRated: number; peakPct: 
   );
 }
 
-/* Vertical bar histogram: distribution over labelled buckets */
+/* Two-line category tick: splits the label on "\n" so long bucket names
+   (e.g. "> 15 yr\n(Non-viable)") don't collide with their neighbors. */
+function BucketTick({ x, y, payload }: { x?: number; y?: number; payload?: { value?: string } }) {
+  const [l1, l2] = String(payload?.value ?? "").split("\n");
+  return (
+    <text x={x} y={(y ?? 0) + 10} textAnchor="middle" fontSize={10} fill="#5b6b80">
+      <tspan x={x}>{l1}</tspan>
+      {l2 && <tspan x={x} dy={11}>{l2}</tspan>}
+    </text>
+  );
+}
+
+/* Vertical bar histogram: distribution over labelled buckets.
+   Per-bucket `color` overrides the default fill. */
 export function Histogram({
   data,
   color = "#2563eb",
   unit = "sites",
 }: {
-  data: { bucket: string; count: number }[];
+  data: { bucket: string; count: number; color?: string }[];
   color?: string;
   unit?: string;
 }) {
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <BarChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 4 }}>
+      <BarChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 14 }}>
         <CartesianGrid vertical={false} stroke="#eef1f6" />
-        <XAxis dataKey="bucket" tick={{ fontSize: 10, fill: "#5b6b80" }} interval={0} />
+        <XAxis dataKey="bucket" tick={<BucketTick />} interval={0} />
         <YAxis tick={AXIS} width={40} tickFormatter={kFmt} />
-        <Tooltip formatter={(v) => [`${Number(v).toLocaleString()} ${unit}`, "Count"]} />
-        <Bar dataKey="count" fill={color} radius={[3, 3, 0, 0]} />
+        <Tooltip
+          formatter={(v) => [`${Number(v).toLocaleString()} ${unit}`, "Count"]}
+          labelFormatter={(l) => String(l).replace("\n", " ")}
+        />
+        <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+          {data.map((d, i) => (
+            <Cell key={i} fill={d.color ?? color} />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );

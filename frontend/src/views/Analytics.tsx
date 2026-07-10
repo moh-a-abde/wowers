@@ -12,7 +12,6 @@ const PB_BUCKETS: { label: string; min: number; max: number; band: Band }[] = [
   { label: "5–8", min: 5, max: 8, band: "moderate" },
   { label: "8–11", min: 8, max: 11, band: "moderate" },
   { label: "11–15", min: 11, max: 15, band: "moderate" },
-  { label: "15–20", min: 15, max: 20, band: "marginal" },
 ];
 
 /** Portfolio-level analytics across all scored sites. */
@@ -20,19 +19,28 @@ export default function Analytics() {
   const { data: national, error: nErr } = useAsync(fetchNational, []);
   const { data: plants, error: pErr } = useAsync(fetchPlants, []);
 
-  const viable = useMemo(
-    () => (plants ? plants.features.map((f) => f.properties).filter((p) => p.viable) : []),
+  const all = useMemo(
+    () => (plants ? plants.features.map((f) => f.properties) : []),
     [plants],
   );
+  const viable = useMemo(() => all.filter((p) => p.viable), [all]);
 
-  const paybackHist = useMemo(
-    () =>
-      PB_BUCKETS.map((b) => ({
-        bucket: b.label,
-        count: viable.filter((p) => p.payback != null && p.payback >= b.min && p.payback < b.max).length,
-      })),
-    [viable],
-  );
+  const paybackHist = useMemo(() => {
+    const buckets = PB_BUCKETS.map((b) => ({
+      bucket: b.label,
+      count: viable.filter((p) => p.payback != null && p.payback >= b.min && p.payback < b.max).length,
+      color: BAND_COLOR[b.band],
+    }));
+    // Viable sites never exceed ~14 yr payback (the NPV>0 gate cuts them off
+    // well before the 20-yr limit), so everything past 15 yr — including the
+    // ">20 yr" band and never-pays-back sites — is the non-viable tail.
+    buckets.push({
+      bucket: "> 15 yr\n(Non-viable)",
+      count: all.filter((p) => p.payback == null || p.payback > 15).length,
+      color: BAND_COLOR.nonviable,
+    });
+    return buckets;
+  }, [all, viable]);
 
   const turbineMix = useMemo(() => {
     const m = new Map<string, number>();
@@ -89,8 +97,11 @@ export default function Analytics() {
 
       <div className="an-grid">
         <div className="card card-pad">
-          <h3 className="card-title">Payback Distribution (viable sites)</h3>
+          <h3 className="card-title">Payback Distribution</h3>
           <Histogram data={paybackHist} />
+          <div className="faint" style={{ fontSize: 11, marginTop: 6 }}>
+            Colored bars: viable sites by payback. Grey bar: non-viable sites — payback over 15 yr or never pays back.
+          </div>
         </div>
         <div className="card card-pad">
           <h3 className="card-title">Viable Sites by State</h3>
