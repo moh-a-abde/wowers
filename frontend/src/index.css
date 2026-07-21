@@ -58,8 +58,33 @@ a:hover { text-decoration: underline; }
 }
 .card-pad { padding: 18px 20px; }
 .card-title { font-size: 15px; font-weight: 700; margin: 0 0 14px; color: var(--text); }
+.card-sub { font-size: 11.5px; color: var(--text-faint); margin: 0; line-height: 1.45; }
 .muted { color: var(--text-dim); }
 .faint { color: var(--text-faint); }
+
+/* Card anatomy: header band, flexible body, bottom-anchored footer */
+.card-col { display: flex; flex-direction: column; }
+.card-head { padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.card-head .card-title { margin-bottom: 4px; }
+.card-foot { margin-top: auto; }
+
+/* Label / value data row inside a card */
+.drow {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding: 8px 0; border-bottom: 1px solid #eef1f6; font-size: 13px;
+}
+.drow:last-child { border-bottom: none; }
+.drow .val { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Tinted headline block (NPV/IRR, turbine name) */
+.headline-box {
+  background: #f5f8fd; border: 1px solid #e6edf8; border-radius: 10px;
+  padding: 10px 14px; display: flex; gap: 26px; align-items: baseline;
+}
+
+/* Hoverable term with an explanation tooltip */
+.hint { cursor: help; border-bottom: 1px dotted #c2ccda; }
+.hint:hover { border-bottom-color: var(--blue); }
 
 /* ---- KPI tiles ---- */
 .kpi-row { display: flex; gap: 14px; flex-wrap: wrap; }

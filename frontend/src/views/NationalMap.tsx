@@ -50,6 +50,7 @@ export default function NationalMap() {
     const next = turbines.includes(t) ? turbines.filter((x) => x !== t) : [...turbines, t];
     update({ turb: next.length === TURBINES.length ? null : next.join(",") });
   };
+  const resetFilters = () => setParams(new URLSearchParams(), { replace: true });
 
   const filtered: PlantCollection | null = useMemo(() => {
     if (!plants) return null;
@@ -182,6 +183,22 @@ export default function NationalMap() {
             <MapView data={filtered} bounds={bounds} />
           ) : (
             <div className="loading">Loading map…</div>
+          )}
+          {filtered && filtered.features.length === 0 && (
+            <div
+              style={{
+                position: "absolute", inset: 0, zIndex: 2, display: "flex",
+                alignItems: "center", justifyContent: "center", pointerEvents: "none",
+              }}
+            >
+              <div className="card card-pad" style={{ textAlign: "center", pointerEvents: "auto", maxWidth: 260 }}>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>No sites match these filters</div>
+                <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+                  Try widening the payback range or re-enabling a turbine type.
+                </div>
+                <button className="btn btn-blue" onClick={resetFilters}>Reset filters</button>
+              </div>
+            </div>
           )}
         </div>
 
