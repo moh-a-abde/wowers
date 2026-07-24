@@ -1,0 +1,285 @@
+% =====================================================================
+% WOWERS Master's Thesis — Tom's assembly file (Track T + Joint drafts)
+% ---------------------------------------------------------------------
+% This is the master LaTeX document. Tom drafts the data/backend chapters
+% (Track T) and the Joint framing chapters here; Mohamed's frontend prose
+% (M1, M2) drops into the marked [MERGE] stubs at combine time.
+%
+% WORKFLOW (see thesis/THESIS_BREAKDOWN.md):
+%   - Write ONE work package at a time. Replace its \wptodo stub with prose.
+%   - Obey thesis/thesis_format_prompt.md (voice, numbers, honesty, fig/tab rules).
+%   - After a WP: tick it in THESIS_BREAKDOWN.md and log to thesis/THESIS_JOURNAL.md.
+%
+% COMPILE:  pdflatex thesis_tom.tex   (run twice for TOC/refs)
+% =====================================================================
+\documentclass[11pt,letterpaper]{report}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{caption}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+% --- helper: placeholder for a not-yet-written work package -----------
+\newcommand{\wptodo}[2]{%
+  \par\medskip\noindent\textcolor{red}{\textbf{[TODO — #1]}}\ \textit{#2}\par\medskip}
+
+% --- helper: figure placeholder, per format prompt convention ---------
+% Usage: \figplaceholder{N}{what the figure must show}{caption text}
+\newcommand{\figplaceholder}[3]{%
+  \begin{figure}[htbp]\centering
+    \fbox{\parbox{0.85\linewidth}{\centering\vspace{2em}%
+      \textbf{[FIGURE #1]} — #2\vspace{2em}}}
+    \caption{#3}\label{fig:#1}
+  \end{figure}}
+
+\title{WOWERS: A Proof-of-Concept Infrastructure-Intelligence Platform for National
+Screening of Micro-Hydropower Recovery at Wastewater Outfalls}
+\author{XINSHENG (TOM) TANG \and MOHAMED ABDEL HAMID}
+\date{} % set MONTH_YEAR on title page below
+
+\begin{document}
+
+% =====================================================================
+% FRONT MATTER                                          (WP J5 — Joint)
+% =====================================================================
+\begin{titlepage}\centering
+  {\large WOWERS: A Proof-of-Concept Infrastructure-Intelligence Platform for\\
+   National Screening of Micro-Hydropower Recovery at Wastewater Outfalls\par}
+  \vspace{2cm}
+  A THESIS\\ SUBMITTED TO THE FACULTY OF THE GRADUATE SCHOOL\\
+  OF UNIVERSITY OF ST.\ THOMAS\\ BY\par
+  \vspace{1cm}
+  XINSHENG (TOM) TANG\\ MOHAMED ABDEL HAMID\par
+  \vspace{1cm}
+  IN PARTIAL FULFILLMENT OF THE REQUIREMENTS\\
+  FOR THE DEGREE OF MASTER OF SCIENCE\par
+  \vspace{1cm}
+  {\itshape \{\{MONTH\_YEAR\}\}}\par
+\end{titlepage}
+
+% --- Certification page ----------------------------------------------
+\thispagestyle{empty}
+\noindent UNIVERSITY OF ST.\ THOMAS\par\vspace{1em}
+\noindent This is to certify that I have examined this copy of Master's thesis by\par
+\vspace{1em}\noindent Xinsheng (Tom) Tang\\ Mohamed Abdel Hamid\par
+\vspace{1em}\noindent and have found it is complete and satisfactory in all respects,
+and that any and all revisions required by the final examining committee have been made.
+\par\vspace{2em}
+\noindent\rule{6cm}{0.4pt}\\ Name of Faculty Advisor(s)\par\vspace{1.5em}
+\noindent\rule{8cm}{0.4pt}\\ Signature of Faculty Advisor(s)\par\vspace{1.5em}
+\noindent\rule{8cm}{0.4pt}\\ Date\par\vspace{2em}
+\noindent GRADUATE PROGRAM\\ School of Engineering\par
+\clearpage
+
+% --- Abstract (5 paragraphs, 350-450 words; write LAST) ---------------
+\chapter*{Abstract}
+\wptodo{J5 · Abstract}{Five paragraphs per format §3.3: (1) opportunity + quantified loss;
+(2) the proposal + "that can be built on later in the development of a minimum viable
+product (MVP)"; (3) dataflow end to end; (4) headline numbers at full precision, measured
+vs.\ simulated separated; (5) what it enables + three improvements. Write after all
+chapters exist.}
+
+% --- Acknowledgements -------------------------------------------------
+\chapter*{Acknowledgements}
+\wptodo{J5 · Acknowledgements}{Four short paragraphs: advisor; business-side faculty;
+named industry practitioners; one-line catch-all.}
+
+\tableofcontents
+\listoffigures
+\listoftables
+\clearpage
+
+% =====================================================================
+% CHAPTER 1 — INTRODUCTION                              (WP J2 — Joint)
+% =====================================================================
+\chapter{Introduction}
+\wptodo{J2 · Introduction (~1,100 w)}{Macro trend + hard number; why current approach does
+not scale; "We propose the creation of a company, WOWERS, to\dots"; end-state workflow;
+split technical vs.\ logistical development. Feeds: ARCHITECTURE.md, project journal.}
+
+\section{Thesis Statement}
+\wptodo{J2}{One paragraph ~120 words: the proposition, scope of the business discussion,
+what the proof-of-concept develops.}
+
+\section{Thesis Outline}
+\wptodo{J2}{One paragraph walking each chapter in order.}
+
+% =====================================================================
+% CHAPTER 2 — BACKGROUND AND PRIOR WORK                 (WP T1 — Tom)
+% =====================================================================
+\chapter{Background and Prior Work}
+\wptodo{T1 · Ch2 (~2,400 w)}{Feeds: project journal (turbine + energy research),
+ENERGY_CONSUMPTION_*.md, ORNL national conduit assessment, CF_CALIBRATION_REPORT.md §4.
+BIGGEST lit-search gap per readiness map.}
+
+\section{Wastewater Outfall Energy Loss and Recovery Limitations}
+\wptodo{T1 · 2.1}{Enumerate the limitation modes as a numbered set in the opening, then one
+paragraph each, every one ending in a quantified impact + bracketed citation.}
+
+\section{Current Practice and In-Conduit Recovery Techniques}
+\wptodo{T1 · 2.2}{Honest current practice: LucidPipe Portland, Rentricity, CINK — what
+exists, what it catches, what it misses.}
+
+\section{Public-Data Screening of Hydropower Potential (Primer)}
+\wptodo{T1 · 2.3}{First-principles primer: \(P=\eta\rho g Q H\), public regulatory data
+(ECHO/ICIS, DMR, 3DEP). Scope it explicitly. End on why prior methods are limited.}
+
+\section{Prior National Assessments and Calibration Approaches}
+\wptodo{T1 · 2.4}{Literature-review peak: 8--12 citations; compare \(\geq 3\) prior
+national/conduit assessments by a common metric.}
+
+% =====================================================================
+% CHAPTER 3 — BUSINESS MODEL                            (WP J1 — Joint)
+% =====================================================================
+\chapter{Business Model}
+\wptodo{J1 · Ch3 (~2,300 w)}{Eight subsections, 150--400 w each. Feeds:
+WOWERS_Project_Report.pdf, DIRECTOR_BRIEF_2026-06-24.md,
+WOWERS_Capital_and_Funding_Research.md, Fowler feedback. Address the four judge gaps.}
+
+\section{The Problem}
+\wptodo{J1 · 3.1}{Global/national \$ figure + unit-level figure + three named complications.}
+\section{The Solution}
+\wptodo{J1 · 3.2}{The service in one paragraph; optional partner/ecosystem play.}
+\section{The Target Market}
+\wptodo{J1 · 3.3}{One REAL named archetype plant: size, output, what makes it hard to serve.}
+\section{Competition}
+\wptodo{J1 · 3.4}{Real competitors (LucidEnergy, Rentricity, CINK); concede strengths; the gap.}
+\section{Pricing Model}
+\wptodo{J1 · 3.5}{Three price tiers (bulleted, \$ figures) + one derivation sentence.}
+\section{Marketing and Distribution}
+\wptodo{J1 · 3.6}{Three named stages, in order, goal of each.}
+\section{Market Potential}
+\wptodo{J1 · 3.7}{TAM$\rightarrow$SAM$\rightarrow$SOM arithmetic shown; ~10\% realistic share.}
+\section{Future Vision and Project Timeline}
+\wptodo{J1 · 3.8}{Named upcoming project; milestone sequence; which milestone is built first.}
+
+% =====================================================================
+% CHAPTER 4 — DESIGN DETAILS (technical bulk, 9,000-12,000 w)
+% Hardware skeleton remapped to WOWERS software (see BREAKDOWN §0).
+% =====================================================================
+\chapter{Design Details}
+
+\section{System Overview}                                % WP T2 / Joint
+\wptodo{T2 · 4.1}{Whole-platform dataflow: public data $\rightarrow$ 4-phase pipeline
+$\rightarrow$ geojson $\rightarrow$ dashboard. MUST end with the honesty paragraph naming
+how the built solution differs from the proposed design.}
+\figplaceholder{1}{Top-level system block diagram: data sources, the four pipeline phases,
+the geojson export contract, and the frontend dashboard.}{System block diagram of the WOWERS
+platform}
+
+\section{Data Acquisition}                               % WP T2 — Tom
+\wptodo{T2 · 4.2 (~1,600 w w/ 4.1)}{Feeds: ARCHITECTURE.md, src/phase1/ingest.py,
+filter_potw.py, dmr_timeseries.py, src/phase3/elevation.py, src/phase5/ground_truth.py,
+config/settings.yaml. Sources, options considered, honesty paragraph (999 sentinels,
+GPD/MGD errors, coordinate corruption).}
+
+\section{Processing Pipeline}                            % WP T3, T4 — Tom
+\wptodo{T3/T4 · 4.3 (~4,600 w)}{The heart of the technical half. Each subsystem follows the
+five-part shape: responsibility $\rightarrow \geq 3$ options $\rightarrow$ why chosen
+$\rightarrow$ how built $\rightarrow$ named limitations.}
+
+\subsection{POTW Filtering and Flow Features}
+\wptodo{T3 · 4.3.1}{Feeds: filter_potw.py, flow_features.py, PHASE1_REPORT.md.}
+\subsection{Composite Ranking}
+\wptodo{T3 · 4.3.2}{Feeds: ranking.py. Weights, min-max normalization.}
+\subsection{Monte-Carlo Energy Estimation}
+\wptodo{T3 · 4.3.3}{Feeds: energy_physics.py, monte_carlo.py, head_assumptions.py,
+PHASE2_REPORT.md. Site-keyed seeding, P10/P50/P90.}
+\subsection{Head Estimation}
+\wptodo{T4 · 4.3.4}{Feeds: head_estimation.py, outfall_coords.py. Flag DEM-proxy as the
+LARGEST methodological assumption; the plausibility gate.}
+\subsection{Turbine Selection}
+\wptodo{T4 · 4.3.5}{Feeds: turbine_selection.py, data/turbines/turbine_manufacturers.csv.}
+\subsection{Cost Models and Financial Scorecard}
+\wptodo{T4 · 4.3.6}{Feeds: cost_models.py, financials.py, revenue.py, plant_consumption.py,
+sensitivity.py, EXCLUSION_FUNNEL_REPORT.md. CapEx bands, install cost, NPV/IRR/payback.}
+
+\section{Calibration and Validation}                     % WP T5 — Tom
+\wptodo{T5 · 4.4 (~part of 2,000 w)}{Feeds: scripts/cf_calibration.py,
+CF_CALIBRATION_REPORT.md, src/phase5/*, FERC_CONDUIT_LABEL_REPORT.md. Implied-CF vs EHA-CF
+$\rightarrow$ 119--281 GWh band (strongest element). Phase-5 ML KILL as an honest negative
+result — report it, do not hide it.}
+
+\section{Data Export and Serving Layer}                  % WP T5 — Tom
+\wptodo{T5 · 4.5}{Feeds: scripts/export_geojson.py, exports/viable_sites.geojson +
+scored_sites.geojson. The 58-property contract, byte-determinism.}
+
+\section{Frontend Visualization System}                  % WP M1 — Mohamed [MERGE]
+\wptodo{M1 · 4.6 — MERGE FROM MOHAMED (~2,000 w)}{Mohamed drafts in his file; paste here at
+combine time. Feeds: frontend/src/ (App routing, 7 views, MapView, charts, Gauge, SiteTable,
+lib/data.ts). Stack options; single-file geojson contract; the 7 views; URL filters; CSV;
+map interaction.}
+% \figplaceholder{2}{Frontend application flow / routing diagram.}{Frontend application flow}
+
+% =====================================================================
+% CHAPTER 5 — EXPERIMENTS AND RESULTS (3,500-4,500 w)
+% Format quirk: subsections start at 5.1.1; there is NO 5.1 heading.
+% =====================================================================
+\chapter{Experiments and Results}
+% force section counter to 1 (prints no heading) so subsections read 5.1.x
+\stepcounter{section}\setcounter{subsection}{0}
+
+\subsection{Best Case and Expected System Performance}   % WP T6 — Tom
+\wptodo{T6 · 5.1.1 (must come first)}{Two PARALLEL tables — Ideal vs Expected system
+performance — identical columns, differing assumptions. Physics ceiling 409.2 GWh/yr vs
+calibrated band 119--281 GWh/yr.}
+
+\subsection{Site Exclusion Funnel}                       % WP T6 — Tom
+\wptodo{T6 · 5.1.2}{17,148 $\rightarrow$ 5,464 $\rightarrow$ 4,860 $\rightarrow$ 3,778
+$\rightarrow$ 1,138. Selection-bias defense: 76.8\% data-gap vs 16.5\% economics.}
+\figplaceholder{8}{Exclusion funnel from 17,148 screened POTWs to 1,138 project-viable
+sites, with the drop reason at each stage.}{Site exclusion funnel}
+
+\subsection{Energy and Financial Results}                % WP T6 — Tom
+\wptodo{T6 · 5.1.3}{Monte-Carlo energy, portfolio NPV \$310.1M, median payback 9.8 yr.
+Discrepancy paragraphs wherever measured $\neq$ expected.}
+
+\subsection{Capacity-Factor Calibration}                 % WP T6 — Tom
+\wptodo{T6 · 5.1.4}{Implied-CF vs EHA-CF (629 plants / 9{,}798 plant-years). LucidPipe
+Portland CF 0.628 anchor. The calibration-band result + discrepancy paragraph.}
+
+\subsection{Machine-Learning Feasibility (Negative Result)} % WP T6 — Tom
+\wptodo{T6 · 5.1.5}{Report the Phase-5 kill plainly: only 11 conduit labels found vs the
+$\geq 50$ gate; Point Loma offline since 2018. List the specific reasons it failed.}
+
+\subsection{Frontend Performance}                        % WP M2 — Mohamed [MERGE]
+\wptodo{M2 · 5.1.6 — MERGE FROM MOHAMED (~700 w)}{Build perf (vite 7.3.5, ~2.6 s, bundle
+sizes), headless + Chrome QA. Separate measured from deferred (code-splitting, clustering).}
+
+\subsection{System Integration Test}                     % WP J4 — Joint
+\wptodo{J4 · 5.1.7}{End-to-end: parquets $\rightarrow$ export_geojson.py $\rightarrow$
+dashboard; P2-SEED baseline matches across the boundary (1,138 / 409.17 GWh / \$310.1M /
+9.8 yr). Realistic stimulus = the real re-baselined parquets.}
+
+% =====================================================================
+% CHAPTER 6 — CONCLUSIONS AND FUTURE WORK               (WP J3 — Joint)
+% =====================================================================
+\chapter{Conclusions and Future Work}
+\wptodo{J3 · Ch6 (~900 w)}{What was designed/tested + which MVP requirements it fulfills;
+restate headline metrics at full precision; three future-work themes (Tom-side validation /
+head-error; Mohamed-side code-splitting / clustering / live backend; joint customer pilot);
+position as first step to customer value.}
+
+% =====================================================================
+% REFERENCES  (IEEE-adjacent, numbered by first appearance; target 40-50)
+% =====================================================================
+\begin{thebibliography}{99}
+  \bibitem{placeholder} \wptodo{J5 · References}{Merge both tracks' citations into one
+  IEEE-numbered list. Journal/conference and web formats per format prompt §6.}
+\end{thebibliography}
+
+% =====================================================================
+% APPENDICES                                            (WP T7 — Tom)
+% =====================================================================
+\appendix
+\chapter{Data Dictionary and Exclusion-Funnel Tables}
+\wptodo{T7 · Appendix A}{58 geojson properties; full funnel tables.}
+\chapter{Calibration and Sensitivity Captures}
+\wptodo{T7 · Appendix B}{Implied-CF vs EHA-CF captures; sensitivity NPV bands.}
+\chapter{Monte-Carlo Distribution Figures}
+\wptodo{T7 · Appendix C}{P10/P50/P90 distributions.}
+
+\end{document}
