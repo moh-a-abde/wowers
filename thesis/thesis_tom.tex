@@ -111,25 +111,242 @@ what the proof-of-concept develops.}
 % CHAPTER 2 — BACKGROUND AND PRIOR WORK                 (WP T1 — Tom)
 % =====================================================================
 \chapter{Background and Prior Work}
-\wptodo{T1 · Ch2 (~2,400 w)}{Feeds: project journal (turbine + energy research),
-ENERGY_CONSUMPTION_*.md, ORNL national conduit assessment, CF_CALIBRATION_REPORT.md §4.
-BIGGEST lit-search gap per readiness map.}
+
+Municipal wastewater treatment is an energy-intensive public service. Nationally,
+U.S.\ publicly owned treatment works (POTWs) consume on the order of 30.2 TWh/yr of
+electricity, about 0.8\% of total U.S.\ electricity use in the reference year of the
+Electric Power Research Institute (EPRI) sector study~\cite{epri2013}. At the same time,
+treated effluent leaves most plants through gravity or pressurized outfalls that drop
+several meters of unused hydraulic head into receiving waters. That residual head is
+dissipated as turbulence and heat rather than converted to useful work. Micro-hydropower
+recovery at the outfall is therefore an energy-\emph{recovery} opportunity nested inside
+an energy-\emph{consuming} facility: the plant already pays for aeration, pumping, and
+solids handling, while a fraction of the kinetic and potential energy in the discharge
+stream goes unused.
+
+The physical opportunity is real, but capture has been rare. There are six common
+limitations that keep outfall energy recovery from scaling across the U.S.\ POTW fleet.
+These limitations will now be discussed in more detail.
 
 \section{Wastewater Outfall Energy Loss and Recovery Limitations}
-\wptodo{T1 · 2.1}{Enumerate the limitation modes as a numbered set in the opening, then one
-paragraph each, every one ending in a quantified impact + bracketed citation.}
+
+The six limitations that dominate practice are (1)~unmeasured site head, (2)~incomplete
+or corrupted flow records, (3)~misapplied river-hydro capacity factors, (4)~debris and
+maintenance downtime that physics models omit, (5)~project-by-project rather than
+fleet-scale screening, and (6)~opaque unit economics relative to plant power bills.
+Each limitation is treated below in that order.
+
+Unmeasured hydraulic head is the first barrier. Gross head at an outfall is the elevation
+difference between the plant hydraulic grade line and the receiving-water surface, less
+friction and minor losses in the conduit. Unlike river dams, WWTP outfalls are not
+instrumented with published stage records, and national permit databases carry facility
+coordinates far more reliably than outfall invert elevations. Screening studies that
+substitute literature archetype heads (for example triangular distributions of a few
+meters for small plants) can mis-rank sites by a factor of two or more when real
+topographic relief differs from the archetype~\cite{ornl2014}. Rule of thumb in the field
+is that net heads below about 1--2~m rarely justify a conventional reaction turbine
+without a very large continuous flow.
+
+Incomplete or corrupted discharge records form the second barrier. Flow is reported to
+EPA through Discharge Monitoring Reports (DMRs) under ICIS-NPDES, but the national archive
+contains sentinel values (for example design-flow entries of 999.0~MGD), unit slips between
+gallons per day and million gallons per day, and primary-outfall selection errors that
+prefer a single corrupted row over a consistently reported treatment outfall. After
+cleaning, the WOWERS Phase~1 cohort retains 17,148 active POTWs with usable mean flow; the
+pre-clean archive required extensive guards precisely because uncorrected DMR rows
+propagate into energy estimates that look precise and are wrong~\cite{epa_echo}.
+
+Capacity-factor misapplication is the third barrier. Run-of-river small hydro in the DOE
+HydroSource Existing Hydropower Assets (EHA) dataset shows median annual capacity factors
+near 0.39 for plants in the 0.1--5~MW class (629 plants, 9,798 plant-years) because of
+seasonal drought, peak sizing, and environmental-flow bypasses~\cite{hydrosource_eha}.
+WWTP outfalls track municipal demand, typically varying only $\pm$15--25\% seasonally, and
+have no ecological minimum-flow reservation on the effluent itself. Applying the river
+median CF to a continuous municipal conduit therefore understates recoverable energy by
+roughly a factor of two relative to a WWTP-appropriate CF near 0.60~\cite{cf_calib}.
+
+Debris fouling, minimum-flow cutoffs, and maintenance downtime constitute the fourth
+limitation. Physics ceilings that integrate $\eta\rho g Q H$ over a flow-duration curve
+with high availability (implied CF near 0.87 in the WOWERS Phase~2 P50 ceiling of
+409.2~GWh/yr) omit screens clogging, grit abrasion in wastewater, and planned outages.
+Even the best-documented continuous-conduit anchor---LucidPipe Portland at measured CF
+0.628---already sits well below a pure physics ceiling~\cite{lucidpipe}. Expecting
+fleet-wide CF above about 0.65 without site-specific O\&M modeling is not supported by
+published installs.
+
+The fifth limitation is institutional rather than hydraulic: recovery projects are
+originated one municipality at a time. Vendors such as LucidEnergy, Rentricity, and CINK
+Hydro-Energy publish case sheets for individual pressurized mains or WWTP references, but
+no public national inventory ranks all U.S.\ POTW outfalls by recoverable energy and
+payback under a shared method~\cite{rentricity,cink}. Without a fleet screen, capital
+flows to the plants that already have a consultant, not necessarily to the plants with the
+best physics.
+
+The sixth limitation is economic opacity at plant scale. EPRI reports national wastewater
+electricity use of 30.2~TWh/yr and observed energy intensities from about 3,300~kWh/MG for
+plants under 2~MGD down to about 1,600~kWh/MG for plants above 100~MGD~\cite{epri2013}.
+Against that bill, a micro-turbine that offsets a median of roughly 0.8\% of plant
+consumption (Phase~4 screening sanity check) looks trivial in isolation even when the
+portfolio NPV is large. Operators therefore under-invest unless screening shows named
+payback, CapEx, and turbine match rather than a generic ``green energy'' claim.
+These common limitations will now be set against what current practice already achieves.
 
 \section{Current Practice and In-Conduit Recovery Techniques}
-\wptodo{T1 · 2.2}{Honest current practice: LucidPipe Portland, Rentricity, CINK — what
-exists, what it catches, what it misses.}
+
+In-conduit and effluent hydropower is a proven niche, not an empty category. Three
+commercial lines illustrate what practitioners already do well, which of the six
+limitations they address, and which they leave open.
+
+LucidEnergy's LucidPipe system places spherical in-pipe turbines in large-diameter
+pressurized transmission mains (approximately 24--96~in). The flagship Portland, Oregon,
+installation on the Bull Run drinking-water main deploys four 42~in machines for 200~kW
+nameplate capacity and reports 1,100~MWh/yr of generation, implying a measured capacity
+factor of $1{,}100{,}000/(200\times 8{,}760)=0.628$~\cite{lucidpipe}. That project
+demonstrates continuous municipal-conduit duty cycles with CF well above river-hydro
+medians, and it catches limitation~(3) by proving the WWTP/conduit CF argument in the
+field. It does not catch limitations~(1),~(5), or~(6) for the national WWTP fleet: head and
+flow are known because the utility already operates the main, and the project was
+originated as a single utility partnership rather than from a ranked national list. The
+hydraulic regime is also drinking water rather than wastewater, so debris and corrosion
+risks are milder than at a secondary-effluent outfall.
+
+Rentricity supplies reverse-pump (Francis-type) machines certified to NSF~61/372 for
+potable and wastewater service. Public featured projects include approximately 32~kW at
+2.4~MGD and 40~psi, and approximately 360~kW at 2--12~MGD with 175--250~ft of head
+~\cite{rentricity}. These installs show that wastewater-certified hardware exists in the
+tens-to-hundreds-of-kilowatts band relevant to medium POTWs, addressing part of
+limitation~(4) through productized O\&M expectations. Annual generation (hence CF) is not
+published per site, so Rentricity cannot yet anchor a national calibration band the way
+LucidPipe can. Screening still depends on the utility bringing a known pressure and flow
+to the vendor.
+
+CINK Hydro-Energy manufactures crossflow, Kaplan, Pelton, and Francis machines and
+explicitly lists wastewater treatment plants among use cases. The company reports more than
+450 turbines in more than 50 countries and advertises operation from 6\% to 100\% of design
+flow~\cite{cink}. That part-load envelope is well matched to flat municipal flow-duration
+curves and therefore softens limitation~(4) relative to peak-sized river machines. As with
+Rentricity, published per-site annual kWh figures suitable for CF calibration are sparse,
+and project origination remains site-solicited rather than fleet-ranked.
+
+Complementary U.S.\ vendors (Canyon Hydro conduit installations, Emrgy canal modules,
+Turbulent vortex units, Natel fish-safe Kaplan variants) enlarge the hardware menu but do
+not change the pattern: hardware and site engineering exist; a reproducible national
+prioritization of POTW outfalls does not~\cite{doe_vision}. Current practice therefore
+catches local hydraulic feasibility and, in the LucidPipe case, continuous-conduit CF. It
+misses national ranking under shared assumptions, systematic treatment of DMR data quality,
+and calibrated portfolio energy bands. A public-data screening primer that makes those
+gaps precise will now be discussed.
 
 \section{Public-Data Screening of Hydropower Potential (Primer)}
-\wptodo{T1 · 2.3}{First-principles primer: \(P=\eta\rho g Q H\), public regulatory data
-(ECHO/ICIS, DMR, 3DEP). Scope it explicitly. End on why prior methods are limited.}
+
+This section discusses only the \emph{screening} problem---estimating which plants merit
+a site visit---not detailed civil design, interconnection studies, or turbine manufacturing.
+The enabling physics is the standard hydropower relation
+\begin{equation}
+  P = \eta\,\rho\,g\,Q\,H,
+  \label{eq:hydro}
+\end{equation}
+where $P$ is electrical power, $\eta$ is overall efficiency, $\rho$ is water density,
+$g$ is gravitational acceleration, $Q$ is volumetric flow, and $H$ is net head. Annual
+energy follows by integrating power over time, or equivalently by integrating
+Equation~\eqref{eq:hydro} along a flow-duration curve (FDC) with an availability factor.
+For municipal outfalls, $Q$ is observed (DMR monthly averages), while $H$ must be inferred
+from topography or plant drawings.
+
+Three public data layers make a national screen possible in principle. First, EPA ECHO /
+ICIS-NPDES identifies active POTW permits and publishes facility attributes used to build
+the candidate set~\cite{epa_echo}. Second, DMR parameter 50050 (flow) supplies the time
+series from which mean flow, percentiles, and a 20-point FDC are computed; the WOWERS
+ingest processes on the order of 279~million DMR rows spanning fiscal years 2009--2024.
+Third, the USGS 3DEP elevation service supplies point elevations that, differenced between
+plant and outfall coordinates and reduced by a head-loss fraction, yield a DEM-proxy net
+head in place of literature archetype triangles~\cite{usgs_3dep}. Ground-truth generation
+and capacity-factor benchmarks additionally draw on EIA/EHA HydroSource tables for existing
+hydropower assets~\cite{hydrosource_eha}.
+
+A defensible screen must still separate physics ceilings from calibrated expectations.
+Substituting median river-hydro CF for continuous effluent over-haircuts energy; omitting
+debris and downtime overstates it. The WOWERS response, developed in Chapters~4 and~5, is
+to report a physics ceiling (409.2~GWh/yr at the P2-SEED baseline) beside a calibrated band
+of 119--281~GWh/yr anchored to EHA empirics and LucidPipe~\cite{cf_calib}. Prior national
+methods that stop at resource potential, or that calibrate only against river fleets,
+therefore leave a methodological gap that Section~2.4 compares explicitly. Why those prior
+methods remain limited for POTW outfall recovery will now be discussed.
 
 \section{Prior National Assessments and Calibration Approaches}
-\wptodo{T1 · 2.4}{Literature-review peak: 8--12 citations; compare \(\geq 3\) prior
-national/conduit assessments by a common metric.}
+
+National hydropower assessment literature is rich for rivers and canals and thin for
+WWTP outfalls. The comparison that follows uses a single common metric---reported or
+implied annual energy (or capacity factor) at national or multi-state scale---across at
+least three named prior lines of work and the WOWERS screen. The scale and method contrast
+can be seen in Table~\ref{tab:prior_work}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Comparison of national and conduit hydropower assessment approaches by scope,
+  primary flow/head basis, and headline energy or capacity-factor metric}
+  \label{tab:prior_work}
+  \begin{tabular}{@{}p{2.6cm}p{2.8cm}p{3.2cm}p{3.6cm}@{}}
+    \toprule
+    Assessment & Scope & Flow / head basis & Headline metric \\
+    \midrule
+    DOE Hydropower Vision (2016) & U.S.\ conventional + new stream-reach & Resource + cost
+      curves; not POTW-specific & Sector roadmap; small-hydro cost form
+      $A\cdot\mathrm{kW}^{B}$~\cite{doe_vision,ornl2014} \\
+    ORNL / HydroSource EHA CF & Existing U.S.\ plants $\geq$1~MW class tabulated & Metered
+      generation / nameplate & Median CF $\approx$0.39 (0.1--5~MW bucket,
+      629 plants)~\cite{hydrosource_eha} \\
+    ORNL conduit / BCM canal methods & Non-powered dams, canals, municipal conduit cost
+      samples & Engineering potential + install-cost equations & Potential GWh and
+      \$/kW fits (e.g.\ BCM ICC)~\cite{ornl2014,osti3002705} \\
+    WOWERS (this work) & 17,148 U.S.\ POTW outfalls $\rightarrow$ 1,138 project-viable &
+      ICIS DMR FDC + 3DEP head proxy; CF calibrated & Physics ceiling 409.2~GWh/yr;
+      calibrated band 119--281~GWh/yr~\cite{cf_calib} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+DOE's \emph{Hydropower Vision} and the related Oak Ridge National Laboratory (ORNL) New
+Stream-reach Development cost work supply the sector framing and the power-law CapEx form
+used throughout small-hydro screening, but they do not inventory WWTP effluent
+drops~\cite{doe_vision,ornl2014}. Their value to WOWERS is methodological (cost curves,
+turbine envelopes), not a POTW energy total that can be compared one-to-one with
+409.2~GWh/yr.
+
+The HydroSource EHA annual capacity-factor workbook is the strongest empirical
+calibration source available without site visits. Restricting to the 0.1--5~MW class yields
+629 plants and 9,798 plant-years with median CF 0.390 and 25th/75th percentiles 0.254 /
+0.541~\cite{hydrosource_eha,cf_calib}. Those statistics correctly bound a \emph{conservative
+floor} for any small-hydro claim. They incorrectly describe WWTP duty cycles if used as a
+central estimate, because seasonal river drivers listed in Section~2.1 do not apply to
+municipal effluent. The WOWERS calibration therefore keeps the EHA floor (119--194~GWh/yr
+depending on percentile and MW sub-bucket) and adds a WWTP-appropriate central tier at
+CF~0.60 (281~GWh/yr) anchored 5\% below LucidPipe's measured 0.628~\cite{lucidpipe,cf_calib}.
+
+ORNL conduit and canal work, including municipal conduit install-cost samples and the
+baseload cost model (BCM) canal/conduit installed-capital-cost equation, improves CapEx
+realism for in-conduit machines but again estimates \emph{engineering potential} or
+\$/kW rather than a cleaned national POTW energy band tied to DMR
+FDCs~\cite{ornl2014,osti3002705}. FERC's qualifying-conduit pathway under the Hydropower
+Regulatory Efficiency Act of 2013 further lowers soft costs for man-made municipal conduits
+(Notice of Intent rather than a full license for facilities $\leq$40~MW), which improves
+project economics once a site is chosen but does not rank sites~\cite{ferc_conduit}.
+
+Plant energy-\emph{consumption} literature (EPRI Table~5-1 observed kWh/MG by flow band;
+WEF Manual of Practice~32 curves retained for sensitivity) closes the offset narrative:
+national wastewater use near 30.2~TWh/yr and validated plant-level intensities give context
+for why a 119--281~GWh/yr recovery band is simultaneously material at portfolio scale and
+small as a fraction of treatment load~\cite{epri2013,wef_mop32}. ENERGY STAR and EPA
+planning guides corroborate the order of magnitude without replacing the EPRI observed
+grid~\cite{epa2013}.
+
+Taken together, prior assessments either (a)~quantify broad hydropower resource and cost,
+(b)~measure CF on river fleets, or (c)~document individual conduit installs. None combine a
+17,000-plant POTW filter, DMR-derived FDCs, DEM-proxy heads, vendor turbine matching, and
+an explicit physics-versus-calibrated energy band. That combined screen is the technical
+core developed in Chapter~4, and the quantitative gaps between ceiling and calibrated
+expectation are reported in Chapter~5. The business model that motivates building such a
+screen will now be discussed.
 
 % =====================================================================
 % CHAPTER 3 — BUSINESS MODEL                            (WP J1 — Joint)
@@ -267,8 +484,78 @@ position as first step to customer value.}
 % REFERENCES  (IEEE-adjacent, numbered by first appearance; target 40-50)
 % =====================================================================
 \begin{thebibliography}{99}
-  \bibitem{placeholder} \wptodo{J5 · References}{Merge both tracks' citations into one
-  IEEE-numbered list. Journal/conference and web formats per format prompt §6.}
+
+\bibitem{epri2013}
+S.~Pabi, A.~Amarnath, R.~Goldstein, and L.~Reekie,
+``Electricity Use and Management in the Municipal Water Supply and Wastewater Industries,''
+Electric Power Research Institute, Report 3002001433, Nov.\ 2013.
+
+\bibitem{epa2013}
+U.S.\ Environmental Protection Agency,
+``Energy Efficiency in Water and Wastewater Facilities,''
+Local Government Climate and Energy Strategy Series, EPA 832-R-10-005, 2013.
+
+\bibitem{wef_mop32}
+Water Environment Federation,
+\emph{Energy Conservation in Water and Wastewater Treatment Facilities},
+Manual of Practice No.~32, WEF Press, Alexandria, VA, 2009.
+
+\bibitem{epa_echo}
+U.S.\ Environmental Protection Agency,
+``Enforcement and Compliance History Online (ECHO) / ICIS-NPDES Data Downloads,''
+[Online]. Available: https://echo.epa.gov/
+
+\bibitem{usgs_3dep}
+U.S.\ Geological Survey,
+``3D Elevation Program (3DEP),''
+[Online]. Available: https://www.usgs.gov/3d-elevation-program
+
+\bibitem{hydrosource_eha}
+Oak Ridge National Laboratory,
+``Existing Hydropower Assets (EHA) --- Annual Capacity Factor,''
+DOE HydroSource, [Online]. Available: https://hydrosource.ornl.gov/
+
+\bibitem{doe_vision}
+U.S.\ Department of Energy,
+\emph{Hydropower Vision: A New Chapter for America's 1st Renewable Electricity Source},
+DOE/EE-1504, 2016.
+
+\bibitem{ornl2014}
+S.-C.~Kao et al.,
+``New Stream-reach Development: A Comprehensive Assessment of Power Energy Potential on Existing Streams within the United States,''
+Oak Ridge National Laboratory, ORNL/TM-2014/525, 2014.
+
+\bibitem{osti3002705}
+Oak Ridge National Laboratory,
+``Municipal Conduit Hydropower Project Cost Data,''
+OSTI 3002705 (supporting tables), ca.\ 2020\$ basis.
+
+\bibitem{lucidpipe}
+LucidEnergy / Portland Water Bureau,
+``LucidPipe Power System --- Portland, Oregon (Bull Run transmission main),''
+project documentation and press materials; see also technical overview at thecivilengineer.org.
+
+\bibitem{rentricity}
+Rentricity Inc.,
+``Featured Projects,''
+[Online]. Available: https://rentricity.com/featured-projects
+
+\bibitem{cink}
+CINK Hydro-Energy,
+``References and Wastewater Applications,''
+[Online]. Available: https://cink-hydro-energy.com/references
+
+\bibitem{ferc_conduit}
+Federal Energy Regulatory Commission,
+``Qualifying Conduit Hydropower Facilities,''
+18~CFR~4.400--4.401; Hydropower Regulatory Efficiency Act of 2013.
+
+\bibitem{cf_calib}
+WOWERS Project,
+``Capacity-Factor Calibration Report,''
+internal technical report \texttt{CF\_CALIBRATION\_REPORT.md}, 2026.
+% Additional Track M / Joint citations merge here at WP J5.
+
 \end{thebibliography}
 
 % =====================================================================

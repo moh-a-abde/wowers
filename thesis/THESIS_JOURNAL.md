@@ -75,3 +75,38 @@ Any draft that cites these must match exactly (P2-SEED re-baseline):
 ## Session Log
 
 <!-- New entries go below this line, newest at the bottom. Do not edit entries above. -->
+
+### Session: 2026-07-23 — T1 Ch2 Background & Prior Work — Tom
+
+**Work package:** T1 · Ch2 Background & Prior Work
+
+**What was drafted:**
+- Full first draft of Chapter 2 in `thesis/thesis_tom.tex` (~2,280 words): opening + §§2.1–2.4
+- §2.1 six numbered recovery limitations (unmeasured head, DMR corruption, river-CF misapplication, O&M/debris, site-by-site origination, economic opacity) each with quantified impact + citation
+- §2.2 LucidPipe Portland (CF 0.628), Rentricity, CINK — what current practice catches vs misses
+- §2.3 first-principles primer \(P=\eta\rho g Q H\), ECHO/ICIS + DMR + 3DEP + EHA scope
+- §2.4 lit peak comparing DOE Hydropower Vision / ORNL NSD, HydroSource EHA CF, ORNL conduit/BCM, and WOWERS
+- Seeded 14 IEEE-style `\bibitem`s used by Ch2 (J5 will still merge Track M/Joint refs later)
+
+**Source artifacts used:**
+- `WOWERS_PROJECT_JOURNAL.md` (turbine manufacturer research; LucidPipe / Rentricity / CINK; ORNL/HydroSource notes)
+- `ENERGY_CONSUMPTION_RESEARCH_PLAN.md`, `ENERGY_CONSUMPTION_SOURCES.md` (EPRI 30.2 TWh, kWh/MG bands, offset sanity)
+- `CF_CALIBRATION_REPORT.md` §§4–6 (WWTP vs river CF; LucidPipe anchor; 119–281 GWh band)
+- `ARCHITECTURE.md` (pipeline/data sources overview)
+- `thesis/thesis_format_prompt.md` §5 Ch2 rules (voice, numbered faults, lit density)
+
+**Figures / tables produced or specified:**
+- Table `\ref{tab:prior_work}` — scale/prior-work comparison (DOE Vision, EHA CF, ORNL conduit/BCM, WOWERS)
+- Equation `\eqref{eq:hydro}` — \(P=\eta\rho g Q H\)
+- No new figures this WP (figure inventory items are later Track T packages)
+
+**Open items / follow-ups:**
+- Several web/vendor citations (`lucidpipe`, `rentricity`, `cink`, `osti3002705`) need stronger primary PDFs / DOIs before final stitch (J5)
+- ORNL national conduit potential PDF (Pub176069) not opened from disk this session — table cites TM-2014/525 + OSTI cost tables; may add the conduit-potential report as a fifth row later
+- Confirm MONTH_YEAR / School of Engineering naming still outstanding (Section 0)
+
+**Breakdown updated:**
+- §3 T1 checkbox → `[x]`; §7 T1 status → ☑
+
+**Next work package suggested:**
+- T2 · Ch4.1 System Overview + Ch4.2 Data Acquisition (~1,600 w)

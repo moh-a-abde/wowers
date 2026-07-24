@@ -127,7 +127,7 @@ Legend: **Words** = target draft length · **Feeds** = repo artifacts to open ·
 
 ### Track T — Tom (data / backend)
 
-- [ ] **T1 · Ch2 Background & Prior Work** — ~2,400 w
+- [x] **T1 · Ch2 Background & Prior Work** — ~2,400 w
   - **Feeds:** `WOWERS_PROJECT_JOURNAL.md` (turbine research, energy sources),
     `ENERGY_CONSUMPTION_RESEARCH_PLAN.md`, `ENERGY_CONSUMPTION_SOURCES.md`, ORNL national
     conduit assessment, `CF_CALIBRATION_REPORT.md` §4 (real installs).
@@ -323,7 +323,7 @@ So neither of you has to re-read the whole format prompt each session:
 
 | Track | WP | Section | Owner | Words | Status |
 |---|---|---|---|---|---|
-| T | T1 | Ch2 Background | Tom | 2,400 | ☐ |
+| T | T1 | Ch2 Background | Tom | 2,400 | ☑ |
 | T | T2 | Ch4.1–4.2 Overview + Acquisition | Tom | 1,600 | ☐ |
 | T | T3 | Ch4.3 Pipeline P1–P2 | Tom | 2,200 | ☐ |
 | T | T4 | Ch4.3 Pipeline P3–P4 | Tom | 2,400 | ☐ |
