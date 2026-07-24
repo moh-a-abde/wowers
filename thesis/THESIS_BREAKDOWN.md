@@ -36,6 +36,40 @@ which one you picked at the top of your reply.
 2. Append a session entry to `thesis/THESIS_JOURNAL.md` following the structure defined at
    the top of that file. Only append to the bottom; never rewrite a past entry.
 
+**RULE — NEVER CITE THE PROJECT'S INTERNAL `.md` FILES.** Every Markdown file in this repo
+(`WOWERS_PROJECT_JOURNAL.md`, `ARCHITECTURE.md`, all `*_REPORT.md`, `*_PROMPT.md`,
+`THESIS_BREAKDOWN.md`, `THESIS_JOURNAL.md`, research-plan and sources `.md` files, etc.) is
+an **internal development artifact, not a publishable academic source.** You read them to
+understand the system and to find numbers — you do **not** cite them, reference them, or let
+them appear in the thesis reference list or in any inline citation. This holds even for the
+`Feeds:` lists in §3: those name files to *open for understanding*, never files to *cite*.
+
+When a claim you took from one of those `.md` files needs a citation:
+1. Open the `.md` file and locate the **original external source** it drew the claim from —
+   the peer-reviewed paper, dataset, standard, government/agency report, or vendor document
+   (e.g. an ORNL report, an EPA/USGS dataset, an EIA/EHA table, a turbine-vendor spec).
+2. Verify that original source exists and actually supports the claim (do not trust the
+   `.md` file's paraphrase blindly).
+3. Cite **that original source** in the thesis, formatted per the required citation style.
+   If the `.md` file gives no traceable external source for a claim, either find one
+   yourself or drop the claim — never paper over it with a citation to the internal file.
+
+The project's own generated numbers (funnel counts, calibration band, NPV, etc.) are results
+of *this* work and are reported as such in the prose — they need no external citation, but
+they must still never be attributed to the internal `.md` file they were read from.
+
+**RULE — IMAGES / FIGURES.** When a work package or the format calls for a figure that must
+be a real rendered image (a screenshot, a map render, a plotted chart):
+1. If you can produce it yourself — run the relevant figure/plot script, render the chart
+   from the parquets/geojson, or generate the diagram — **do so and embed the actual image**
+   in the draft, with the caption below it per §5.
+2. If you **cannot** obtain the image yourself, do **not** fabricate it, sketch it in ASCII,
+   or leave a silent blank. **Stop and ask the user:** name exactly which figure is needed
+   (its number and caption), say where the image should come from or where it lives in the
+   repo, and ask the user to upload it. Then continue with the rest of the work package,
+   leaving a clearly-labelled `[FIGURE N PENDING — awaiting upload: <what/where>]` marker so
+   nothing ships as if the figure were present when it is not.
+
 ---
 
 > **Purpose.** Split the thesis defined by `thesis_format_prompt.md` into small,
@@ -122,7 +156,8 @@ Three tracks run in parallel, then merge:
 
 ## 3. Work packages
 
-Legend: **Words** = target draft length · **Feeds** = repo artifacts to open ·
+Legend: **Words** = target draft length · **Feeds** = repo artifacts to open *for
+understanding only — these are never citable sources; see the RULE on internal `.md` files* ·
 **Fig/Tab** = deliverables to produce for §4 inventory.
 
 ### Track T — Tom (data / backend)
@@ -139,7 +174,7 @@ Legend: **Words** = target draft length · **Feeds** = repo artifacts to open ·
     the biggest missing piece per the journal readiness map — expect real lit search.**
   - **Fig/Tab:** scale/prior-work comparison table.
 
-- [ ] **T2 · Ch4.1 (draft w/ Joint) + Ch4.2 Data Acquisition** — ~1,600 w
+- [x] **T2 · Ch4.1 (draft w/ Joint) + Ch4.2 Data Acquisition** — ~1,600 w
   - **Feeds:** `ARCHITECTURE.md`, `src/phase1/ingest.py`, `filter_potw.py`,
     `dmr_timeseries.py`, `src/phase3/elevation.py`, `src/phase5/ground_truth.py` (EIA/EHA),
     `config/settings.yaml`.
@@ -291,6 +326,18 @@ So neither of you has to re-read the whole format prompt each session:
   required; label every assumption inline.
 - **Specificity:** name every tool, version, source (`polars`, `vite 7.3.5`, `USGS 3DEP`,
   `EPA ICIS-NPDES`, `LightGBM`), never "a library".
+- **Sources / citations:** the repo's internal `.md` files (journal, reports, prompts,
+  architecture, this breakdown) are development artifacts — **never cite them.** Read them to
+  understand the system and to find numbers, but any claim needing a citation must be traced
+  to and cited from its **original external source** (paper, dataset, standard, agency report,
+  vendor doc), verified first. See the full RULE at the top of this file. This project's own
+  generated results are reported as our findings, not attributed to the `.md` they were read
+  from.
+- **Images / figures:** when a figure must be a real rendered image (screenshot, map, plot),
+  produce and embed the actual image if you can (run the script / render the chart). If you
+  cannot obtain it, do not fabricate or leave a silent blank — **ask the user to upload it,
+  naming the figure and where it should come from,** and leave a visible
+  `[FIGURE N PENDING — awaiting upload: <what/where>]` marker. See the full RULE at the top.
 - **Subsystem shape (every Ch4 section):** (1) what it's responsible for → (2) ≥3 options
   considered → (3) why the choice won → (4) how it was built (rebuildable detail) → (5)
   named limitations deferred to future work.
@@ -324,7 +371,7 @@ So neither of you has to re-read the whole format prompt each session:
 | Track | WP | Section | Owner | Words | Status |
 |---|---|---|---|---|---|
 | T | T1 | Ch2 Background | Tom | 2,400 | ☑ |
-| T | T2 | Ch4.1–4.2 Overview + Acquisition | Tom | 1,600 | ☐ |
+| T | T2 | Ch4.1–4.2 Overview + Acquisition | Tom | 1,600 | ☑ |
 | T | T3 | Ch4.3 Pipeline P1–P2 | Tom | 2,200 | ☐ |
 | T | T4 | Ch4.3 Pipeline P3–P4 | Tom | 2,400 | ☐ |
 | T | T5 | Ch4.4–4.5 Calibration + Export | Tom | 2,000 | ☐ |

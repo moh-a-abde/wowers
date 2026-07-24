@@ -21,19 +21,25 @@
 \usepackage{caption}
 \usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc}
 
 % --- helper: placeholder for a not-yet-written work package -----------
 \newcommand{\wptodo}[2]{%
   \par\medskip\noindent\textcolor{red}{\textbf{[TODO — #1]}}\ \textit{#2}\par\medskip}
 
-% --- helper: figure placeholder, per format prompt convention ---------
-% Usage: \figplaceholder{N}{what the figure must show}{caption text}
-\newcommand{\figplaceholder}[3]{%
+% --- helper: figure pending upload (per THESIS_BREAKDOWN images rule) ---
+% Usage: \figpending{N}{what/where the image should come from}{caption text}
+\newcommand{\figpending}[3]{%
   \begin{figure}[htbp]\centering
-    \fbox{\parbox{0.85\linewidth}{\centering\vspace{2em}%
-      \textbf{[FIGURE #1]} — #2\vspace{2em}}}
+    \fbox{\parbox{0.85\linewidth}{\centering\vspace{1.5em}%
+      \textbf{[FIGURE #1 PENDING --- awaiting upload: #2]}%
+      \vspace{1.5em}}}
     \caption{#3}\label{fig:#1}
   \end{figure}}
+
+% deprecated alias kept so older stubs still compile
+\newcommand{\figplaceholder}[3]{\figpending{#1}{#2}{#3}}
 
 \title{WOWERS: A Proof-of-Concept Infrastructure-Intelligence Platform for National
 Screening of Micro-Hydropower Recovery at Wastewater Outfalls}
@@ -163,7 +169,8 @@ seasonal drought, peak sizing, and environmental-flow bypasses~\cite{hydrosource
 WWTP outfalls track municipal demand, typically varying only $\pm$15--25\% seasonally, and
 have no ecological minimum-flow reservation on the effluent itself. Applying the river
 median CF to a continuous municipal conduit therefore understates recoverable energy by
-roughly a factor of two relative to a WWTP-appropriate CF near 0.60~\cite{cf_calib}.
+roughly a factor of two relative to a WWTP-appropriate CF near 0.60, the central
+tier we adopt after anchoring to LucidPipe~\cite{lucidpipe}.
 
 Debris fouling, minimum-flow cutoffs, and maintenance downtime constitute the fourth
 limitation. Physics ceilings that integrate $\eta\rho g Q H$ over a flow-duration curve
@@ -268,7 +275,7 @@ A defensible screen must still separate physics ceilings from calibrated expecta
 Substituting median river-hydro CF for continuous effluent over-haircuts energy; omitting
 debris and downtime overstates it. The WOWERS response, developed in Chapters~4 and~5, is
 to report a physics ceiling (409.2~GWh/yr at the P2-SEED baseline) beside a calibrated band
-of 119--281~GWh/yr anchored to EHA empirics and LucidPipe~\cite{cf_calib}. Prior national
+of 119--281~GWh/yr anchored to EHA empirics and LucidPipe~\cite{hydrosource_eha,lucidpipe}. Prior national
 methods that stop at resource potential, or that calibrate only against river fleets,
 therefore leave a methodological gap that Section~2.4 compares explicitly. Why those prior
 methods remain limited for POTW outfall recovery will now be discussed.
@@ -301,7 +308,7 @@ can be seen in Table~\ref{tab:prior_work}.
       \$/kW fits (e.g.\ BCM ICC)~\cite{ornl2014,osti3002705} \\
     WOWERS (this work) & 17,148 U.S.\ POTW outfalls $\rightarrow$ 1,138 project-viable &
       ICIS DMR FDC + 3DEP head proxy; CF calibrated & Physics ceiling 409.2~GWh/yr;
-      calibrated band 119--281~GWh/yr~\cite{cf_calib} \\
+      calibrated band 119--281~GWh/yr \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -316,12 +323,12 @@ turbine envelopes), not a POTW energy total that can be compared one-to-one with
 The HydroSource EHA annual capacity-factor workbook is the strongest empirical
 calibration source available without site visits. Restricting to the 0.1--5~MW class yields
 629 plants and 9,798 plant-years with median CF 0.390 and 25th/75th percentiles 0.254 /
-0.541~\cite{hydrosource_eha,cf_calib}. Those statistics correctly bound a \emph{conservative
+0.541~\cite{hydrosource_eha}. Those statistics correctly bound a \emph{conservative
 floor} for any small-hydro claim. They incorrectly describe WWTP duty cycles if used as a
 central estimate, because seasonal river drivers listed in Section~2.1 do not apply to
 municipal effluent. The WOWERS calibration therefore keeps the EHA floor (119--194~GWh/yr
 depending on percentile and MW sub-bucket) and adds a WWTP-appropriate central tier at
-CF~0.60 (281~GWh/yr) anchored 5\% below LucidPipe's measured 0.628~\cite{lucidpipe,cf_calib}.
+CF~0.60 (281~GWh/yr) anchored 5\% below LucidPipe's measured 0.628~\cite{lucidpipe}.
 
 ORNL conduit and canal work, including municipal conduit install-cost samples and the
 baseload cost model (BCM) canal/conduit installed-capital-cost equation, improves CapEx
@@ -380,18 +387,267 @@ WOWERS_Capital_and_Funding_Research.md, Fowler feedback. Address the four judge 
 \chapter{Design Details}
 
 \section{System Overview}                                % WP T2 / Joint
-\wptodo{T2 · 4.1}{Whole-platform dataflow: public data $\rightarrow$ 4-phase pipeline
-$\rightarrow$ geojson $\rightarrow$ dashboard. MUST end with the honesty paragraph naming
-how the built solution differs from the proposed design.}
-\figplaceholder{1}{Top-level system block diagram: data sources, the four pipeline phases,
-the geojson export contract, and the frontend dashboard.}{System block diagram of the WOWERS
-platform}
+
+The WOWERS platform is a national screening system that turns public regulatory
+and geospatial data into ranked, financially scored micro-hydropower opportunities
+at U.S.\ POTW outfalls. Figure~\ref{fig:1} below depicts the top-level dataflow.
+Four external source families feed a four-phase Python pipeline; the pipeline
+writes parquet intermediates; an export script freezes a 58-property GeoJSON
+contract; and a React + MapLibre dashboard reads that single file with no live
+backend.
+
+\begin{figure}[htbp]
+  \centering
+  % Self-contained TikZ — compiles on Overleaf with no external PNG upload.
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+    font=\sffamily\scriptsize,
+    >=Stealth,
+    every node/.style={align=center},
+    src/.style={draw, thick, rounded corners=2pt, fill=black!8,
+      minimum width=2.7cm, minimum height=1.35cm, inner sep=3pt},
+    phase/.style={draw, thick, rounded corners=2pt, fill=black!14,
+      minimum width=2.55cm, minimum height=1.55cm, inner sep=3pt},
+    art/.style={draw, thick, rounded corners=2pt, fill=white,
+      minimum width=2.7cm, minimum height=1.35cm, inner sep=3pt},
+    kill/.style={draw, thick, densely dashed, rounded corners=2pt,
+      fill=white, text=black!55, minimum width=2.55cm, minimum height=1.0cm},
+    lbl/.style={font=\sffamily\tiny, text=black!55},
+    arr/.style={->, thick},
+  ]
+    % --- labels ---
+    \node[lbl] at (5.6, 5.55) {Public / agency inputs};
+    \node[lbl] at (5.0, 3.15) {Offline Python screening pipeline (Phases 1--4)};
+    \node[lbl] at (5.6, -0.15) {Export / serving / visualization};
+
+    % --- sources ---
+    \node[src] (echo) at (0.0,4.3) {EPA ECHO\\ICIS facilities\\+ permits};
+    \node[src] (dmr)  at (3.5,4.3) {EPA DMR param 50050\\FY2009--24\\($\sim$279M rows)};
+    \node[src] (dep)  at (7.0,4.3) {USGS 3DEP EPQS\\elevations\\(DEM head)};
+    \node[src] (eha)  at (10.5,4.3) {DOE EHA / EIA-860/923\\CF \& generation\\labels};
+
+    % --- phases ---
+    \node[phase] (p1) at (0.4,1.55) {Phase 1\\POTW filter $\cdot$ FDC\\ranking\\$\rightarrow$ ranked\_candidates};
+    \node[phase] (p2) at (3.7,1.55) {Phase 2\\Monte-Carlo energy\\P10 / P50 / P90\\$\rightarrow$ energy\_yield};
+    \node[phase] (p3) at (7.0,1.55) {Phase 3\\3DEP head proxy\\turbine match\\$\rightarrow$ turbine\_sizing};
+    \node[phase] (p4) at (10.3,1.55) {Phase 4\\CapEx $\cdot$ NPV $\cdot$ payback\\econ gates\\$\rightarrow$ scorecards};
+
+    % --- CF side analysis + Phase 5 kill ---
+    \node[art] (cf) at (10.5,3.15) {CF calibration\\119--281 GWh/yr band\\(side analysis)};
+    \node[kill] (p5) at (10.3,0.15) {Phase 5 ML --- killed\\(only 11 FERC labels)};
+
+    % --- export row ---
+    \node[art] (exp) at (1.2,-1.55) {\texttt{export\_geojson.py}\\58-property contract\\byte-deterministic};
+    \node[art] (gj)  at (5.6,-1.55) {\texttt{scored\_sites.geojson}\\(+ \texttt{viable\_sites})\\1,138 project-viable};
+    \node[art] (ui)  at (10.0,-1.55) {React + MapLibre UI\\7 views $\cdot$ static build\\no live backend};
+
+    % --- arrows: sources -> phases ---
+    \draw[arr] (echo.south) -- (p1.north);
+    \draw[arr] (dmr.south)  -- (p1.north east);
+    \draw[arr] (dep.south)  -- (p3.north);
+    \draw[arr] (eha.south)  -- (cf.north);
+    \draw[arr, densely dashed] (cf.west) -| (p2.north);
+
+    % --- phase chain ---
+    \draw[arr] (p1) -- (p2);
+    \draw[arr] (p2) -- (p3);
+    \draw[arr] (p3) -- (p4);
+
+    % --- phases fan into export ---
+    \draw[arr] (p1.south) -- ++(0,-0.25) -| (exp.north);
+    \draw[arr] (p2.south) -- ++(0,-0.25) -| ([xshift=6pt]exp.north);
+    \draw[arr] (p3.south) -- ++(0,-0.35) -| ([xshift=14pt]exp.north);
+    \draw[arr] (p4.south) -- ++(0,-0.45) -| ([xshift=22pt]exp.north);
+
+    % --- export chain ---
+    \draw[arr] (exp) -- (gj);
+    \draw[arr] (gj) -- (ui);
+
+    \node[lbl, anchor=west] at (-1.2,-2.85)
+      {Config: \texttt{settings.yaml}\quad
+       Intermediates: \texttt{data/processed/phase\{1--4\}/*.parquet}};
+  \end{tikzpicture}%
+  }
+  \caption{System block diagram of the WOWERS platform}
+  \label{fig:1}
+\end{figure}
+
+Data enter as EPA ECHO / ICIS-NPDES facility and permit tables, approximately
+279~million Discharge Monitoring Report (DMR) rows for fiscal years 2009--2024,
+USGS 3DEP elevation point queries, and DOE HydroSource Existing Hydropower Assets
+(EHA) / EIA Form~860--923 tables used for capacity-factor calibration and the
+attempted Phase~5 ground-truth set. Phase~1 filters active POTWs, builds monthly
+flow series, computes flow features, and ranks candidates. Phase~2 runs a
+site-keyed Monte-Carlo energy engine that produces P10/P50/P90 annual energy under
+Equation~\eqref{eq:hydro}. Phase~3 replaces literature head archetypes with a
+3DEP DEM proxy where coordinates allow, then matches commercial turbine envelopes.
+Phase~4 applies CapEx/OpEx models, revenue and plant-consumption offsets, and
+NPV/IRR/payback gates that define the project-viable cohort. The P2-SEED re-baseline
+that Chapter~5 reports screens 17,148 POTWs and retains 1,138 project-viable sites
+with a physics ceiling of 409.2~GWh/yr, a calibrated band of 119--281~GWh/yr,
+portfolio NPV of \$310.1M, and median payback of 9.8~yr.
+
+Configuration is centralized in \texttt{config/settings.yaml} (URLs, fiscal-year
+list, sanity caps, ranking weights, physics constants, cost-model coefficients).
+Ingest and transforms are implemented in \texttt{polars} with chunked DMR reads
+(\texttt{processing.dmr\_chunk\_size} $= 500{,}000$) and parquet checkpoints under
+\texttt{data/processed/phase\{1--4\}/}. The serving boundary is deliberate: the
+dashboard consumes only \texttt{exports/viable\_sites.geojson} (and the companion
+scored-sites file), so pipeline and UI can evolve on opposite sides of a frozen
+property contract.
+
+For this work, although a full screening solution has been implemented, it does
+not strictly follow the originally proposed design and functions as a proof of
+concept. The notable differences in design are (1)~head is a DEM proxy with a
+plausibility gate rather than surveyed invert elevations or plant drawings;
+(2)~Phase~5 supervised learning was killed after only eleven FERC conduit labels
+were found, so no ML energy model ships; (3)~the dashboard is a static Vite build
+over a single GeoJSON file rather than a live API over parquet; and (4)~revenue
+and CapEx remain modeled bands (power-law \$/kW, EPRI kWh/MG intensities, FERC
+conduit NOI assumptions) rather than vendor quotes or metered plant bills. Those
+gaps are intentional for a national screen and are named again in the subsystem
+sections that follow. How the raw data that drive this pipeline are acquired will
+now be discussed.
 
 \section{Data Acquisition}                               % WP T2 — Tom
-\wptodo{T2 · 4.2 (~1,600 w w/ 4.1)}{Feeds: ARCHITECTURE.md, src/phase1/ingest.py,
-filter_potw.py, dmr_timeseries.py, src/phase3/elevation.py, src/phase5/ground_truth.py,
-config/settings.yaml. Sources, options considered, honesty paragraph (999 sentinels,
-GPD/MGD errors, coordinate corruption).}
+
+Data acquisition is responsible for placing every external input the pipeline
+needs onto local disk in a form later phases can read without re-hitting vendor
+portals on every run. There are four main requirements of acquisition. The
+ingest must (1)~cover the national POTW fleet rather than a convenience sample,
+(2)~preserve enough multi-year flow history to build an FDC, (3)~supply
+coordinates accurate enough for a 3DEP head proxy, and (4)~admit an independent
+capacity-factor or generation label set for calibration. The source inventory
+satisfying those requirements can be seen in Table~\ref{tab:data_sources}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Data-source inventory for the WOWERS screening pipeline}
+  \label{tab:data_sources}
+  \begin{tabular}{@{}p{2.4cm}p{3.4cm}p{2.6cm}p{3.4cm}@{}}
+    \toprule
+    Source & What it supplies & Approx.\ volume & Ingest module \\
+    \midrule
+    EPA ECHO ICIS facilities + permits
+      & POTW identity, design/avg flow, permit status, facility lat/lon
+      & \texttt{npdes\_downloads.zip} $\sim$322~MB
+      & \texttt{src/phase1/ingest.py}, \texttt{filter\_potw.py} \\
+    EPA ECHO DMR FY2009--24
+      & Monthly flow (param 50050) by outfall
+      & $\sim$279M rows; $\sim$9.6~GB ZIPs
+      & \texttt{dmr\_timeseries.py} \\
+    USGS 3DEP EPQS
+      & Point elevation (m ASL) at plant/outfall coords
+      & On-demand JSON; disk-cached
+      & \texttt{src/phase3/elevation.py} \\
+    DOE HydroSource EHA + EIA-860/923
+      & Existing-hydro CF, net generation, nameplate
+      & Plant + CF workbooks on disk
+      & \texttt{src/phase5/ground\_truth.py}; \texttt{scripts/cf\_calibration.py} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Facility and Permit Tables (EPA ECHO / ICIS-NPDES)}
+
+Three options were considered for the facility universe: (A)~manual municipal
+outreach and FOIA per utility, (B)~Clean Watersheds Needs Survey (CWNS) plant
+lists without NPDES join keys, and (C)~EPA ECHO bulk ICIS downloads. Option~(A)
+cannot reach 17,000 plants in a thesis timeline. Option~(B) lacks the permit and
+DMR join path required for measured flow. Option~(C) won because
+\texttt{https://echo.epa.gov/files/echodownloads/npdes\_downloads.zip} already
+bundles \texttt{ICIS\_FACILITIES.CSV} and \texttt{ICIS\_PERMITS.CSV} with a
+stable join key (\texttt{NPDES\_ID} $=$ \texttt{EXTERNAL\_PERMIT\_NMBR}) and is
+refreshable without vendor contracts~\cite{epa_echo}.
+
+Implementation lives in \texttt{ingest\_npdes\_facilities} and
+\texttt{load\_potw\_facilities}. The ZIP is streamed with retries, extracted once,
+and skipped on re-run when the on-disk size matches. Permits are filtered to POTW
+facility-type indicators, active status codes (including Administratively Continued
+\texttt{ADC}, which recovered 4,308 permits including DC0021199 Blue Plains), and
+non-federal treatment plants. Design and actual-average flow fields are scrubbed
+before join: values above 2,000~MGD, the EPA numeric sentinel 999.0, and entries
+below 0.005~MGD are nulled in \texttt{filter\_potw.py} so they cannot win a
+``largest design flow'' deduplication. After the facilities join, P1-COORD-GUARD
+drops rows whose latitude/longitude fall outside inclusive U.S.\ NPDES territory
+bands (American Samoa, Guam/CNMI, CONUS--Alaska, USVI), rejecting rather than
+auto-flipping obvious sign errors so hidden coordinate edits never enter the
+parquet. The limitation deferred to future work is outfall-invert elevation: ICIS
+gives facility geocodes, not surveyed hydraulic grade lines.
+
+\subsection{Discharge Monitoring Reports (Flow Time Series)}
+
+Three options were considered for flow: (A)~design flow only from the permit table,
+(B)~utility SCADA exports, and (C)~national DMR parameter 50050. Design flow alone
+cannot support an FDC or capacity-factor story. SCADA does not exist as a public
+national archive. DMR won as the only measured monthly flow series covering
+essentially the full permitted fleet. Fiscal years 2009--2024 are configured in
+\texttt{settings.yaml} under \texttt{epa.dmr\_fiscal\_years}; each year downloads
+from \texttt{npdes\_dmrs\_fy\{year\}.zip} with up to four parallel workers in
+\texttt{ingest\_dmr\_files}.
+
+Parsing in \texttt{dmr\_timeseries.py} reads each CSV in 500{,}000-row chunks with
+\texttt{polars}, keeps parameter code \texttt{50050}, and resolves column-name
+aliases that drift across fiscal years. The critical value rule is to prefer
+\texttt{DMR\_VALUE\_STANDARD\_UNITS} (EPA-converted MGD) and fall back to
+\texttt{DMR\_VALUE\_NMBR} only when the standard-units column is absent; using the
+raw number as MGD when facilities report gal/d inflates flow by roughly
+$10^{5}$ and was observed to push national means into the thousands of MGD before
+the fix. NODI codes map selected ``no data'' indicators to zero or estimated
+flags; other NODI values become null. Per-record caps at
+$\max(2~\mathrm{MGD},\,10\times\mathrm{design\_flow})$ null corrupt rows before
+feature statistics so a single 7{,}000~MGD typo cannot dominate a 0.02~MGD plant.
+Primary-outfall selection prefers the outfall with the most non-null months rather
+than the maximum mean, which previously let a rarely reported CSO/STR feature beat
+the treatment outfall. The named limitation is residual \texttt{dmr\_limited}
+sites with fewer than three surviving months: they are excluded or flagged before
+Monte Carlo rather than imputed into false precision.
+
+\subsection{Elevation (USGS 3DEP) and Calibration Labels (EHA / EIA)}
+
+Head acquisition compared (A)~literature triangular archetypes only, (B)~paid DEM
+tiles processed offline, and (C)~USGS Elevation Point Query Service (EPQS) v1
+against plant and outfall coordinates. Archetypes alone are the Phase~2 bootstrap
+but were already identified in Chapter~2 as a ranking risk. Offline tiles add
+licensing and batch GIS overhead without improving the first national pass.
+EPQS won for rebuildability: \texttt{src/phase3/elevation.py} queries
+\texttt{https://epqs.nationalmap.gov/v1/json} with \texttt{httpx}/\texttt{asyncio},
+honours \texttt{phase3.max\_concurrent\_requests} and \texttt{request\_delay\_s},
+caches JSON under \texttt{data/elevation\_cache/} keyed by rounded lat/lon, and
+treats the EPQS ocean sentinel $-1{,}000{,}000$ as a failed query~\cite{usgs_3dep}.
+Outfall coordinates, when present in
+\texttt{NPDES\_PERM\_FEATURE\_COORDS.csv}, enable a plant-minus-outfall DEM proxy;
+otherwise the pipeline falls back through literature head then a design default.
+The largest methodological assumption in the entire acquisition chain---that DEM
+differencing approximates net hydraulic head---is deferred in detail to
+Section~4.3.4.
+
+Calibration and ground-truth acquisition compared (A)~no empirical CF check,
+(B)~vendor case sheets only, and (C)~DOE HydroSource EHA annual capacity-factor
+tables plus EIA-860/923 conventional-hydro generation. Option~(C) won for the
+floor and central band reported in Chapter~2: EHA supplies 629 plants /
+9{,}798 plant-years in the 0.1--5~MW class, ingested via
+\texttt{ground\_truth.py} / \texttt{cf\_calibration.py} from
+\texttt{ORNL\_EHAHydroPlant\_PublicFY2024.xlsx} and
+\texttt{EHA\_Annual\_CapacityFactor.xlsx}~\cite{hydrosource_eha}. EIA Forms 860
+and 923 contribute operable hydro nameplate and annual net generation under a
+canonical schema, with the documented bias that both sets skew to plants
+$\geq$1~MW and are not representative of WWTP micro-scale units. FERC conduit
+exemption labels were pursued as the micro-scale supplement and are reported as a
+negative result in Chapter~5 rather than silently omitted.
+
+\subsection{Acquisition Honesty and Deferred Work}
+
+The acquisition layer is therefore complete enough to rebuild the screen from
+public URLs and on-disk EHA/EIA workbooks, but it is not a clean sensor feed.
+Sentinel 999.0 design flows, GPD-as-MGD unit slips, single-row outfall corruption,
+and coordinate rows outside U.S.\ territory bands are first-class failure modes
+that the code nulls or drops rather than ``fixes'' in place. Even after guards,
+head remains a DEM proxy, treatment type is unknown for every plant (energy
+intensity uses EPRI observed flow-band averages), and micro-scale generation labels
+are too few for supervised learning. Those limits bound what Chapters~4.3--4.5 can
+honestly claim. The processing pipeline that consumes these acquired tables will
+now be discussed.
 
 \section{Processing Pipeline}                            % WP T3, T4 — Tom
 \wptodo{T3/T4 · 4.3 (~4,600 w)}{The heart of the technical half. Each subsystem follows the
@@ -549,11 +805,6 @@ CINK Hydro-Energy,
 Federal Energy Regulatory Commission,
 ``Qualifying Conduit Hydropower Facilities,''
 18~CFR~4.400--4.401; Hydropower Regulatory Efficiency Act of 2013.
-
-\bibitem{cf_calib}
-WOWERS Project,
-``Capacity-Factor Calibration Report,''
-internal technical report \texttt{CF\_CALIBRATION\_REPORT.md}, 2026.
 % Additional Track M / Joint citations merge here at WP J5.
 
 \end{thebibliography}
