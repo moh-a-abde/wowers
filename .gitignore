@@ -41,3 +41,4 @@ WOWERS_Project_Report.pdf
 
 # Frontend dependencies (teammate's vite/react app installs its own)
 frontend/node_modules/
+thesis/.mplconfig/

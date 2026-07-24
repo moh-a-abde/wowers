@@ -111,11 +111,12 @@ export function Tornado({
   base: number;
   rows: { label: string; low: number | null; high: number | null }[];
 }) {
+  const denom = Math.abs(base);
   const data = rows
     .filter((r) => r.low != null && r.high != null)
     .map((r) => {
-      const lowPct = ((r.low! - base) / Math.abs(base)) * 100;
-      const highPct = ((r.high! - base) / Math.abs(base)) * 100;
+      const lowPct = denom > 0 ? ((r.low! - base) / denom) * 100 : 0;
+      const highPct = denom > 0 ? ((r.high! - base) / denom) * 100 : 0;
       return { label: r.label, low: Math.min(lowPct, highPct), high: Math.max(lowPct, highPct) };
     });
   return (

@@ -6,11 +6,19 @@ import Gauge from "../components/charts/Gauge";
 import { MiniMap } from "../components/MapView";
 import { EfficiencyCurve, Tornado } from "../components/charts/Charts";
 
-function Row({ l, v }: { l: string; v: string }) {
+function Row({ l, v, hint }: { l: string; v: string; hint?: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid #eef1f6", fontSize: 13 }}>
-      <span className="muted">{l}</span>
-      <span style={{ fontWeight: 600 }}>{v}</span>
+    <div className="drow">
+      <span className={`muted${hint ? " hint" : ""}`} title={hint}>{l}</span>
+      <span className="val">{v}</span>
+    </div>
+  );
+}
+
+function CardHead({ title }: { title: string }) {
+  return (
+    <div className="card-head">
+      <h3 className="card-title">{title}</h3>
     </div>
   );
 }
@@ -27,6 +35,8 @@ export default function PlantDetail() {
   const similarParams = new URLSearchParams();
   if (p.state) similarParams.set("state", p.state);
   if (p.turbine.type) similarParams.set("turbine", p.turbine.type);
+  const npvColor = f.npv_usd == null ? "var(--text)" : f.npv_usd >= 0 ? "var(--green)" : "#dc2626";
+  const irrColor = f.irr == null ? "var(--text)" : f.irr >= 0 ? "var(--green)" : "#dc2626";
 
   return (
     <div style={{ padding: 22 }}>
@@ -50,7 +60,7 @@ export default function PlantDetail() {
         {/* left column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="card card-pad">
-            <h3 className="card-title">≈ Flow Data</h3>
+            <CardHead title="≈ Flow Data" />
             <Row l="Mean Flow" v={`${num(p.flow.mean_mgd)} MGD`} />
             <Row l="P10 Flow" v={p.flow.p10_mgd != null ? `${num(p.flow.p10_mgd)} MGD` : "—"} />
             <Row l="P90 Flow" v={p.flow.p90_mgd != null ? `${num(p.flow.p90_mgd)} MGD` : "—"} />
@@ -59,8 +69,8 @@ export default function PlantDetail() {
             <Row l="Utilization" v={pct(p.flow.utilization)} />
           </div>
           <div className="card card-pad">
-            <h3 className="card-title">⛰ Elevation Data</h3>
-            <Row l="Head Source" v={p.elevation.head_source === "usgs_3dep" ? "USGS 3DEP ✓" : "Literature"} />
+            <CardHead title="⛰ Elevation Data" />
+            <Row l="Head Source" v={p.elevation.head_source === "usgs_3dep" ? "USGS 3DEP ✓" : "Literature"} hint="USGS 3DEP is a measured elevation model; Literature is a size-based statistical estimate used when 3DEP coordinates aren't available." />
             <Row l="Net Head" v={p.elevation.head_net_m != null ? `${p.elevation.head_net_m} m` : "—"} />
             <Row l="Gross Head" v={p.elevation.head_gross_m != null ? `${p.elevation.head_gross_m} m` : "—"} />
             <Row l="Facility Elevation" v={p.elevation.facility_elev_m != null ? `${num(p.elevation.facility_elev_m)} m` : "—"} />
@@ -68,7 +78,7 @@ export default function PlantDetail() {
           </div>
           {p.lat != null && p.lon != null && (
             <div className="card card-pad">
-              <h3 className="card-title">⌖ Site Location</h3>
+              <CardHead title="⌖ Site Location" />
               <MiniMap lat={p.lat} lon={p.lon} />
               <div className="faint" style={{ fontSize: 11, marginTop: 8, textAlign: "center" }}>
                 {p.lat.toFixed(4)}, {p.lon.toFixed(4)}
@@ -79,33 +89,28 @@ export default function PlantDetail() {
 
         {/* center column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <div className="card card-pad">
-            <h3 className="card-title">Energy Recovery Estimate</h3>
+          <div className="card card-pad card-col">
+            <CardHead title="Energy Recovery Estimate" />
             {p.energy.p50_mwh != null && p.energy.p10_mwh != null && p.energy.p90_mwh != null ? (
-              <Gauge p10={p.energy.p10_mwh} p50={p.energy.p50_mwh} p90={p.energy.p90_mwh} />
+              <Gauge p10={p.energy.p10_mwh} p50={p.energy.p50_mwh} p90={p.energy.p90_mwh} capacityFactor={p.turbine.capacity_factor} />
             ) : <div className="muted">No energy estimate.</div>}
-            <div style={{ display: "flex", justifyContent: "space-around", marginTop: 10, fontSize: 12 }}>
-              <div style={{ textAlign: "center" }}><div className="muted">P10</div><b>{num(p.energy.p10_mwh)}</b></div>
-              <div style={{ textAlign: "center" }}><div className="muted">P50</div><b>{num(p.energy.p50_mwh)}</b></div>
-              <div style={{ textAlign: "center" }}><div className="muted">P90</div><b>{num(p.energy.p90_mwh)}</b></div>
-            </div>
-            <div className="faint" style={{ fontSize: 11, textAlign: "center", marginTop: 8 }}>
+            <div className="card-foot faint" style={{ fontSize: 11, textAlign: "center", paddingTop: 10 }}>
               Offsets {pctRaw(p.energy.offset_pct)} of plant electricity · ≈{num(p.energy.equivalent_homes)} homes
             </div>
           </div>
-          <div className="card card-pad">
-            <h3 className="card-title">Recommended Turbine</h3>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--navy)" }}>
-              {TURBINE_LABEL[p.turbine.type ?? ""] ?? p.turbine.type} Turbine
+          <div className="card card-pad card-col">
+            <CardHead title="Recommended Turbine" />
+            <div className="headline-box" style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "var(--navy)" }}>
+                {TURBINE_LABEL[p.turbine.type ?? ""] ?? p.turbine.type} Turbine
+              </div>
             </div>
-            <div style={{ marginTop: 8 }}>
-              <Row l="Rated Power" v={`${num(p.turbine.rated_power_kw)} kW`} />
-              <Row l="Rated Flow" v={p.turbine.rated_flow_m3s != null ? `${p.turbine.rated_flow_m3s} m³/s` : "—"} />
-              <Row l="Peak Efficiency" v={p.turbine.peak_efficiency_pct != null ? `${p.turbine.peak_efficiency_pct}%` : "—"} />
-              <Row l="Capacity Factor" v={pct(p.turbine.capacity_factor)} />
-            </div>
+            <Row l="Rated Power" v={`${num(p.turbine.rated_power_kw)} kW`} />
+            <Row l="Rated Flow" v={p.turbine.rated_flow_m3s != null ? `${p.turbine.rated_flow_m3s} m³/s` : "—"} />
+            <Row l="Peak Efficiency" v={p.turbine.peak_efficiency_pct != null ? `${p.turbine.peak_efficiency_pct}%` : "—"} />
+            <Row l="Capacity Factor" v={pct(p.turbine.capacity_factor)} hint="Actual annual output vs. running at full rated power 24/7 — this also drives the gauge needle above." />
             {p.turbine.rated_flow_m3s != null && p.turbine.peak_efficiency_pct != null && (
-              <div style={{ marginTop: 10 }}>
+              <div className="card-foot" style={{ paddingTop: 10 }}>
                 <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Efficiency Curve</div>
                 <EfficiencyCurve qRated={p.turbine.rated_flow_m3s} peakPct={p.turbine.peak_efficiency_pct} />
               </div>
@@ -116,28 +121,26 @@ export default function PlantDetail() {
         {/* right column */}
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="card card-pad">
-            <h3 className="card-title">Financial Scorecard</h3>
-            <div style={{ display: "flex", gap: 16, alignItems: "baseline" }}>
+            <CardHead title="Financial Scorecard" />
+            <div className="headline-box" style={{ marginBottom: 6 }}>
               <div>
                 <div className="muted" style={{ fontSize: 12 }}>NPV</div>
-                <div style={{ fontSize: 30, fontWeight: 800, color: "var(--green)" }}>{usd(f.npv_usd)}</div>
+                <div style={{ fontSize: 30, fontWeight: 800, color: npvColor }}>{usd(f.npv_usd)}</div>
               </div>
               <div>
                 <div className="muted" style={{ fontSize: 12 }}>IRR</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "var(--green)" }}>{pct(f.irr)}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: irrColor }}>{pct(f.irr)}</div>
               </div>
             </div>
-            <div style={{ marginTop: 12 }}>
-              <Row l="Payback" v={years(f.payback_years)} />
-              <Row l="Installation Cost" v={usd(f.capex.installation_usd)} />
-              <Row l="Total CapEx" v={usd(f.capex.total_usd)} />
-              <Row l="Annual Savings" v={`${usd(f.annual_revenue_usd)}/yr`} />
-              <Row l="LCOE" v={f.lcoe_per_kwh != null ? `$${f.lcoe_per_kwh.toFixed(3)}/kWh` : "—"} />
-              <Row l="NPV w/ 50% grant" v={usd(f.npv_with_grant_usd)} />
-            </div>
+            <Row l="Payback" v={years(f.payback_years)} />
+            <Row l="Installation Cost" v={usd(f.capex.installation_usd)} />
+            <Row l="Total CapEx" v={usd(f.capex.total_usd)} />
+            <Row l="Annual Savings" v={`${usd(f.annual_revenue_usd)}/yr`} />
+            <Row l="LCOE" v={f.lcoe_per_kwh != null ? `$${f.lcoe_per_kwh.toFixed(3)}/kWh` : "—"} />
+            <Row l="NPV w/ 50% grant" v={usd(f.npv_with_grant_usd)} />
           </div>
           <div className="card card-pad">
-            <h3 className="card-title">Sensitivity Analysis</h3>
+            <CardHead title="Sensitivity Analysis" />
             <div className="faint" style={{ fontSize: 11, marginBottom: 6 }}>Impact on NPV (±20%). Dominant driver: {p.sensitivity.dominant}</div>
             {f.npv_usd != null && (
               <Tornado
@@ -151,7 +154,7 @@ export default function PlantDetail() {
             )}
           </div>
           <div className="card card-pad">
-            <h3 className="card-title">Next Steps</h3>
+            <CardHead title="Next Steps" />
             {vendor && (
               <a href={vendor.url} target="_blank" rel="noopener noreferrer" className="btn btn-blue" style={{ width: "100%", justifyContent: "center", marginBottom: 8 }}>
                 Get Turbine Quotes ↗
