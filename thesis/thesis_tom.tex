@@ -12,17 +12,41 @@
 %
 % COMPILE:  pdflatex thesis_tom.tex   (run twice for TOC/refs)
 % =====================================================================
-\documentclass[11pt,letterpaper]{report}
+\documentclass[12pt,letterpaper]{report}
 
-\usepackage[margin=1in]{geometry}
+% Graduate-thesis page setup: 12pt double-spaced body, 1.5in binding margin.
+\usepackage[left=1.5in,right=1in,top=1in,bottom=1in]{geometry}
+\usepackage{setspace}
+\doublespacing
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{caption}
+\usepackage{etoolbox}
+\usepackage{tocloft}
+
+% Double spacing applies to body prose only. Captions, tabular bodies, and the
+% reference list stay single-spaced, which is the usual thesis exemption.
+\captionsetup{font=singlespacing}
+\AtBeginEnvironment{tabular}{\singlespacing}
+\AtBeginEnvironment{thebibliography}{\singlespacing\setlength{\itemsep}{0.6em}}
 \usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,fit,calc}
+
+% --- format rule: figures and tables number sequentially across the WHOLE
+% document (Figure 1, 2, 3 ... / Table 1, 2, 3 ...), not per chapter, and the
+% appendix continues the same sequence rather than restarting.
+\usepackage{chngcntr}
+\counterwithout{figure}{chapter}
+\counterwithout{table}{chapter}
+
+% --- format rule §3.5: TOC / LoF / LoT render as dot-leader lines with page
+% numbers. The report class gives leaders to sections but not to chapters.
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftchapfont}{\normalfont\bfseries}
+\renewcommand{\cftchappagefont}{\normalfont\bfseries}
 
 % --- helper: placeholder for a not-yet-written work package -----------
 \newcommand{\wptodo}[2]{%
@@ -66,6 +90,9 @@ Screening of Micro-Hydropower Recovery at Wastewater Outfalls}
   {\itshape \{\{MONTH\_YEAR\}\}}\par
 \end{titlepage}
 
+% Front matter is numbered in lowercase roman; the body restarts at arabic 1.
+\pagenumbering{roman}
+
 % --- Certification page ----------------------------------------------
 \thispagestyle{empty}
 \noindent UNIVERSITY OF ST.\ THOMAS\par\vspace{1em}
@@ -82,6 +109,7 @@ and that any and all revisions required by the final examining committee have be
 
 % --- Abstract (5 paragraphs, 350-450 words; write LAST) ---------------
 \chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
 \wptodo{J5 · Abstract}{Five paragraphs per format §3.3: (1) opportunity + quantified loss;
 (2) the proposal + "that can be built on later in the development of a minimum viable
 product (MVP)"; (3) dataflow end to end; (4) headline numbers at full precision, measured
@@ -90,13 +118,26 @@ chapters exist.}
 
 % --- Acknowledgements -------------------------------------------------
 \chapter*{Acknowledgements}
+\addcontentsline{toc}{chapter}{Acknowledgements}
 \wptodo{J5 · Acknowledgements}{Four short paragraphs: advisor; business-side faculty;
 named industry practitioners; one-line catch-all.}
 
-\tableofcontents
-\listoffigures
-\listoftables
+% tocloft does not force a page break before each list, so the \clearpage calls
+% below are required — without them Contents runs on from Acknowledgements.
+\begin{singlespace}
 \clearpage
+\tableofcontents
+\clearpage
+\addcontentsline{toc}{chapter}{List of Figures}
+\listoffigures
+\clearpage
+\addcontentsline{toc}{chapter}{List of Tables}
+\listoftables
+\end{singlespace}
+\clearpage
+
+% Body pages restart at arabic 1 per standard graduate-thesis pagination.
+\pagenumbering{arabic}
 
 % =====================================================================
 % CHAPTER 1 — INTRODUCTION                              (WP J2 — Joint)
@@ -416,12 +457,12 @@ backend.
     arr/.style={->, thick},
   ]
     % --- labels ---
-    \node[lbl] at (5.6, 5.55) {Public / agency inputs};
-    \node[lbl] at (5.0, 3.15) {Offline Python screening pipeline (Phases 1--4)};
-    \node[lbl] at (5.6, -0.15) {Export / serving / visualization};
+    \node[lbl] at (5.6, 6.05) {Public / agency inputs};
+    \node[lbl, anchor=east] at (-1.15, 1.55) {Offline Python\\screening\\pipeline\\(Phases 1--4)};
+    \node[lbl] at (4.6, -0.55) {Export / serving / visualization};
 
     % --- sources ---
-    \node[src] (echo) at (0.0,4.3) {EPA ECHO\\ICIS facilities\\+ permits};
+    \node[src] (echo) at (0.0,4.8) {EPA ECHO\\ICIS facilities\\+ permits};
     \node[src] (dmr)  at (3.5,4.3) {EPA DMR param 50050\\FY2009--24\\($\sim$279M rows)};
     \node[src] (dep)  at (7.0,4.3) {USGS 3DEP EPQS\\elevations\\(DEM head)};
     \node[src] (eha)  at (10.5,4.3) {DOE EHA / EIA-860/923\\CF \& generation\\labels};
@@ -434,12 +475,12 @@ backend.
 
     % --- CF side analysis + Phase 5 kill ---
     \node[art] (cf) at (10.5,3.15) {CF calibration\\119--281 GWh/yr band\\(side analysis)};
-    \node[kill] (p5) at (10.3,0.15) {Phase 5 ML --- killed\\(only 11 FERC labels)};
+    \node[kill] (p5) at (10.3,-0.55) {Phase 5 ML --- killed\\(only 11 FERC labels)};
 
     % --- export row ---
-    \node[art] (exp) at (1.2,-1.55) {\texttt{export\_geojson.py}\\58-property contract\\byte-deterministic};
-    \node[art] (gj)  at (5.6,-1.55) {\texttt{scored\_sites.geojson}\\(+ \texttt{viable\_sites})\\1,138 project-viable};
-    \node[art] (ui)  at (10.0,-1.55) {React + MapLibre UI\\7 views $\cdot$ static build\\no live backend};
+    \node[art] (exp) at (1.2,-2.25) {\texttt{export\_geojson.py}\\58-property contract\\byte-deterministic};
+    \node[art] (gj)  at (5.6,-2.25) {\texttt{scored\_sites.geojson}\\(+ \texttt{viable\_sites})\\1,138 project-viable};
+    \node[art] (ui)  at (10.0,-2.25) {React + MapLibre UI\\7 views $\cdot$ static build\\no live backend};
 
     % --- arrows: sources -> phases ---
     \draw[arr] (echo.south) -- (p1.north);
@@ -463,7 +504,7 @@ backend.
     \draw[arr] (exp) -- (gj);
     \draw[arr] (gj) -- (ui);
 
-    \node[lbl, anchor=west] at (-1.2,-2.85)
+    \node[lbl, anchor=west] at (-1.5,-3.55)
       {Config: \texttt{settings.yaml}\quad
        Intermediates: \texttt{data/processed/phase\{1--4\}/*.parquet}};
   \end{tikzpicture}%
@@ -650,17 +691,285 @@ honestly claim. The processing pipeline that consumes these acquired tables will
 now be discussed.
 
 \section{Processing Pipeline}                            % WP T3, T4 — Tom
-\wptodo{T3/T4 · 4.3 (~4,600 w)}{The heart of the technical half. Each subsystem follows the
-five-part shape: responsibility $\rightarrow \geq 3$ options $\rightarrow$ why chosen
-$\rightarrow$ how built $\rightarrow$ named limitations.}
+
+The processing pipeline is responsible for turning the acquired tables of
+Section~4.2 into a per-plant screening record: a flow distribution, a ranked
+position in the national candidate list, an annual-energy estimate carrying its
+own uncertainty, a net head, a matched turbine, and a financial scorecard. It is
+implemented as four sequential phases, each writing a parquet file that the next
+phase reads, so any phase can be re-run without repeating the ones before it.
+Phases~1 and~2 --- filtering, flow features, ranking, and Monte-Carlo energy ---
+are described in Sections~4.3.1 through~4.3.3. Phases~3 and~4 --- head
+estimation, turbine selection, and cost and financial modelling --- follow in
+Sections~4.3.4 through~4.3.6. Each subsystem is presented in the same order:
+what it is responsible for, the options considered, why the chosen option won,
+how it was built, and the limitations deferred to future work.
 
 \subsection{POTW Filtering and Flow Features}
-\wptodo{T3 · 4.3.1}{Feeds: filter\_potw.py, flow\_features.py, PHASE1\_REPORT.md.}
+
+This subsystem is responsible for reducing the national NPDES universe to
+publicly owned treatment works that are actually operating, and for converting
+their monthly discharge records into one flow distribution per plant. Everything
+downstream consumes that distribution, so an error here propagates to every
+later number.
+
+Three options were considered for the flow signal itself. Option~(A) was the
+permitted design flow alone, a single scalar available for most plants.
+Option~(B) was the arithmetic mean of the reported monthly average flows.
+Option~(C) was a 20-point flow duration curve (FDC) evaluated at fixed
+exceedance probabilities from 0.01 to 0.95. Option~(A) was rejected because
+design flow is a permit ceiling rather than an observation, and utilisation at
+U.S.\ plants varies widely enough that a design-flow screen would rank permit
+paperwork rather than water. Option~(B) was rejected because hydropower energy
+is an integral over the whole flow distribution: two plants with the same mean
+flow but different variability produce different annual energy and require
+different turbines. Option~(C) won because it preserves the shape of the
+distribution at a fixed, comparable grid, feeds the trapezoidal energy
+integration of Section~4.3.3 directly, and supplies the reliable low-flow
+baseline ($Q_{P10}$) used in ranking.
+
+A second choice was required for plants reporting several outfalls. The options
+were (A)~summing all outfalls, (B)~keeping the outfall with the highest mean
+flow, and (C)~keeping the outfall with the most non-null monthly records, with
+combined-sewer, storm, and emergency prefixes pushed last and the mean used only
+as a tie-breaker. Summing double-counts plants that report the same water at a
+process point and a final discharge point. The maximum-mean rule was the
+original implementation and failed in production: a single corrupted row on a
+rarely reported overflow outfall could beat dozens of clean records on the real
+treatment outfall. Option~(C) replaced it and is what \texttt{flow\_features.py}
+implements today.
+
+Implementation runs in two modules. \texttt{filter\_potw.py} keeps permits whose
+facility-type indicator is \texttt{POTW} or \texttt{POT}, whose status code is
+effective, non-major effective, or administratively continued, and which are not
+federal treatment facilities; nulls the EPA sentinel value 999.0, any flow above
+2{,}000~MGD, and any actual-average flow exceeding five times design flow;
+deduplicates to one row per NPDES identifier keeping the largest surviving design
+flow; joins the facility table for name, state, and coordinates; and applies the
+P1-COORD-GUARD territory bands described in Section~4.2.1.
+\texttt{flow\_features.py} then groups the DMR series by plant, filters
+individual monthly readings above five times design flow \emph{before} any
+statistic is computed, and returns mean, median, standard deviation, coefficient
+of variation, the 10th, 25th, 75th, and 90th percentiles, minimum, maximum,
+month and year counts, missing-record fraction, a seasonal amplitude taken as
+the spread of calendar-month means, a linear flow trend from
+\texttt{scipy.stats.linregress}, and the FDC itself. The FDC is built from
+Weibull plotting positions $i/(n+1)$ on the descending sorted record and
+interpolated onto the 20-point exceedance grid held in
+\texttt{settings.yaml}. Each plant is finally tagged with a data-quality tier:
+\texttt{dmr} for twelve or more surviving months, \texttt{dmr\_limited} below
+that, \texttt{actual\_avg\_only} when the permit's actual-average field is the
+sole flow signal, and \texttt{design\_only} when mean flow has to be inferred as
+75~\% of design flow. Across the 17{,}148 plants that survive Phase~1, the tiers
+split 11{,}555 \texttt{dmr}, 607 \texttt{dmr\_limited}, 2{,}779
+\texttt{actual\_avg\_only}, and 2{,}207 \texttt{design\_only}.
+
+The per-reading filter is itself a result worth reporting. The original guard
+compared the finished mean against five times design flow and nulled every
+statistic when the ratio failed. That rule silently destroyed 435 plants whose
+records were mostly clean: their median record count was 110 months, and in 407
+cases a single bogus month --- for example 300~MGD filed against a 0.252~MGD
+plant --- had inflated the mean past the cap. Moving the same threshold from the
+aggregate to the individual reading recovered those 407 plants with real FDCs,
+while the 20 plants whose readings were bogus throughout still fall through to
+the design-flow fallback. The aggregate check was kept as a safety net for rows
+whose design flow is null at filter time.
+
+Three limitations are deferred. First, DMR reports monthly averages, so the FDC
+describes month-to-month variation and cannot represent diurnal swing; peak
+instantaneous flow at a plant is higher than any point on the curve, and the
+low-flow tail is correspondingly smoother than reality. Second, the
+primary-outfall rule assumes one outfall carries the recoverable discharge, which
+is wrong for plants that split flow across parallel outfalls. Third, the 75~\%
+utilisation factor applied to \texttt{design\_only} plants is an assumption, not
+a measurement; those 2{,}207 plants carry it into every downstream number and are
+flagged by data-quality tier so they can be excluded from any later analysis that
+requires measured flow.
+
 \subsection{Composite Ranking}
-\wptodo{T3 · 4.3.2}{Feeds: ranking.py. Weights, min-max normalization.}
+
+Ranking is responsible for ordering the 17{,}148 screened plants before any
+expensive per-site work is done, so that manual review, elevation queries, and
+later validation effort start where the evidence is strongest.
+
+Three options were considered. Option~(A) was ordering by mean flow alone.
+Option~(B) was ordering by a first-pass energy estimate. Option~(C) was a
+weighted composite of several normalised flow features. Option~(A) is a single
+axis and treats a plant with six months of erratic records identically to one
+with sixteen years of stable records at the same mean. Option~(B) is
+circular at this stage: energy requires head, and head does not exist until
+Phase~3 --- ranking on a head assumption would rank the assumption. Option~(C)
+won because every input it needs is already measured in Phase~1, and because the
+weights are explicit and auditable rather than buried inside an energy model.
+The weights are given in Table~\ref{tab:rank_weights}.
+
+\begin{table}[htbp]
+\centering
+\caption{Phase 1 composite ranking weights}
+\label{tab:rank_weights}
+\begin{tabular}{llr}
+\toprule
+Component & Normalised input & Weight \\
+\midrule
+Mean flow          & \texttt{mean\_flow\_mgd}, higher is better        & 0.35 \\
+Reliable baseline  & \texttt{p10\_flow\_mgd}, higher is better         & 0.20 \\
+Flow consistency   & \texttt{cv\_flow} capped at 2.0, inverted         & 0.20 \\
+Utilisation        & mean/design ratio capped at 2.0                   & 0.15 \\
+Record depth       & \texttt{n\_years\_data}, higher is better         & 0.10 \\
+\midrule
+Total              &                                                   & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Implementation is in \texttt{ranking.py}. Each component is min-max normalised
+across the fleet with a $10^{-12}$ term added to the denominator so a degenerate
+column cannot divide by zero, then combined by the weights above, which are
+re-normalised to sum to 1.0 at load so a partial override in
+\texttt{settings.yaml} cannot silently rescale the score. Missing values are
+filled with zero rather than a neutral midpoint, so a plant with no utilisation
+signal ranks last on that axis instead of scoring as average. Plants whose
+design flow is explicitly zero --- misclassified industrial dischargers that
+carry high DMR flow, of which KYP000044 is the documented example --- have their
+score forced to zero, while plants whose design flow is merely null keep a normal
+score, because nulling those would zero roughly 2{,}106 sites that are probably
+genuine treatment works with incomplete permit records. The final ordinal rank is
+assigned by descending score.
+
+Two limitations are named. The weights are engineering judgment, not fitted
+parameters: no labelled outcome existed to fit them against, which is the same
+scarcity that ends the machine-learning attempt reported in Section~4.4. And
+because normalisation is fleet-relative, a ranking score is only comparable
+within one pipeline run. Neither limitation propagates into the energy or
+financial results, because ranking is not a gate: all 17{,}148 plants pass to
+Phase~2 regardless of rank, so a mis-weighted score costs review order, not
+exclusion.
+
 \subsection{Monte-Carlo Energy Estimation}
-\wptodo{T3 · 4.3.3}{Feeds: energy\_physics.py, monte\_carlo.py, head\_assumptions.py,
-PHASE2\_REPORT.md. Site-keyed seeding, P10/P50/P90.}
+
+Phase~2 is responsible for converting each plant's flow duration curve into an
+annual-energy estimate that carries its own uncertainty, and for excluding plants
+that cannot support a turbine before any per-site network or optimisation work is
+spent on them. It applies the hydropower relation of Equation~\eqref{eq:hydro} with
+the constants held in \texttt{settings.yaml}: water density 998.2~kg/m\textsuperscript{3},
+gravitational acceleration 9.81~m/s\textsuperscript{2}, the conversion
+1~MGD~$=$~0.043813~m\textsuperscript{3}/s, and 8{,}766~h/yr.
+
+Three options were considered for handling uncertainty. Option~(A) was a
+deterministic point estimate at mean flow, default efficiency, and a default
+head. Option~(B) was a low, base, and high scenario triplet. Option~(C) was
+Monte-Carlo sampling with 10{,}000 iterations per plant. Option~(A) was rejected
+because the dominant unknown at this stage is head, which has not been measured
+yet, and a point estimate presents an assumption with the same authority as a
+measurement. Option~(B) improves on that but yields three numbers whose
+probability content is undefined --- there is no basis for calling the high
+scenario a P90. Option~(C) won because it produces genuine percentiles from
+stated input distributions, costs about 10~ms per plant once vectorised, and
+makes the uncertainty of the screen reportable rather than implied.
+
+Each iteration draws three independent samples. Head is drawn from a triangular
+distribution selected by design-flow archetype, as listed in
+Table~\ref{tab:head_archetypes}. Turbine efficiency is drawn from
+Triangular(0.70, 0.82, 0.90), pooled across machine types because no turbine has
+been selected at this stage. Plant availability is drawn from Triangular(0.90,
+0.95, 0.98). Power is evaluated at each of the 20 FDC points, integrated over the
+exceedance axis by the trapezoidal rule, and multiplied by 8{,}766~h/yr and the
+availability sample to give net annual energy. The integration is performed as a
+single $10{,}000 \times 20$ matrix operation in \texttt{energy\_physics.py}
+rather than a Python loop, and \texttt{monte\_carlo.py} distributes plants across
+worker processes with \texttt{concurrent.futures.ProcessPoolExecutor} when more
+than one worker is requested.
+
+\begin{table}[htbp]
+\centering
+\caption{Phase 2 head archetypes and triangular sampling parameters}
+\label{tab:head_archetypes}
+\begin{tabular}{lrrrr}
+\toprule
+Archetype & Design flow (MGD) & Low (m) & Mode (m) & High (m) \\
+\midrule
+\texttt{large\_potw}  & $>$ 10      & 3.0 & 8.0 & 15.0 \\
+\texttt{medium\_potw} & 1--10       & 2.0 & 5.0 & 10.0 \\
+\texttt{small\_potw}  & $<$ 1       & 1.0 & 3.0 & 6.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Seeding was rebuilt after a reproducibility failure that is worth recording.
+The original implementation seeded each plant with the base seed plus its row
+index. When P1-COORD-GUARD removed ten bad-coordinate facilities and the fleet
+went from 17{,}158 to 17{,}148 rows, every plant after the first removed row
+received a different seed, 1{,}090 financial scorecard rows were re-drawn, and
+three viability calls flipped --- none of which had anything to do with the ten
+removed plants. The replacement, \texttt{\_site\_seed\_sequence}, derives each
+plant's seed from the first eight bytes of the SHA-256 digest of its NPDES
+identifier mixed with the base seed through
+\texttt{numpy.random.SeedSequence}. The Python built-in \texttt{hash} was not
+used because it is salted per process. Draws are now invariant to row order, row
+count, and worker count, and the sequential and parallel paths produce identical
+output; changing the base seed remains the deliberate way to re-baseline the
+whole fleet.
+
+A three-test exclusion gate runs before sampling, in priority order. Plants with
+null, zero, or negative mean flow are excluded as \texttt{no\_usable\_flow};
+plants below the 0.5~MGD viability threshold are excluded as \texttt{small\_potw};
+and \texttt{dmr\_limited} plants with fewer than three surviving months are
+excluded as \texttt{sparse\_dmr\_artifact}. Of the 17{,}148 plants entering
+Phase~2, 1{,}496 fail the first test, 10{,}182 the second, and 6 the third,
+leaving 5{,}464 retained. Excluded plants are written to the output parquet with
+their reason string rather than dropped, so the funnel of Section~5.1.2 can be
+recomputed from the file itself.
+
+For each retained plant the phase writes the 10th, 50th, and 90th energy
+percentiles, the sample mean and standard deviation, the median power, the
+implied capacity factor, the three head percentiles, and an equivalent-households
+figure at 10{,}500~kWh/yr per U.S.\ home~\cite{eia_household}. Summed over the
+5{,}464 retained plants the P50 estimate is 699.18~GWh/yr, against 444.31~GWh/yr
+at P10 and 1{,}002.13~GWh/yr at P90. The median plant returns 24{,}146~kWh/yr at
+P50, and the median ratio of P90 to P10 within a single plant is 2.28, which is
+the width the head assumption alone imposes on a site before any measurement is
+taken. Figure~\ref{fig:mc_energy} shows both halves of that result: the
+10{,}000-sample distribution for one representative plant and the fleet
+distribution of per-plant P50 energy.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig02_mc_energy.png}
+\caption{Monte-Carlo annual-energy distribution for a representative plant
+(PA0026280, Lewistown STP, 1.59 MGD mean flow, 168 months of DMR record) and the
+fleet distribution of per-plant P50 energy for the 5,464 plants retained by
+Phase 2}
+\label{fig:mc_energy}
+\end{figure}
+
+These Phase~2 totals are screening intermediates and are deliberately not the
+headline figure of this thesis. They are computed on archetype head rather than
+measured head, before turbine sizing, and before economics; the 409.2~GWh/yr
+ceiling and the calibrated 119--281~GWh/yr band reported in Chapter~5 come from
+Phases~3 and~4 applied to the surviving sites. The gap between 699.18~GWh/yr here
+and 409.2~GWh/yr there is a consequence of real head replacing assumed head, of
+the 1~kW physics floor, and of the financial gate, and is decomposed stage by
+stage in Section~5.1.2.
+
+Four limitations are named. The head triangulars are archetypes indexed by
+design flow, not site measurements, and no plant-specific evidence supports the
+mode values; Section~4.3.4 replaces them with a digital-elevation-model estimate
+and flags that estimate as the largest methodological assumption in the work.
+The three sampled quantities are drawn independently, so any real correlation
+between head, machine efficiency, and availability is absent from the reported
+spread. The FDC integration is truncated to the shorter of the curve and the
+exceedance grid, which drops the low-flow tail for plants with sparse records and
+understates their annual energy by an estimated few per cent. Finally, the
+implied capacity factor is implausibly high: across the 5{,}464 retained plants
+its median is 0.869 (tenth to ninetieth percentile 0.834 to 0.883), and across
+the 1{,}138 plants that survive to project viability in Phase~4 it is 0.872
+(0.856 to 0.883). Part of that is real --- treated wastewater discharge is far
+flatter than river flow --- and part is optimism, because a smooth monthly FDC is
+integrated as though the machine ran at every point on it with no debris, minimum
+flow, or outage modelling. That discrepancy is
+not corrected inside Phase~2; it is measured against real capacity factors and
+turned into the calibration band in Section~4.4. Head estimation, which removes
+the archetype assumption these energy figures rest on, will now be discussed.
 \subsection{Head Estimation}
 \wptodo{T4 · 4.3.4}{Feeds: head\_estimation.py, outfall\_coords.py. Flag DEM-proxy as the
 LARGEST methodological assumption; the plausibility gate.}
@@ -805,6 +1114,12 @@ CINK Hydro-Energy,
 Federal Energy Regulatory Commission,
 ``Qualifying Conduit Hydropower Facilities,''
 18~CFR~4.400--4.401; Hydropower Regulatory Efficiency Act of 2013.
+
+\bibitem{eia_household}
+U.S.\ Energy Information Administration,
+``How much electricity does an American home use?,'' Frequently Asked Questions,
+2023 residential average (10,500~kWh/yr per customer).
+[Online]. Available: https://www.eia.gov/tools/faqs/faq.php?id=97
 % Additional Track M / Joint citations merge here at WP J5.
 
 \end{thebibliography}

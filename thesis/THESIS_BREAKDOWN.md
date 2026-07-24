@@ -183,7 +183,7 @@ understanding only — these are never citable sources; see the RULE on internal
     sentinels, GPD/MGD unit errors, coordinate corruption).
   - **Fig/Tab:** system block diagram (**Figure 1**, joint), data-source inventory table.
 
-- [ ] **T3 · Ch4.3 Processing Pipeline — Phases 1–2** — ~2,200 w
+- [x] **T3 · Ch4.3 Processing Pipeline — Phases 1–2** — ~2,200 w
   - **Feeds:** `src/phase1/flow_features.py`, `ranking.py`, `src/phase2/energy_physics.py`,
     `monte_carlo.py`, `head_assumptions.py`, `PHASE1_REPORT.md`, `PHASE2_REPORT.md`.
   - **Beats:** POTW filter + active-permit logic; flow-feature statistics; composite
@@ -372,7 +372,7 @@ So neither of you has to re-read the whole format prompt each session:
 |---|---|---|---|---|---|
 | T | T1 | Ch2 Background | Tom | 2,400 | ☑ |
 | T | T2 | Ch4.1–4.2 Overview + Acquisition | Tom | 1,600 | ☑ |
-| T | T3 | Ch4.3 Pipeline P1–P2 | Tom | 2,200 | ☐ |
+| T | T3 | Ch4.3 Pipeline P1–P2 | Tom | 2,200 | ☑ |
 | T | T4 | Ch4.3 Pipeline P3–P4 | Tom | 2,400 | ☐ |
 | T | T5 | Ch4.4–4.5 Calibration + Export | Tom | 2,000 | ☐ |
 | T | T6 | Ch5 Results (energy/funnel/calib) | Tom | 3,000 | ☐ |
