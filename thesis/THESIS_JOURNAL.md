@@ -361,3 +361,55 @@ Any draft that cites these must match exactly (P2-SEED re-baseline):
 
 **Next work package suggested:**
 - T5 · Ch4.4 Calibration and Validation + Ch4.5 Export Layer (~2,000 w) — the implied-CF vs EHA-CF band, the Phase 5 ML kill as an honest negative result, and the 58-property GeoJSON contract
+
+### Session: 2026-07-25 — T5 · Ch4.4 Calibration and Validation + Ch4.5 Export Layer — Tom
+
+**Work package:** T5 — §4.4 opening, §4.4.1 Capacity-Factor Calibration, §4.4.2 Machine-Learning Feasibility, §4.5 Data Export and Serving Layer
+
+**What was written:**
+- §4.4 opening. States plainly that everything before it is modelled and that no WOWERS site has been instrumented, then frames the section as two attempts at comparison rather than as validation.
+- §4.4.1 Capacity-Factor Calibration. Four options — direct measurement at an outfall, comparison against other modelled national assessments, re-tuning the Phase 2 sampling distributions, and benchmarking the implied capacity factor against measured plants. The fourth won because a published multiplier is reversible while a re-tuned distribution buries the correction inside the model. Documents the decomposition of the implied 0.8725 into availability 0.943 × flow-duration-curve utilisation 0.925, and separates the part that is real (flat municipal discharge) from the part that is optimistic (0.95 modal availability, no minimum-flow cutoff, no debris model). Then the recompute-and-clean method, the three EHA buckets, the LucidPipe anchor arithmetic, the band, and the three calibrated columns the band puts into the Phase 4 scorecard. Five named limitations, ending on the one that matters: this is calibration of a single scalar against somebody else's plants, not validation of any site in the portfolio.
+- §4.4.2 Machine-Learning Feasibility. The Phase 5 kill written as a negative result against a gate fixed in advance (≥ 50 new usable labels). Records the sources searched and why each failed, the structural reason FERC cannot carry the labels (permitting system; generation is reported to EIA on Form 923, which is what EHA republishes), the 115 → 103 already owned → 11 genuinely new arithmetic, and the Point Loma correction, including that the first pass masked a plant offline since 2018 by selecting its latest non-zero year. Four reasons for the kill, then what survives: the rails, the leakage lock, and the smoke test whose metrics are deferred to §5.1.5 and labelled as having no product significance.
+- §4.5 Data Export and Serving Layer. Four options — database plus API, four per-view JSON files, parquet-in-the-browser, one static GeoJSON with client-side derivation — and why the last won. Documents the join, the 58-property contract, RFC 7946 conformance (coordinate order, `meta` foreign member), the three rounding classes, the dual-file default write, the on-write validation, and byte determinism. Five named limitations: whole-file download at 6.13 MB, no schema version, the 10^6 payback sentinel, manual regeneration with no CI check, and lossy rounding that makes the file a reporting artefact rather than a reanalysis input.
+
+**Numbers — all recomputed live this session, none copied from a report:**
+- `scripts/cf_calibration.py` re-run end to end. Implied CF over the 1,138 viable sites: p10/p25/p50/p75/p90 = 0.8556 / 0.8651 / 0.8725 / 0.8810 / 0.8833 on a 409.2 GWh/yr headline. CF recompute vs the workbook string: n = 23,483, mean |diff| = 0.00250 (p25 0.00125, p75 0.00375).
+- EHA buckets: 0.1–5 MW = 629 plants / 9,798 plant-years, p25/p50/p75 = 0.2535 / 0.3902 / 0.5409; 0.1–1 MW = 59 plants / 802 plant-years, 0.2676 / 0.4145 / 0.5457; 2013–2022 slice = 611 plants / 5,530 plant-years, p50 0.3817.
+- Band on 409.2 GWh/yr: ×0.291 = 118.9, ×0.447 = 183.0, ×0.620 = 253.7, ×0.688 = 281.4 GWh/yr. Sub-bucket floors 125.5 and 194.4 GWh/yr. LucidPipe CF = 1,100,000 ÷ (200 × 8,760) = 0.6279.
+- Phase 4 calibrated columns summed from parquet: viable cohort 119.07 / 182.90 / 281.51 GWh/yr against a 409.17 GWh/yr ceiling; all 3,778 scored 149.83 / 230.15 / 354.23 against 514.87.
+- Ground-truth label set: 1,360 rows (1,268 EHA + 92 EIA), 250,643.66 GWh/yr measured, median installed 7,700 kW, range 100 kW – 6,495 MW, `actual_head_m` and `actual_flow_m3s` null in 1,360 of 1,360.
+- Export: both tracked GeoJSON files re-exported to a scratch path and hashed. `viable_sites.geojson` 1,138 features / 1.85 MB / SHA-256 `f359b413…`; `scored_sites.geojson` 3,778 features / 6.13 MB / SHA-256 `420ad5f4…`. Two consecutive runs matched each other and matched the tracked files byte for byte. 58 properties on every feature, uniform key order, 0 features dropped for null coordinates, 823 payback sentinels in the scored file and 0 in the viable file, `meta` = {17148, 3778, P2-SEED re-baseline 2026-07-06}.
+- Property-group counts in Table 10 were counted from `PROPERTIES` in the exporter, not estimated: 4 + 7 + 13 + 5 + 4 + 8 + 8 + 9 = 58, with the first three groups being the original 24.
+
+**Figures and tables produced:**
+- **Figure 7** `figures/fig07_cf_calibration.png` — measured EHA capacity factor against the modelled implied capacity factor as densities, with the LucidPipe and anchor lines, plus a p10–p90 spread panel for the three buckets and the WOWERS distribution. Regenerator `thesis/figures/make_fig07_cf_calibration.py`, which imports the loaders from `scripts/cf_calibration.py` so the figure cannot drift from the script.
+- **Figure 8** `figures/fig08_calibration_band.png` — portfolio energy per tier with the capacity factor and multiplier written inside each bar, and the 0.1–1 MW variant marked. Regenerator `thesis/figures/make_fig08_calibration_band.py`.
+- **Table 9** capacity-factor calibration band; **Table 10** GeoJSON property groups.
+- Both regenerators need SANDISK mounted (they read the EHA workbook) and run from the repository root as `PYTHONPATH=. python3 thesis/figures/make_figNN_*.py`.
+
+**New citations (all external):**
+- `eia923` — EIA Form EIA-923 Power Plant Operations Report, cited for the claim that measured generation reaches the public record through EIA rather than FERC.
+- `rfc7946` — Butler et al., IETF RFC 7946, for coordinate order (§3.1.1) and the `meta` foreign member (§6.1).
+- `lightgbm` — Ke et al., NIPS 2017, for the estimator used in the smoke test.
+
+**Environment note:**
+- `fastexcel` (a declared dependency in `pyproject.toml`) was missing from the active interpreter, so `cf_calibration.py` could not read the EHA workbook. Installed `fastexcel 0.20.2` with pip; nothing else in the environment was touched. Anyone reproducing Figures 7 and 8 needs it.
+
+**Verification:**
+- `tectonic -X compile thesis_tom.tex` → 0 errors, 0 undefined references, 67 pages (was 56). Zero overfull hboxes inside the T5 range; the two that appeared on the first pass were fixed by setting Table 10 at `\footnotesize` with shorter examples and by wrapping the long calibrated-column names in `sloppypar`.
+- Pages carrying Figure 7, Table 9, Figure 8, and Table 10 were rendered and inspected. Captions sit above tables and below figures and sequential numbering is intact (Tables 1–10, Figures 1–8, with the T6 funnel stub now Figure 9).
+
+**Scope note — word count:**
+- T5 came in at **3,269 words against the ~2,000 allotted** (§4.4 = 2,327, §4.5 = 942), after a trim pass that removed about 90 words of duplication. Like T4 it covers three subsystems rather than one. Chapters 1–6 now hold 12,847 words with T6, T7, M1, M2 and all four Joint packages still unwritten; at the remaining planned allotments that projects to roughly 25,100 words, which is **above the 24,000-word ceiling**. This needs a deliberate cut at J5 rather than drift: the first candidates are §4.3.6's cost-provenance narrative, the §4.4.1 capacity-factor decomposition paragraph, and §4.4.2's source-by-source hunt paragraph, which together are worth about 500 words without losing a required beat.
+
+**Open items / follow-ups:**
+- §4.4.1 forward-references §5.1.4 and §4.4.2 forward-references §5.1.5; T6 must contain both, and §5.1.4 must state what the band does to the Section 4.3.6 economics, which this section promises but does not do.
+- The smoke-test metrics are marked internal in `SMOKE_TEST_REPORT.md`. They are reported in this thesis as a labelled pipeline proof with no product significance; if that framing is ever relaxed in §5.1.5 the internal marking should be revisited first.
+- Figures 7 and 8 cannot be regenerated without the external drive. If the EHA bucket statistics are needed offline later, cache them to a small parquet under `data/` first.
+- The 4 % gap between the 0.60 central anchor and the measured LucidPipe 0.628 is stated as a judgment. If a second real conduit or WWTP install with published annual energy is ever found, the anchor should be recomputed rather than kept.
+
+**Breakdown updated:**
+- §3 T5 checkbox → `[x]`; §7 T5 status → ☑
+
+**Next work package suggested:**
+- T6 · Ch5 Results (~3,000 w) — the parallel ideal-versus-expected tables, the 17,148 → 5,464 → 4,860 → 3,778 → 1,138 funnel with its selection-bias defence, the calibration result, and the machine-learning negative result
