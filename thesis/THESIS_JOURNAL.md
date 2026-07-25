@@ -538,7 +538,7 @@ Any draft that cites these must match exactly (P2-SEED re-baseline):
 - Chapter 1 opening page rendered and inspected.
 
 **Open items / follow-ups:**
-- The intro claims a feasibility study "costs tens of thousands of dollars and takes weeks". That is the received figure from the journal's customer conversations, not a cited source. Either find a citable engineering-services figure at J5 or soften the wording to attribute it as a practitioner estimate.
+- ~~The intro claims a feasibility study "costs tens of thousands of dollars and takes weeks"~~ — **resolved 2026-07-25, same day.** A source search (small-hydro feasibility cost literature, ORNL cost models, USDA REAP feasibility-grant programme) produced no primary document stating a per-study cost or duration for small-hydro or conduit site assessment. The ORNL baseline cost models explicitly *exclude* licensing and financing from initial capital cost, and the REAP programme publishes grant caps rather than study costs, so neither supports the claim as written. Rather than attribute an unverifiable figure, the sentence was rewritten to drop the dollar and duration numbers entirely and rest the argument on this work's own measured result: the median viable site is a 12.96 kW machine at $66,421 all-in capital cost, so any per-site engineering assessment is a material fraction of the project it assesses. The scaling argument is unchanged and now carries no unsourced number. Ch1 is 1,056 words after the edit.
 - §1.2 describes §4.6 and §5.1.6 as if they exist. They are Mohamed's M1 and M2 and are still stubs — the outline is correct about the finished document but will read oddly until those merge.
 
 **Breakdown updated:**
