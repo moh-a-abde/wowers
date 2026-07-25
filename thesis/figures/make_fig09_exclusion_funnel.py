@@ -1,7 +1,10 @@
 """Render Figure 9 — the site exclusion funnel and where the energy goes.
 
 Left panel:  the five funnel stages by site count, with the drop at each stage
-             labelled by its exclusion class (data gap, physics floor, economics).
+             labelled by its exclusion class (scale threshold, data gap, physics
+             floor, economics). The Phase 2 drop is split by the reason string the
+             phase wrote, because the 0.5 MGD floor is a scope decision rather
+             than a missing record.
 Right panel: the same funnel in energy terms, from the Phase 2 fleet estimate of
              699.18 GWh/yr down to the 409.17 GWh/yr carried by the viable cohort,
              separating losses caused by dropping sites from the loss caused by
@@ -60,31 +63,49 @@ def main() -> None:
     e_p3 = float(p3.filter(pl.col("turbine_viable"))["annual_energy_mwh"].sum()) / 1e3
     e_vi = float(p4.filter(pl.col("project_viable"))["annual_energy_kwh"].sum()) / 1e6
 
+    # Phase 2 drops split by the reason string the phase itself wrote, because
+    # "below the 0.5 MGD threshold" is a scope decision and not a data gap.
+    reasons = dict(
+        p2.filter(pl.col("excluded"))
+        .group_by("exclusion_reason")
+        .agg(pl.len().alias("n"))
+        .select(["exclusion_reason", "n"])
+        .iter_rows()
+    )
+    n_small = reasons["small_potw"]
+    n_nodata = n1 - n2 - n_small
+
     stages = [
         ("Screened POTWs", n1, None, None),
-        ("Flow-valid (Phase 2)", n2, n1 - n2, "data gap"),
-        ("Head-valid (Phase 3)", n3, n2 - n3, "data gap"),
-        ("Turbine-viable (Phase 3)", n4, n3 - n4, "physics floor"),
-        ("Project-viable (Phase 4)", n5, n4 - n5, "economics"),
+        ("Flow-valid (Phase 2)", n2, [(n_small, "scale threshold"), (n_nodata, "data gap")], None),
+        ("Head-valid (Phase 3)", n3, [(n2 - n3, "data gap")], None),
+        ("Turbine-viable (Phase 3)", n4, [(n3 - n4, "physics floor")], None),
+        ("Project-viable (Phase 4)", n5, [(n4 - n5, "economics")], None),
     ]
-    dropcolour = {"data gap": GAP, "physics floor": PHYS, "economics": ECON}
+    dropcolour = {"data gap": GAP, "physics floor": PHYS, "economics": ECON,
+                  "scale threshold": "#8a6fa8"}
 
     plt.rcParams.update({"font.size": 11, "axes.labelsize": 11, "axes.titlesize": 11})
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9.0, 3.8),
                                    gridspec_kw={"width_ratios": [1.15, 1.0]})
 
     ypos = np.arange(len(stages))[::-1]
-    for y, (label, kept, dropped, kind) in zip(ypos, stages):
+    for y, (label, kept, drops, _unused) in zip(ypos, stages):
         ax1.barh(y, kept, color=KEEP, height=0.56)
-        if dropped:
-            ax1.barh(y, dropped, left=kept, color=dropcolour[kind], height=0.56, alpha=0.85)
-            ax1.text(kept + dropped + 250, y, f"{kept:,} kept", fontsize=8.5,
-                     color=INK, va="center")
-            ax1.text(kept + dropped + 250, y - 0.34, f"$-${dropped:,} {kind}",
-                     fontsize=8, color=dropcolour[kind], va="center")
-        else:
+        if not drops:
             ax1.text(kept + 250, y, f"{kept:,} screened", fontsize=8.5, color=INK,
                      va="center")
+            continue
+        left = kept
+        for n, kind in drops:
+            ax1.barh(y, n, left=left, color=dropcolour[kind], height=0.56, alpha=0.85)
+            left += n
+        ax1.text(left + 250, y + 0.16, f"{kept:,} kept", fontsize=8.5, color=INK,
+                 va="center")
+        offsets = [-0.20, -0.48]
+        for (n, kind), dy in zip(drops, offsets):
+            ax1.text(left + 250, y + dy, f"$-${n:,} {kind}", fontsize=8,
+                     color=dropcolour[kind], va="center")
     ax1.set_yticks(ypos)
     ax1.set_yticklabels([s[0] for s in stages], fontsize=8.5)
     ax1.set_xlim(0, 21_500)
@@ -117,8 +138,9 @@ def main() -> None:
     fig.savefig(OUT, dpi=200)
 
     print(f"wrote {OUT}")
-    for label, kept, dropped, kind in stages:
-        print(f"  {label:26s} kept={kept:6,}  dropped={dropped or 0:6,}  {kind or ''}")
+    for label, kept, drops, _ in stages:
+        detail = ", ".join(f"{n:,} {kind}" for n, kind in (drops or []))
+        print(f"  {label:26s} kept={kept:6,}  dropped: {detail}")
     print(f"  energy: {e_all:.2f} -> {e_hv:.2f} -> {e_tv:.2f} -> {e_p3:.2f} -> {e_vi:.2f} GWh/yr")
 
 
