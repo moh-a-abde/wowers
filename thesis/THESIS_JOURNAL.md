@@ -413,3 +413,59 @@ Any draft that cites these must match exactly (P2-SEED re-baseline):
 
 **Next work package suggested:**
 - T6 · Ch5 Results (~3,000 w) — the parallel ideal-versus-expected tables, the 17,148 → 5,464 → 4,860 → 3,778 → 1,138 funnel with its selection-bias defence, the calibration result, and the machine-learning negative result
+
+### Session: 2026-07-25 — T6 · Ch5 Results — Tom
+
+**Work package:** T6 — Chapter 5 lead-in, §5.1.1 Best Case and Expected System Performance, §5.1.2 Site Exclusion Funnel, §5.1.3 Energy and Financial Results, §5.1.4 Capacity-Factor Calibration, §5.1.5 Machine-Learning Feasibility
+
+**What was written:**
+- Chapter 5 lead-in. Names the only measured inputs in the whole work — DMR discharge records and 3DEP elevations — and states that everything downstream is modelled and no site has been built or metered.
+- §5.1.1. The two parallel tables the format demands, identical columns, one assumption apart. Ideal is the pipeline under its own assumptions; Expected is the same 1,138 sites with energy at the 0.688 central calibration factor and every cash flow recomputed. Explains why the fleet capacity factor reads 0.7972 here and 0.8725 in §4.4.1 — different denominators, one against the Phase 3 rating and one against median-condition power at mean flow.
+- §5.1.2. Funnel table and figure by count and by energy, the exclusion-class rollup, and the selection-bias answer. Contains the stage decomposition §4.3.3 promised: 699.18 → 641.90 → 619.32 → 514.87 → 409.17 GWh/yr, with the 104.44 GWh/yr step called out as a model change rather than a site drop.
+- §5.1.3. Portfolio shape (concentration, tier split), per-site medians, the three-dimensional econ gradient across all 3,778 scored sites, and the two qualifiers on the viable cohort: 848 of 1,138 carry a measured flow duration curve, and 360 still carry the Phase 2 archetype head and hold 27.0 % of the portfolio energy.
+- §5.1.4. The calibration as a result, plus a computation this work had not done before: re-scoring every site through the full 30-year cash-flow model at each calibration tier. Contains the discrepancy paragraph §4.4.1 and T5 promised.
+- §5.1.5. The Phase 5 negative result with its metric table, the finding that LightGBM does not clearly beat a capacity-factor baseline, the leakage-guard demonstration, and the one-sentence transferable conclusion: the asset class lacks measured plants, not modelling capacity.
+
+**Numbers — all recomputed live from parquet this session:**
+- Funnel 17,148 → 5,464 → 4,860 → 3,778 → 1,138; drops 11,684 / 604 / 1,082 / 2,640; rollup 12,288 data gap (76.8 %), 1,082 physics floor (6.8 %), 2,640 economics (16.5 %) of 16,010.
+- Energy chain 699.18 / 641.90 / 619.32 / 514.87 / 409.17 GWh/yr. Data-and-physics stages cost 79.86 GWh (11.4 %) while removing 30.9 % of sites; the Phase 3 re-estimate costs a further 104.44 GWh (16.9 %).
+- Ideal table: 834 / 262 / 42 sites by tier; 9.16 / 23.16 / 26.26 MW; CF 0.8215 / 0.8098 / 0.7777; 65.95 / 164.30 / 178.91 GWh/yr; $6.32M / $16.12M / $18.79M revenue; NPV $27.01M / $93.92M / $189.21M. Totals 1,138 · 58.59 MW · CF 0.7972 · 409.17 GWh/yr · $41.23M/yr · $310.13M.
+- Expected table (same sites, ×0.688, cash flows recomputed): CF 0.5652 / 0.5571 / 0.5350; 45.37 / 113.04 / 123.09 GWh/yr; NPV $0.40M / $26.09M / $110.16M; totals CF 0.5485 · 281.51 GWh/yr · $28.37M/yr · $136.65M, with 439 of the 1,138 still clearing the gate (261 / 136 / 42 by tier).
+- Re-score at every tier through the real DCF (`compute_scorecard`, 3,778 sites per scenario): ceiling 1,138 sites / 409.17 GWh / $310.13M; central 439 / 213.80 / $152.64M; p50 floor 129 / 95.98 / $59.44M; p25 floor 27 / 30.01 / $19.03M. Median payback of the surviving cohort 9.83 / 10.39 / 10.73 / 10.57 yr.
+- Viable-cohort medians: 12.96 kW, 93,350 kWh/yr, payback 9.8262 yr, IRR 9.40 %, LCOE $0.0683/kWh, CapEx $66,421, NPV $29,693, energy offset 2.0155 %. Concentration: top 10 sites 18.9 %, top 100 60.4 %, top 250 80.4 % of viable energy; the 42 full-licensing plants hold 43.7 % of energy and 61.0 % of NPV on 3.7 % of the sites.
+- Cohort composition: 848 dmr / 165 design_only / 125 actual_avg_only; head 778 3DEP and 360 archetype, the archetype cohort holding 110.29 GWh (27.0 %); machines 654 Crossflow (47.48 GWh), 256 Kaplan (240.51), 228 Francis (121.18).
+- Non-viable scored cohort: 2,640 sites, 105.70 GWh/yr, $142.18M CapEx, median rated 2.61 kW, median NPV −$11,305, 823 sentinel paybacks.
+- Geography: 51 states and territories with viable sites, 54 scored. CA 147 sites / 67.98 GWh, NY 45 / 40.02, TX 102 / 38.95, IL 47 / 34.91, WA 7 / 20.32. Map frame excludes 52 scored (28 PR, 10 AK, 6 HI, 3 GU, 2 MP, 2 AS, 1 VI) of which 27 are viable.
+- Smoke test re-run live (`python -m src.phase5.train`, seed 0) under **LightGBM 4.7.0**, versus 4.6.0 in the original run: rmse_log 0.9165 ± 0.0763, R² 0.7775 ± 0.0336, Spearman 0.9137 ± 0.0124, MAPE 987 % ± 1,353 %; mean baseline 1.9486 / −0.0012 / NaN / 4,263 %; CF baseline 0.9326 / 0.7703 / 0.9092 / 1,743 %. Every figure matched the recorded run to four decimals, so the determinism claim now holds across a LightGBM minor version. Leakage guard fired with the exact recorded message.
+
+**Correction made to an earlier work package:**
+- §4.3.6 (T4) described `$3,676/kW` as the viable cohort's "median all-in cost". It is the median **equipment** cost per kilowatt; `capex_per_kw` in the scorecard is the power-law equipment figure, not the four-component total. The all-in median is **$5,577/kW**. The sentence now reports both. No other number in T4 was affected — the portfolio totals were already computed from the four CapEx columns directly.
+
+**Figures and tables produced:**
+- **Figure 9** `figures/fig09_exclusion_funnel.png` — funnel by count with each drop coloured by class, plus the energy chain including the model-change step. Regenerator `thesis/figures/make_fig09_exclusion_funnel.py`.
+- **Figure 10** `figures/fig10_national_map.png` — every scored plant at its permitted coordinate, marker area by rated power, plus the top-ten states by viable energy. No basemap is drawn; the site cloud is the map, so nothing is interpolated. Regenerator `thesis/figures/make_fig10_national_map.py`.
+- **Tables 11–15** — ideal performance; expected performance; funnel with drop classes; portfolio re-scored at each calibration tier; smoke-test metrics.
+- Figures 9 and 10 need only the repository parquets (unlike Figures 7–8, which need SANDISK).
+
+**Environment note:**
+- `scipy`, `lightgbm`, and `scikit-learn` were missing from the active interpreter and were installed with pip (scipy 1.18.0, lightgbm 4.7.0, scikit-learn 1.9.0). All three are declared in `pyproject.toml`. `fastexcel` was installed in the previous session for the same reason.
+
+**Verification:**
+- `tectonic -X compile thesis_tom.tex` → 0 errors, 0 undefined references, 75 pages (was 67). No overfull hboxes in the T6 range after the three new tables were set at `\footnotesize` with shortened headers.
+- Pages carrying Tables 11–12, Figure 9, Figure 10, Table 14, and Table 15 were rendered and inspected. Sequential numbering intact: Tables 1–15, Figures 1–10.
+- Every claim of the form "x % of y" in the chapter was checked against the recomputed totals; one first-draft figure (31.5 % of sites removed by the two data stages) was wrong and is now 30.9 %.
+
+**Scope note — word count:**
+- T6 came in at **2,224 words against the ~3,000 allotted**, which is under budget rather than over for the first time in Track T. Chapters 1–6 now hold 14,940 words including the remaining `\wptodo` stub text, with T7, M1, M2 and all four Joint packages unwritten. At the planned allotments that projects to roughly 23,800–24,200 words, so the body is now near but no longer clearly above the 24,000 ceiling. The J5 trim list from the T5 entry still stands as insurance.
+
+**Open items / follow-ups:**
+- §5.1.1 and §5.1.4 both lean on the re-score computation; it lives only in this session's scratch script. If the numbers are ever challenged, fold that script into `scripts/` as a read-only companion to `cf_calibration.py` so it is reproducible from the repository alone.
+- §5.1.3 reports that 360 viable sites still carry the archetype head. T7's appendix should list them, or at least their count by state, so the claim is auditable.
+- The smoke-test artefacts under `data/processed/phase5/models/` were overwritten by this session's re-run. They are gitignored and byte-equivalent in metrics; no action needed unless someone was relying on the 4.6.0 booster file.
+- J4's integration test must not re-derive the funnel; it should assert the same 1,138 / 409.17 / $310.1M / 9.8 yr chain across the export boundary and cite §5.1.2 rather than repeat it.
+
+**Breakdown updated:**
+- §3 T6 checkbox → `[x]`; §7 T6 status → ☑
+
+**Next work package suggested:**
+- T7 · Appendices A–C (~800 w plus tables) — the 58-property data dictionary, the full funnel tables, and the Monte-Carlo and calibration captures. That closes Track T; Mohamed's M1/M2 and the Joint packages are then the remaining work.
