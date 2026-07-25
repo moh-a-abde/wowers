@@ -1273,8 +1273,8 @@ interconnection, \$57.2M of permitting --- against \$4.08M/yr of operations and
 maintenance. The 1{,}138 sites clearing the viability gate carry \$211.3M of that
 capital cost and \$41.23M/yr of revenue, and return a portfolio net present value
 of \$310.1M, a median payback of 9.83~yr, a median rate of return of 9.40~\%, a
-median levelised cost of \$0.0683/kWh, and a median all-in cost of
-\$3{,}676/kW. Viability concentrates with size: all 42 plants above 250~kW are
+median levelised cost of \$0.0683/kWh, a median equipment cost of \$3{,}676/kW,
+and a median all-in cost of \$5{,}577/kW. Viability concentrates with size: all 42 plants above 250~kW are
 viable, while only 834 of the 3{,}275 plants at or below 25~kW are, though that
 small cohort is 86.7~\% of the scored fleet.
 
@@ -1713,28 +1713,337 @@ map interaction.}
 % force section counter to 1 (prints no heading) so subsections read 5.1.x
 \stepcounter{section}\setcounter{subsection}{0}
 
+This chapter reports what the platform produced when run end to end on the
+re-baselined national dataset of 6~July 2026. One distinction governs every number
+in it. The measured inputs are the discharge records and the elevations: monthly
+flows reported by permit holders to the Environmental Protection
+Agency~\cite{epa_echo} and point elevations returned by the 3DEP query
+service~\cite{usgs_3dep}. Everything downstream --- head, machine choice,
+efficiency, energy, cost, and cash flow --- is modelled, and no WOWERS site has
+been built or metered. Results are therefore reported as a screen with stated
+bounds, and wherever a modelled figure differs from what a stated assumption
+would give, the gap is quantified rather than absorbed.
+
 \subsection{Best Case and Expected System Performance}   % WP T6 — Tom
-\wptodo{T6 · 5.1.1 (must come first)}{Two PARALLEL tables — Ideal vs Expected system
-performance — identical columns, differing assumptions. Physics ceiling 409.2 GWh/yr vs
-calibrated band 119--281 GWh/yr.}
+
+The best case is the pipeline's own output under its own assumptions, and it is
+established here before any calibrated figure is presented. Table~\ref{tab:ideal}
+gives it for the 1{,}138 project-viable sites, split by the permitting tier of
+Section~4.3.6. The portfolio is 58.59~MW of rated capacity producing
+409.17~GWh/yr and \$41.23M/yr of revenue against \$211.33M of capital cost, for a
+net present value of \$310.13M at a 6~\% real discount rate over 30~yr with
+0.2~\%/yr degradation. The fleet-level capacity factor in that table is
+409.17~GWh divided by 58.59~MW times 8{,}760~h, which is 0.7972. It is not the
+0.8725 of Section~4.4.1: that figure divides by the power at median head,
+median efficiency, and mean flow, while this one divides by the rating the turbine
+selector chose, and a rating set at design flow is above mean-flow power at most
+plants. Both are correct against their own denominators and neither is measured.
+
+\begin{table}[htbp]
+\centering
+\caption{Ideal system performance --- 1,138 project-viable sites under Phase 2
+assumptions}
+\label{tab:ideal}
+\footnotesize
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Permitting tier & Sites & MW & CF & GWh/yr & Rev.\ \$M/yr & NPV \$M \\
+\midrule
+Qualifying conduit  & 834     & 9.16  & 0.8215 & 65.95  & 6.32  & 27.01  \\
+Abbreviated         & 262     & 23.16 & 0.8098 & 164.30 & 16.12 & 93.92  \\
+Full licensing      & 42      & 26.26 & 0.7777 & 178.91 & 18.79 & 189.21 \\
+\midrule
+Total               & 1{,}138 & 58.59 & 0.7972 & 409.17 & 41.23 & 310.13 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Expected system performance --- the same 1,138 sites at the calibrated
+central capacity factor}
+\label{tab:expected}
+\footnotesize
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Permitting tier & Sites & MW & CF & GWh/yr & Rev.\ \$M/yr & NPV \$M \\
+\midrule
+Qualifying conduit  & 834     & 9.16  & 0.5652 & 45.37  & 4.35  & 0.40   \\
+Abbreviated         & 262     & 23.16 & 0.5571 & 113.04 & 11.09 & 26.09  \\
+Full licensing      & 42      & 26.26 & 0.5350 & 123.09 & 12.93 & 110.16 \\
+\midrule
+Total               & 1{,}138 & 58.59 & 0.5485 & 281.51 & 28.37 & 136.65 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize Same sites, same capital cost, energy multiplied by the 0.688
+central calibration factor of Table~\ref{tab:cfband} and every cash flow
+recomputed. Of these 1,138 sites, 439 still clear the viability gate.}
+\end{table}
+
+Table~\ref{tab:expected} is the same portfolio with one assumption changed. Energy
+is multiplied by the 0.688 central calibration factor, revenue follows, and each
+site's discounted cash flow is recomputed with capital cost untouched. Energy
+falls to 281.51~GWh/yr and revenue to \$28.37M/yr, both by construction, but net
+present value falls from \$310.13M to \$136.65M, a drop of 55.9~\% against a
+31.2~\% drop in energy. The mechanism is leverage: capital cost is fixed at
+\$211.33M, so a proportional cut in revenue takes a more than proportional cut out
+of what is left. The effect is concentrated at the small end. The 42 largest
+plants keep \$110.16M of net present value, while the 834 plants at or below
+25~kW fall from \$27.01M to \$0.40M and only 261 of them still clear the gate.
+This is the single most important result in the chapter: the portfolio's headline
+survives calibration, and most of its individual small projects do not.
+Section~5.1.4 gives the same computation at the two floor tiers.
 
 \subsection{Site Exclusion Funnel}                       % WP T6 — Tom
-\wptodo{T6 · 5.1.2}{17,148 $\rightarrow$ 5,464 $\rightarrow$ 4,860 $\rightarrow$ 3,778
-$\rightarrow$ 1,138. Selection-bias defense: 76.8\% data-gap vs 16.5\% economics.}
-\figplaceholder{8}{Exclusion funnel from 17,148 screened POTWs to 1,138 project-viable
-sites, with the drop reason at each stage.}{Site exclusion funnel}
+
+The screen begins with 17{,}148 publicly owned treatment works and ends with
+1{,}138, so the first question any reader should ask is what happened to the other
+16{,}010. Table~\ref{tab:funnel} and Figure~\ref{fig:funnel} answer it stage by
+stage, with counts recomputed from the four phase parquets rather than carried
+forward from any earlier document.
+
+\begin{table}[htbp]
+\centering
+\caption{Site exclusion funnel with the class of each drop}
+\label{tab:funnel}
+\small
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+Stage & Retained & Dropped & Class of drop \\
+\midrule
+Phase 1 --- screened POTWs      & 17{,}148 & ---       & --- \\
+Phase 2 --- flow-valid          & 5{,}464  & 11{,}684  & Data gap \\
+Phase 3 --- head-valid          & 4{,}860  & 604       & Data gap \\
+Phase 3 --- turbine-viable      & 3{,}778  & 1{,}082   & Physics floor \\
+Phase 4 --- project-viable      & 1{,}138  & 2{,}640   & Economics \\
+\midrule
+Total excluded                  &          & 16{,}010  & \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize Data gap 12,288 sites (76.8 \%), physics floor 1,082 (6.8 \%),
+economics 2,640 (16.5 \%).}
+\end{table}
+
+The composition of that number is the answer to the cherry-picking question.
+Of the 16{,}010 excluded sites, 12{,}288 --- 76.8~\% --- were dropped because the
+public record does not contain a usable flow or a usable elevation difference for
+them. No turbine was sized at those plants and no energy was computed, so they
+were not rejected by an economic model; they never reached one. A further 1{,}082
+sites, 6.8~\%, were dropped by the 1~kW rating floor of Section~4.3.5, which is
+physics rather than finance. Only 2{,}640 sites, 16.5~\% of exclusions, had a
+complete flow duration curve, a sized machine, an energy figure, and a full
+scorecard and were then rejected on economics. Those 2{,}640 are not deleted from
+the output: they are carried in \texttt{scored\_sites.geojson} with their turbine
+type, energy, and cash flows intact, and they hold 105.70~GWh/yr, so a reader can
+audit the rejections directly rather than take the viable count on trust.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig09_exclusion_funnel.png}
+\caption{Site exclusion funnel by count and by energy, from 17,148 screened
+facilities to 1,138 project-viable sites}
+\label{fig:funnel}
+\end{figure}
+
+Energy does not fall in step with site count, and the difference is the subject of
+the second panel of Figure~\ref{fig:funnel}. The Phase 2 estimate over the 5{,}464
+retained plants is 699.18~GWh/yr. Removing the 604 head-invalid plants takes it to
+641.90 and removing the 1{,}082 sub-kilowatt plants to 619.32, so the two data and
+physics stages together cost 79.86~GWh/yr, or 11.4~\%, while removing 30.9~\% of
+the sites. The 3{,}778 survivors then produce 514.87~GWh/yr, not 619.32.
+That 104.44~GWh/yr gap, 16.9~\%, is not a site exclusion at all. It is what
+happens when Phase 3 replaces the triangular head archetype with a measured
+elevation difference and passes the flow duration curve through a part-load
+efficiency curve instead of a flat efficiency sample: at most plants the real
+terrain is flatter than the archetype and the machine spends part of the year
+below its best efficiency point. The gap is acceptable at screening scope, because
+the Phase 2 figure was never intended as a portfolio total --- it is a ranking
+signal computed before any site geography was known --- but it is also the
+clearest available measure of what the Section~4.3.4 head assumption is worth in
+energy terms. Closing it needs surveyed outfall inverts, not a better model.
+The last stage, economics, removes a further 105.70~GWh/yr to reach 409.17.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig10_national_map.png}
+\caption{National distribution of scored and project-viable sites, and the ten
+states holding the most viable energy}
+\label{fig:natmap}
+\end{figure}
+
+Where those sites are is shown in Figure~\ref{fig:natmap}. The viable cohort
+reaches 51 states and territories, and its geography follows population and
+terrain together: California holds 147 viable sites and 67.98~GWh/yr, New York 45
+sites and 40.02, Texas 102 and 38.95, Illinois 47 and 34.91, and Washington just 7
+sites but 20.32~GWh/yr, which is what mountain-west relief does to a small number
+of large plants. The map frame is the continental United States and excludes 52
+scored plants --- 28 in Puerto Rico, 10 in Alaska, 6 in Hawaii, 3 in Guam, 2 in
+the Northern Marianas, 2 in American Samoa, and 1 in the Virgin Islands --- of
+which 27 are viable and are counted in every total in this chapter.
 
 \subsection{Energy and Financial Results}                % WP T6 — Tom
-\wptodo{T6 · 5.1.3}{Monte-Carlo energy, portfolio NPV \$310.1M, median payback 9.8 yr.
-Discrepancy paragraphs wherever measured $\neq$ expected.}
+
+The viable portfolio is small-plant heavy and top-heavy in energy at the same
+time. Its median site is rated at 12.96~kW and makes 93{,}350~kWh/yr, but the ten
+largest sites hold 18.9~\% of the portfolio's energy, the largest hundred hold
+60.4~\%, and the largest 250 hold 80.4~\%. Read against the permitting tiers of
+Table~\ref{tab:ideal}, 42 plants above 250~kW carry 43.7~\% of the energy and
+61.0~\% of the net present value while making up 3.7~\% of the site count. Any
+commercial reading of this portfolio has to account for that shape: the tail
+justifies the screen, and the head pays for it.
+
+Per-site economics at the median are a payback of 9.83~yr, a real internal rate of
+return of 9.40~\%, a levelised cost of \$0.0683/kWh, capital cost of \$66{,}421,
+and net present value of \$29{,}693. Capital intensity is high for the scale:
+\$3{,}676/kW of equipment at the median and \$5{,}577/kW all-in, the difference
+being the installation, interconnection, and permitting lines that do not shrink
+with machine size. Generation is a trim rather than a supply: the median viable
+site offsets 2.016~\% of its own plant's estimated electricity use.
+
+The gradient across the scored fleet matters more than the binary gate, and all
+3{,}778 sites carry it. On payback, 94 sites are at or below 5~yr and hold
+181.7~GWh/yr, 507 fall between 5 and 10~yr with 153.9~GWh/yr, 537 between 10 and
+20~yr with 73.6~GWh/yr, and 2{,}640 exceed 20~yr or never pay back. On net present
+value, 103 sites clear \$500k and hold 241.1~GWh/yr while 879 sit between zero and
+\$100k with 95.6~GWh/yr. On rate of return, 195 sites exceed 15~\% and hold
+242.0~GWh/yr, and 823 have no real solution at all. The three gradients are
+computed independently and do not partition the fleet the same way, which is
+deliberate: a site that is marginal on payback and strong on rate of return is a
+different commercial proposition from one that fails both, and a single flag would
+hide that.
+
+Two properties of the viable cohort qualify all of the above. First, 848 of the
+1{,}138 sites, 74.5~\%, carry a measured discharge-monitoring flow duration curve;
+the remaining 290 rest on a design-flow or annual-average figure and are flagged
+in the export as lower confidence. Second, 778 sites carry an elevation-derived
+head and 360 still carry the Phase 2 archetype, and those 360 hold 110.29~GWh/yr,
+27.0~\% of the portfolio energy. A quarter of the headline therefore rests on the
+assumption Section~4.3.4 exists to remove, which is the honest reading of the
+number and the first thing a site visit would test.
 
 \subsection{Capacity-Factor Calibration}                 % WP T6 — Tom
-\wptodo{T6 · 5.1.4}{Implied-CF vs EHA-CF (629 plants / 9{,}798 plant-years). LucidPipe
-Portland CF 0.628 anchor. The calibration-band result + discrepancy paragraph.}
+
+Section~4.4.1 set out the method; this subsection reports what it does to the
+result. Benchmarked against 629 real small-hydro plants over 9{,}798 plant-years,
+the portfolio's implied capacity factor of 0.8725 sits above the measured
+distribution at every percentile: the river-hydro median is 0.3902 and even its
+seventy-fifth percentile, 0.5409, is below the WOWERS tenth percentile of 0.8556.
+Substituting measured capacity factors gives the band of Table~\ref{tab:cfband}:
+118.9~GWh/yr at the river-hydro first quartile, 183.0 at its median, and
+281.4~GWh/yr at the LucidPipe-anchored central figure of 0.60, against the
+409.2~GWh/yr ceiling.
+
+\begin{table}[htbp]
+\centering
+\caption{Portfolio re-scored at each calibration tier through the full cash-flow
+model}
+\label{tab:rescore}
+\footnotesize
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Scenario & Viable sites & GWh/yr & CapEx \$M & NPV \$M \\
+\midrule
+Ceiling ($\times$1.000)          & 1{,}138 & 409.17 & 211.33 & 310.13 \\
+Central, CF 0.60 ($\times$0.688) & 439     & 213.80 & 132.42 & 152.64 \\
+Floor, p50 ($\times$0.447)       & 129     & 95.98  & 74.28  & 59.44  \\
+Floor, p25 ($\times$0.291)       & 27      & 30.01  & 31.06  & 19.03  \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize Every scored site was re-scored with energy scaled and the same
+30-year discounted cash flow re-run; each row reports only the sites that clear
+the viability gate in that scenario.}
+\end{table}
+
+The band's effect on the business case is larger than its effect on the energy
+figure, and Table~\ref{tab:rescore} is that result. Re-running the full cash-flow
+model at each multiplier, the viable count falls from 1{,}138 to 439 at the
+central tier, to 129 at the river-hydro median floor, and to 27 at the first
+quartile. Portfolio net present value over the sites that remain viable falls from
+\$310.13M to \$152.64M, \$59.44M, and \$19.03M. The median payback of the
+surviving cohort barely moves, from 9.83~yr to 10.39, 10.73, and 10.57~yr, because
+each scenario is keeping a smaller and better set of sites.
+
+That is a 61.4~\% fall in viable site count against a 31.2~\% fall in energy at
+the central tier, and the mechanism is the fixed cost structure named in
+Section~5.1.1: a plant whose capital cost is dominated by interconnection and
+permitting has no way to absorb a one-third revenue cut. The gap is acceptable for
+a screening deliverable, because the purpose of the screen is to rank and bound
+rather than to underwrite, and every site retains its full scorecard so a
+different assumption can be applied to it. It is not acceptable for a site
+proposal. Closing it needs the thing this work could not obtain: measured annual
+generation from an operating wastewater-outfall turbine, which would replace the
+substituted capacity factor with an observed one. Until then the honest headline
+is the band and not its upper end, and the defensible planning figure is the
+central tier.
 
 \subsection{Machine-Learning Feasibility (Negative Result)} % WP T6 — Tom
-\wptodo{T6 · 5.1.5}{Report the Phase-5 kill plainly: only 11 conduit labels found vs the
-$\geq 50$ gate; Point Loma offline since 2018. List the specific reasons it failed.}
+
+The learned correction described in Section~4.4.2 was tested against a gate fixed
+before the search began --- at least 50 new labelled sites carrying installed
+capacity and measured annual energy --- and the search returned 11. The gate
+failed and the model was killed as a product deliverable. Reporting that outcome
+with its numbers is the point of this subsection.
+
+What was run afterwards is a smoke test whose only purpose is to prove the code
+path, and its metrics have no product significance. It trains LightGBM on the
+1{,}360 combined EIA and EHA dam labels using five features, with five outer folds
+stratified by state and three inner folds grouped by plant, and compares against
+two baselines evaluated on identical splits: a predict-the-training-mean model,
+and a capacity-factor model that predicts capacity times 8{,}760 times the
+training fold's median capacity factor. Results are in Table~\ref{tab:smoke}.
+
+\begin{table}[htbp]
+\centering
+\caption{Phase 5 smoke-test metrics --- internal pipeline proof, no product
+significance}
+\label{tab:smoke}
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Metric (mean over 5 outer folds) & LightGBM & Predict-mean & Capacity-factor \\
+\midrule
+RMSE on log energy & 0.9165 $\pm$ 0.0763 & 1.9486 & 0.9326 \\
+$R^2$ on log energy & 0.7775 $\pm$ 0.0336 & $-0.0012$ & 0.7703 \\
+Spearman rank correlation & 0.9137 $\pm$ 0.0124 & undefined & 0.9092 \\
+Mean absolute percentage error & 987 \% $\pm$ 1{,}353 \% & 4{,}263 \% & 1{,}743 \% \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize The predict-mean baseline emits one constant per fold, for which
+rank correlation is undefined.}
+\end{table}
+
+The result that matters is not that the model beats the mean, which any model
+would, but that it does not clearly beat the capacity-factor baseline: 0.9165
+against 0.9326 on log-space error and 0.9137 against 0.9092 on rank correlation,
+both inside one fold-to-fold standard deviation. On this label set, capacity
+times hours times a fleet median capacity factor is as good as a gradient-boosted
+model with geography. That is the same conclusion Section~4.4 reached from the
+other direction, and it is why the calibration band, rather than a learned
+correction, is what this work ships.
+
+Three further readings are on the record. The percentage error is enormous and its
+mean is not interpretable: the labels span six orders of magnitude, one fold
+carries several large-hydro plants, and the median fold sits near 170~\%, so
+log-space error is the metric that means anything here. The leakage guard was
+exercised deliberately by passing a denylisted column and rejected the feature set
+before any estimator was fitted, with the message \texttt{Leakage detected}
+naming \texttt{annual\_energy\_kwh}. And the run reproduces: re-executed for this
+chapter under LightGBM~4.7.0 rather than the 4.6.0 of the original run, seed~0
+returned every metric above unchanged to four decimals.
+
+The negative result is worth stating in one sentence, because it is the most
+transferable finding in the chapter. Micro-hydropower at wastewater outfalls does
+not lack modelling capacity; it lacks measured plants. Until sub-megawatt conduit
+installations report head, flow, and annual energy in a public dataset, a learned
+model of this asset class cannot be trained, evaluated, or falsified.
 
 \subsection{Frontend Performance}                        % WP M2 — Mohamed [MERGE]
 \wptodo{M2 · 5.1.6 — MERGE FROM MOHAMED (~700 w)}{Build perf (vite 7.3.5, ~2.6 s, bundle

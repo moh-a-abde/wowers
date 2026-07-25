@@ -211,7 +211,7 @@ understanding only — these are never citable sources; see the RULE on internal
     geojson data contract + byte-determinism.
   - **Fig/Tab:** implied-CF vs EHA-CF overlay, calibration-band bar.
 
-- [ ] **T6 · Ch5 Results — energy, funnel, calibration, negative result** — ~3,000 w
+- [x] **T6 · Ch5 Results — energy, funnel, calibration, negative result** — ~3,000 w
   - **Feeds:** all Phase-4 parquets, `EXCLUSION_FUNNEL_REPORT.md`, `CF_CALIBRATION_REPORT.md`,
     `SMOKE_TEST_REPORT.md`, `FERC_CONDUIT_LABEL_REPORT.md`.
   - **Beats:** **5.1.1 Ideal vs Expected** (two parallel tables: 409.2 GWh physics ceiling
@@ -375,7 +375,7 @@ So neither of you has to re-read the whole format prompt each session:
 | T | T3 | Ch4.3 Pipeline P1–P2 | Tom | 2,200 | ☑ |
 | T | T4 | Ch4.3 Pipeline P3–P4 | Tom | 2,400 | ☑ |
 | T | T5 | Ch4.4–4.5 Calibration + Export | Tom | 2,000 | ☑ |
-| T | T6 | Ch5 Results (energy/funnel/calib) | Tom | 3,000 | ☐ |
+| T | T6 | Ch5 Results (energy/funnel/calib) | Tom | 3,000 | ☑ |
 | T | T7 | Appendices A–C | Tom | 800 | ☐ |
 | M | M1 | Ch4.6 Frontend system | Mohamed | 2,000 | ☐ |
 | M | M2 | Ch5 Frontend results | Mohamed | 700 | ☐ |
