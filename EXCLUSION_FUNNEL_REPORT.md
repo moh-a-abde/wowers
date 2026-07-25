@@ -13,15 +13,19 @@ Current production headline at install = 17.5%: **1,138 investment-ready sites �
 
 ## Headline Finding
 
-> **~80% of all exclusions are missing-data problems, not economic rejections.**
+> **83.5% of all exclusions happen before any cash flow exists to reject.**
 
 Of the 16,010 sites that are not investment-ready:
-- **11,684 excluded in Phase 2** — no usable flow data (DMR gaps). *No turbine was sized. No energy was computed.*
-- **604 excluded in Phase 3 (head)** — no valid net head (elevation or outfall data missing). *Same: no energy.*
-- **1,082 excluded in Phase 3 (physics)** — rated power < 1 kW after sizing. *Physics floor, not economics.*
+- **10,182 excluded in Phase 2 (scale threshold)** — mean flow below the 0.5 MGD viability floor (`phase2.min_viable_mean_flow_mgd`). *These plants have flow records; they are too small to carry a machine.* **This is a scope decision, not a data gap** — moving the threshold moves this number.
+- **1,496 excluded in Phase 2 (data gap)** — null, zero, or negative mean flow: `no_usable_flow`. *No turbine was sized. No energy was computed.*
+- **6 excluded in Phase 2 (data gap)** — `dmr_limited` plants with fewer than three surviving months after outlier removal: `sparse_dmr_artifact`.
+- **604 excluded in Phase 3 (data gap, head)** — no valid net head (elevation or outfall data missing/unreliable). *Same: no energy.*
+- **1,082 excluded in Phase 3 (physics floor)** — rated power < 1 kW after sizing. *Physics, not economics.*
 - **2,640 scored but uneconomic in Phase 4** — turbine sized, annual energy computed, cash flows built — failed the finance gate.
 
-The question "did you cherry-pick the viable sites?" is answered by the structure of the pipeline: most non-viable sites were not excluded because they performed poorly on a financial model — they were excluded because the data required to run *any* model did not exist. Only 2,640 sites had a fully-sized turbine, a computed annual energy figure, and a complete financial scorecard, yet still failed economics. Those sites are not discarded — they remain in the output with their energy totals and turbine specs intact, and are categorized by profitability (see the econ_cat gradient below).
+The question "did you cherry-pick the viable sites?" is answered by the structure of the pipeline: 13,370 of the 16,010 exclusions (83.5%) happened before a financial model was ever applied — either because the plant is below the size threshold, because the data required to run *any* model did not exist, or because the physics floor rejected it. Only 2,640 sites had a fully-sized turbine, a computed annual energy figure, and a complete financial scorecard, yet still failed economics. Those sites are not discarded — they remain in the output with their energy totals and turbine specs intact, and are categorized by profitability (see the econ_cat gradient below).
+
+> **Correction (2026-07-25):** earlier versions of this report labelled the whole 11,684-site Phase 2 drop a "data gap" and reported "~80% of all exclusions are missing-data problems / 76.8% data gap". That was wrong. Phase 2 writes a reason string per excluded plant, and 10,182 of the 11,684 are `small_potw` — plants with flow data that sit below the 0.5 MGD threshold. The genuine data gap is 2,106 sites (13.2%). The selection-bias argument survives, but must be stated as above. Do not quote the old figure.
 
 ---
 
@@ -32,10 +36,15 @@ All counts recomputed from parquet.
 | Stage | Sites Remaining | Sites Dropped | Cumulative Dropped | Exclusion Type | Primary Reason |
 |---|---:|---:|---:|---|---|
 | **Phase 1 — Ranked POTWs** | 17,148 | — | — | — | Active POTWs with DMR permit coverage; 10 bad-coord sites removed by P1-COORD-GUARD |
-| **Phase 2 — Retained** | 5,464 | 11,684 | 11,684 | **Data gap** | No usable flow record in EPA DMR (gaps, non-numeric, zero-flow) |
+| Phase 2 — `small_potw` | — | 10,182 | 10,182 | **Scale threshold** | Mean flow < 0.5 MGD (`phase2.min_viable_mean_flow_mgd`) — has flow data, too small to equip |
+| Phase 2 — `no_usable_flow` | — | 1,496 | 11,678 | **Data gap** | Null, zero, or negative mean flow in EPA DMR |
+| Phase 2 — `sparse_dmr_artifact` | — | 6 | 11,684 | **Data gap** | `dmr_limited` plant with < 3 surviving months after outlier removal |
+| **Phase 2 — Retained** | 5,464 | 11,684 | 11,684 | — | Sum of the three reasons above |
 | **Phase 3 — Head valid** | 4,860 | 604 | 12,288 | **Data gap** | No valid net head (elevation or outfall elevation absent/unreliable) |
 | **Phase 3 — Turbine viable** | 3,778 | 1,082 | 13,370 | **Physics floor** | Best-fit rated power < 1 kW after turbine selection |
 | **Phase 4 — Project viable** | 1,138 | 2,640 | 16,010 | **Economics** | NPV ≤ 0 *or* payback > 20 yr *or* IRR not real (no revenue floor — removed Jun 12) |
+
+Phase 2 reason strings are written to `energy_yield_estimates.parquet` (`exclusion_reason` column) — excluded plants are retained in the file, not dropped, so this split is recomputable.
 
 The viability gate at install = 17.5%. The `min_annual_revenue_usd` floor is set to 0 (no-op, reversible lever retained in config).
 
@@ -45,12 +54,15 @@ The viability gate at install = 17.5%. The `min_annual_revenue_usd` floor is set
 
 | Reason Category | Sites Dropped | % of All Exclusions (16,010) |
 |---|---:|---:|
-| **Data gap** (flow or head missing) | 12,288 | 76.8% |
+| **Scale threshold** (mean flow < 0.5 MGD) | 10,182 | 63.6% |
+| **Data gap** (flow 1,496 + 6 sparse; head 604) | 2,106 | 13.2% |
 | **Physics floor** (< 1 kW rated power) | 1,082 | 6.8% |
 | **Economics** (finance gate, Phase 4) | 2,640 | 16.5% |
 | **Total** | 16,010 | 100% |
 
-Interpretation: more than three-quarters of all site exclusions happened before any financial model was applied, because the physical inputs (flow, head) were absent from public records. The 16.5% economics exclusions are the only cases where the pipeline had enough data to build a full project pro forma and the result was not investable.
+Interpretation: 83.5% of site exclusions happened before any financial model was applied. The largest single class is the 0.5 MGD scale threshold (63.6%) — a scope decision set in `config/settings.yaml`, reversible by editing one value, applied to plants that do have flow records. Genuinely missing physical inputs account for 13.2%. The 16.5% economics exclusions are the only cases where the pipeline had enough data to build a full project pro forma and the result was not investable.
+
+**Do not describe the scale threshold as a data gap.** The two classes carry different arguments: the threshold says "we chose not to look at plants this small", the data gap says "the public record cannot tell us". Conflating them overstates the data-availability problem by ~5x.
 
 ---
 
@@ -141,6 +153,9 @@ All numbers in this report can be re-derived from the following files and filter
 | Phase 1 total | `data/processed/phase1/ranked_candidates.parquet` | `len(df)` | 17,148 |
 | Phase 2 retained | `data/processed/phase2/energy_yield_estimates.parquet` | `excluded == False` | 5,464 |
 | Phase 2 excluded | same | `excluded == True` | 11,684 |
+| Phase 2 scale threshold | same | `exclusion_reason == "small_potw"` | 10,182 |
+| Phase 2 no usable flow | same | `exclusion_reason == "no_usable_flow"` | 1,496 |
+| Phase 2 sparse artifact | same | `exclusion_reason == "sparse_dmr_artifact"` | 6 |
 | Phase 3 head_valid | `data/processed/phase3/turbine_sizing.parquet` | `head_valid == True` | 4,860 |
 | Phase 3 head invalid | same | `head_valid == False` | 604 |
 | Phase 3 turbine_viable | same | `turbine_viable == True` | 3,778 |
@@ -159,3 +174,5 @@ Energy unit note: Phase 3 uses `annual_energy_mwh`; Phase 4 uses `annual_energy_
 ---
 
 *Report regenerated: 2026-07-06. Numbers recomputed from post-P2-SEED parquet (P1-COORD-GUARD: 10 bad-coordinate sites removed; P2-SEED: site-keyed Monte Carlo seeding adopted — one-time fleet re-baseline). No pipeline thresholds, CapEx model, or exclusion criteria were modified.*
+
+*Exclusion-class correction: 2026-07-25. The Phase 2 drop is now split by the `exclusion_reason` column the phase already writes, so the scale threshold is no longer counted as a data gap. Site counts, energy totals, and every financial figure are unchanged — only the classification of the 11,684 Phase 2 exclusions and the rollup percentages derived from it. Found while drafting thesis §5.1.2, which carries the corrected split.*
