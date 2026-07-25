@@ -469,3 +469,48 @@ Any draft that cites these must match exactly (P2-SEED re-baseline):
 
 **Next work package suggested:**
 - T7 · Appendices A–C (~800 w plus tables) — the 58-property data dictionary, the full funnel tables, and the Monte-Carlo and calibration captures. That closes Track T; Mohamed's M1/M2 and the Joint packages are then the remaining work.
+
+### Session: 2026-07-25 — T7 · Appendices A–C — Tom
+
+**Work package:** T7 — Appendix A (data dictionary + funnel tables), Appendix B (calibration and sensitivity captures), Appendix C (Monte-Carlo distributions). Track T is now first-drafted end to end.
+
+**What was written:**
+- **Appendix A.** Table 16 is the full 58-property data dictionary as a `longtable` that breaks across pages with a repeated header: property, type, units, rounding class, source phase, and null count over the 3,778 scored features. Prose flags the three entries a consumer can misread — the 10^6 payback/LCOE sentinel, the 974 plants with no flow percentiles, and the 225 with no outfall elevation. Table 17 is the funnel with the pipeline's own reason strings and the energy after each stage; Table 18 is the three-dimensional economic gradient in full; Table 19 distributes the 360 archetype-head viable sites by state, which closes the audit item T6 left open.
+- **Appendix B.** Table 20 is the recomputed EHA capacity-factor distribution for all three buckets with the WOWERS implied row beneath it for comparison; Table 21 gives the calibration band from both buckets side by side; Table 22 is the sensitivity capture behind Figure 6, with the low/base/high portfolio NPV and the swing per input.
+- **Appendix C.** Figure 11 plus Table 23. The closing paragraph is the one piece of new analysis in this work package: the P90:P10 band is uniform at 2.24–2.47× across the entire fleet and separates into exactly three clusters, because its width is set by the three head archetypes rather than by anything measured. Stated plainly — the Monte-Carlo band quantifies the head assumption, not the uncertainty of the estimate.
+
+**Correction made to T6 (§5.1.2) — the funnel's exclusion classes were wrong:**
+- The draft committed yesterday followed `EXCLUSION_FUNNEL_REPORT.md` in labelling all 11,684 Phase 2 drops a "data gap", giving a headline of "76.8 % of exclusions are missing data". That is not what the pipeline recorded. Phase 2 writes a reason string per excluded plant: **10,182 `small_potw`** (mean flow below the 0.5 MGD viability threshold), **1,496 `no_usable_flow`**, and **6 `sparse_dmr_artifact`**. Only the latter two are missing data; the first is a scope threshold that has flow records behind it.
+- Corrected rollup over the 16,010 excluded sites: **scale threshold 10,182 (63.6 %), data gap 2,106 (13.2 %), physics floor 1,082 (6.8 %), economics 2,640 (16.5 %)**. The selection-bias argument survives and is now stated more precisely — 83.5 % of exclusions happened before any cash flow existed to reject — but the "76.8 % missing data" phrasing is retired.
+- Fixed in three places: the §5.1.2 prose, Table 13, and Figure 9, whose Phase 2 bar is now split into a scale-threshold segment and a data-gap segment, with the split read from the parquet reason column rather than hardcoded. §4.3.3 (T3) already described the three-test gate correctly and needed no change.
+- **`EXCLUSION_FUNNEL_REPORT.md` still carries the old rollup** and is used for director/pitch material. It is an internal artefact so the thesis does not cite it, but the number in it is misleading and should be corrected at source before it is quoted again.
+
+**Numbers — recomputed live this session:**
+- Data dictionary generated from `PROPERTIES` and the rounding sets in `scripts/export_geojson.py` plus a live null count per property over `scored_sites.geojson`; nothing hand-typed. Nulls: `city` 1, `p10_flow_mgd`/`p90_flow_mgd` 974 each, `utilization_ratio` 192, `elevation_m` 3, `elev_outfall_m` 225, everything else 0.
+- Phase 2 exclusion reasons 10,182 / 1,496 / 6. Archetype-head viable sites 360 in 45 states holding 110.29 GWh/yr; CA 51 (13.88), PA 44 (11.82), WA 2 (9.38), MO 7 (6.78), TX 18 (6.36), IL 26 (6.01).
+- Monte-Carlo fleet totals P10/P50/P90 = 444.31 / 699.18 / 1,002.13 GWh/yr; median plant 15,347 / 24,146 / 35,041 kWh/yr; P90:P10 ratio p10 2.243, median 2.276, p90 2.409, max 2.470; by archetype large 2.243 (919 plants), medium 2.275 (3,454), small 2.409 (1,091).
+- Sensitivity capture on the 848-plant physical cohort: base $116.51M, head −$17.27M/$250.29M, rate $45.53M/$187.49M, flow $75.73M/$133.55M.
+
+**Figures and tables produced:**
+- **Figure 11** `figures/fig11_mc_bands.png` — per-site P10–P90 band on a log axis across all 5,464 retained plants, plus the histogram of band width. Regenerator `thesis/figures/make_fig11_mc_bands.py`.
+- **Tables 16–23.** Table 16 is the document's first `longtable`; `longtable` was added to the preamble with a single-spacing hook so the 58 rows break cleanly with a repeated header.
+- Figure 9 regenerated after the exclusion-class correction.
+
+**Verification:**
+- `tectonic -X compile thesis_tom.tex` → 0 errors, 0 undefined references, 80 pages (was 75). No overfull hboxes anywhere in the appendix range.
+- Appendix A opening, the first dictionary page, and Appendix B were rendered and inspected. Sequential numbering runs unbroken into the appendix as the format requires: Tables 1–23, Figures 1–11.
+
+**Scope note — word count:**
+- T7 prose is **763 words against the ~800 allotted**, plus eight tables and one figure. Chapters 1–6 hold 15,020 words with M1, M2 and the four Joint packages unwritten; at their planned allotments the body lands near 23,500, inside the 18,000–24,000 window. Track T is complete and no longer at risk of pushing the document over.
+
+**Open items / follow-ups:**
+- Correct the "76.8 % data gap" rollup in `EXCLUSION_FUNNEL_REPORT.md`, or retire the file, before it feeds another pitch deck.
+- Appendix A promises the dictionary is generated from the exporter; the generator script lives in this session's scratch directory only. Fold it into `thesis/figures/` (or `scripts/`) so the table can be regenerated when the contract changes.
+- Table 19 lists the top twelve states and aggregates the remaining 33. If a reviewer wants the full list, it is one query away.
+- The appendix has no bill-of-materials equivalent for the turbine vendor matrix; if the format's Appendix A expectation is read strictly, a vendor spec table could be added at J5 from `data/turbines/turbine_manufacturers.csv`.
+
+**Breakdown updated:**
+- §3 T7 checkbox → `[x]`; §7 T7 status → ☑
+
+**Next work package suggested:**
+- Track T is done. The remaining work is Mohamed's M1 (Ch4.6 frontend, ~2,000 w) and M2 (Ch5 frontend results, ~700 w), and the Joint packages J1–J5. Per §6 the combine gate holds J4 and J5 until both technical tracks are first-drafted, so the next Tom-side item is J1 or J2 with Mohamed, not another Track T package.

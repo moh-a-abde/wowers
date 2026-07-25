@@ -38,6 +38,8 @@
 % --- format rule: figures and tables number sequentially across the WHOLE
 % document (Figure 1, 2, 3 ... / Table 1, 2, 3 ...), not per chapter, and the
 % appendix continues the same sequence rather than restarting.
+\usepackage{longtable}
+\AtBeginEnvironment{longtable}{\singlespacing}
 \usepackage{chngcntr}
 \counterwithout{figure}{chapter}
 \counterwithout{table}{chapter}
@@ -1813,33 +1815,43 @@ forward from any earlier document.
 \toprule
 Stage & Retained & Dropped & Class of drop \\
 \midrule
-Phase 1 --- screened POTWs      & 17{,}148 & ---       & --- \\
-Phase 2 --- flow-valid          & 5{,}464  & 11{,}684  & Data gap \\
-Phase 3 --- head-valid          & 4{,}860  & 604       & Data gap \\
-Phase 3 --- turbine-viable      & 3{,}778  & 1{,}082   & Physics floor \\
-Phase 4 --- project-viable      & 1{,}138  & 2{,}640   & Economics \\
+Phase 1 --- screened POTWs        & 17{,}148 & ---       & --- \\
+\quad below 0.5 MGD mean flow     &          & 10{,}182  & Scale threshold \\
+\quad no usable flow record       &          & 1{,}496   & Data gap \\
+\quad sparse DMR artefact         &          & 6         & Data gap \\
+Phase 2 --- flow-valid            & 5{,}464  & 11{,}684  & \\
+Phase 3 --- head-valid            & 4{,}860  & 604       & Data gap \\
+Phase 3 --- turbine-viable        & 3{,}778  & 1{,}082   & Physics floor \\
+Phase 4 --- project-viable        & 1{,}138  & 2{,}640   & Economics \\
 \midrule
-Total excluded                  &          & 16{,}010  & \\
+Total excluded                    &          & 16{,}010  & \\
 \bottomrule
 \end{tabular}
 
 \vspace{0.4em}
-{\footnotesize Data gap 12,288 sites (76.8 \%), physics floor 1,082 (6.8 \%),
-economics 2,640 (16.5 \%).}
+{\footnotesize Scale threshold 10,182 sites (63.6 \%), data gap 2,106 (13.2 \%),
+physics floor 1,082 (6.8 \%), economics 2,640 (16.5 \%).}
 \end{table}
 
-The composition of that number is the answer to the cherry-picking question.
-Of the 16{,}010 excluded sites, 12{,}288 --- 76.8~\% --- were dropped because the
-public record does not contain a usable flow or a usable elevation difference for
-them. No turbine was sized at those plants and no energy was computed, so they
-were not rejected by an economic model; they never reached one. A further 1{,}082
-sites, 6.8~\%, were dropped by the 1~kW rating floor of Section~4.3.5, which is
-physics rather than finance. Only 2{,}640 sites, 16.5~\% of exclusions, had a
+The composition of that number is the answer to the cherry-picking question, and
+it needs stating precisely rather than as a single ``missing data'' bucket. The
+largest class is a threshold set in advance: 10{,}182 sites, 63.6~\% of all
+exclusions, have a mean discharge below the 0.5~MGD floor of Section~4.3.3 and
+were never sampled. Those plants have flow records; they are simply too small to
+carry a machine, and the threshold is a scope decision that a reader can move by
+editing one configuration value. The second class is a genuine data gap totalling
+2{,}106 sites, 13.2~\%: 1{,}496 with no usable flow record at all, 6 with too few
+surviving months after outlier removal, and 604 for which no valid head could be
+resolved. A further 1{,}082 sites, 6.8~\%, were dropped by the 1~kW rating floor
+of Section~4.3.5, which is physics rather than finance. Only 2{,}640 sites,
+16.5~\% of exclusions, had a
 complete flow duration curve, a sized machine, an energy figure, and a full
 scorecard and were then rejected on economics. Those 2{,}640 are not deleted from
 the output: they are carried in \texttt{scored\_sites.geojson} with their turbine
 type, energy, and cash flows intact, and they hold 105.70~GWh/yr, so a reader can
-audit the rejections directly rather than take the viable count on trust.
+audit the rejections directly rather than take the viable count on trust. The
+summary statement is that 83.5~\% of exclusions happened before any cash flow
+existed to reject.
 
 \begin{figure}[htbp]
 \centering
@@ -2183,10 +2195,326 @@ pp.~3146--3154, 2017.
 % =====================================================================
 \appendix
 \chapter{Data Dictionary and Exclusion-Funnel Tables}
-\wptodo{T7 · Appendix A}{58 geojson properties; full funnel tables.}
+
+This appendix is the reference for the export contract of Section~4.5 and for the
+funnel of Section~5.1.2. Table~\ref{tab:datadict} lists all 58 properties carried
+on every feature of \texttt{scored\_sites.geojson} and
+\texttt{viable\_sites.geojson}, in the order the exporter writes them. The
+rounding column names the class each property is rounded to before serialisation:
+whole numbers for currency, energy, and counts, four decimals for ratios, one
+decimal for lengths, flows, and efficiencies, and \texttt{raw} for text, booleans,
+and the two columns that pass through unrounded. The source column names the phase
+the exporter joins the value from. The final column counts how many of the 3{,}778
+features carry a JSON null for that property, which is the honest measure of
+coverage: a consumer must treat those as absent rather than as zero.
+
+Three entries deserve a note. \texttt{payback\_years} and \texttt{lcoe\_per\_kwh}
+carry the sentinel value $10^6$ where the true value is infinite, which occurs 823
+times in the scored file and never in the viable file. The two flow percentiles are
+null at 974 plants, which are the plants whose flow signal is a design or
+annual-average scalar rather than a duration curve, and \texttt{elev\_outfall\_m}
+is null at 225 plants whose outfall coordinate could not be resolved --- those
+plants carry an archetype head, as Section~4.3.4 describes.
+
+\begin{longtable}{@{}lllllr@{}}
+\caption{Data dictionary --- the 58 properties of the exported GeoJSON contract}
+\label{tab:datadict} \\
+\toprule
+Property & Type & Units & Rounding & Source & Nulls \\
+\midrule
+\endfirsthead
+\multicolumn{6}{@{}l}{\footnotesize Table~\ref{tab:datadict}, continued} \\
+\toprule
+Property & Type & Units & Rounding & Source & Nulls \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\footnotesize
+\texttt{npdes\_id} & text & --- & raw & P4 & 0 \\
+\texttt{facility\_name} & text & --- & raw & P1 & 0 \\
+\texttt{city} & text & --- & raw & P1 & 1 \\
+\texttt{state\_code} & text & --- & raw & P4 & 0 \\
+\texttt{turbine\_type} & text & --- & raw & P4 & 0 \\
+\texttt{rated\_power\_kw} & int & kW & int & P4 & 0 \\
+\texttt{annual\_energy\_kwh} & int & kWh/yr & int & P4 & 0 \\
+\texttt{energy\_kwh\_calib\_floor\_p25} & int & kWh/yr & int & P4 & 0 \\
+\texttt{energy\_kwh\_calib\_floor\_p50} & int & kWh/yr & int & P4 & 0 \\
+\texttt{energy\_kwh\_calib\_central} & int & kWh/yr & int & P4 & 0 \\
+\texttt{capacity\_factor} & float & ratio & 4 dp & P4 & 0 \\
+\texttt{total\_capex\_usd} & int & \$ & int & P4 & 0 \\
+\texttt{npv\_usd} & int & \$ & int & P4 & 0 \\
+\texttt{irr} & float & ratio & 4 dp & P4 & 0 \\
+\texttt{payback\_years} & float & yr & raw & P4 & 0 \\
+\texttt{lcoe\_per\_kwh} & float & \$/kWh & 4 dp & P4 & 0 \\
+\texttt{annual\_revenue\_usd} & int & \$/yr & int & P4 & 0 \\
+\texttt{energy\_offset\_pct} & float & \% & 4 dp & P4 & 0 \\
+\texttt{site\_tier} & text & A or C & raw & P4 & 0 \\
+\texttt{econ\_cat\_payback} & text & band & raw & P4 & 0 \\
+\texttt{econ\_cat\_npv} & text & band & raw & P4 & 0 \\
+\texttt{econ\_cat\_irr} & text & band & raw & P4 & 0 \\
+\texttt{data\_quality\_tier} & int & 0--3 & raw & P4 & 0 \\
+\texttt{project\_viable} & bool & --- & raw & P4 & 0 \\
+\texttt{mean\_flow\_mgd} & float & MGD & 1 dp & P1 & 0 \\
+\texttt{p10\_flow\_mgd} & float & MGD & 1 dp & P1 & 974 \\
+\texttt{p90\_flow\_mgd} & float & MGD & 1 dp & P1 & 974 \\
+\texttt{n\_months\_data} & int & months & int & P1 & 0 \\
+\texttt{utilization\_ratio} & float & ratio & 4 dp & P1 & 192 \\
+\texttt{energy\_p10\_kwh\_yr} & int & kWh/yr & int & P2 & 0 \\
+\texttt{energy\_p50\_kwh\_yr} & int & kWh/yr & int & P2 & 0 \\
+\texttt{energy\_p90\_kwh\_yr} & int & kWh/yr & int & P2 & 0 \\
+\texttt{equivalent\_homes\_p50} & int & homes & int & P2 & 0 \\
+\texttt{head\_net\_m} & float & m & 1 dp & P3 & 0 \\
+\texttt{head\_gross\_m} & float & m & 1 dp & P3 & 0 \\
+\texttt{elevation\_m} & float & m & 1 dp & P3 & 3 \\
+\texttt{elev\_outfall\_m} & float & m & 1 dp & P3 & 225 \\
+\texttt{head\_source} & text & --- & raw & P3 & 0 \\
+\texttt{head\_confidence} & text & --- & raw & P3 & 0 \\
+\texttt{q\_rated\_m3s} & float & m$^3$/s & 1 dp & P3 & 0 \\
+\texttt{peak\_efficiency\_pct} & float & \% & 1 dp & P3 & 0 \\
+\texttt{npv\_with\_50pct\_grant\_usd} & int & \$ & int & P4 & 0 \\
+\texttt{annual\_opex\_usd} & int & \$/yr & int & P4 & 0 \\
+\texttt{elec\_rate\_per\_kwh} & float & \$/kWh & 4 dp & P4 & 0 \\
+\texttt{equipment\_capex\_usd} & int & \$ & int & P4 & 0 \\
+\texttt{installation\_capex\_usd} & int & \$ & int & P4 & 0 \\
+\texttt{interconnection\_capex\_usd} & int & \$ & int & P4 & 0 \\
+\texttt{permitting\_capex\_usd} & int & \$ & int & P4 & 0 \\
+\texttt{permitting\_tier} & text & tier & raw & P4 & 0 \\
+\texttt{sensitivity\_head\_npv\_low} & int & \$ & int & P4 & 0 \\
+\texttt{sensitivity\_head\_npv\_high} & int & \$ & int & P4 & 0 \\
+\texttt{sensitivity\_flow\_npv\_low} & int & \$ & int & P4 & 0 \\
+\texttt{sensitivity\_flow\_npv\_high} & int & \$ & int & P4 & 0 \\
+\texttt{sensitivity\_rate\_npv\_low} & int & \$ & int & P4 & 0 \\
+\texttt{sensitivity\_rate\_npv\_high} & int & \$ & int & P4 & 0 \\
+\texttt{dominant\_sensitivity} & text & --- & raw & P4 & 0 \\
+\texttt{data\_quality} & text & --- & raw & P4 & 0 \\
+\texttt{project\_viable\_high\_confidence} & bool & --- & raw & P4 & 0 \\
+\end{longtable}
+
+\begin{table}[htbp]
+\centering
+\caption{Exclusion funnel with the reason recorded by the pipeline at each stage}
+\label{tab:funnel_full}
+\footnotesize
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Stage & Reason recorded & Dropped & Retained & Energy (GWh/yr) \\
+\midrule
+Phase 1 & ---                              & ---       & 17{,}148 & --- \\
+Phase 2 & \texttt{small\_potw}             & 10{,}182  &          &     \\
+Phase 2 & \texttt{no\_usable\_flow}        & 1{,}496   &          &     \\
+Phase 2 & \texttt{sparse\_dmr\_artifact}   & 6         & 5{,}464  & 699.18 \\
+Phase 3 & head not resolvable              & 604       & 4{,}860  & 641.90 \\
+Phase 3 & rated power below 1 kW           & 1{,}082   & 3{,}778  & 619.32 \\
+Phase 3 & re-estimated with head and curve & ---       & 3{,}778  & 514.87 \\
+Phase 4 & fails NPV, payback, or IRR gate  & 2{,}640   & 1{,}138  & 409.17 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize Energy is the Phase 2 P50 total over the retained set until the
+re-estimation row, after which it is the Phase 3 turbine model. The 0.5 MGD
+\texttt{small\_potw} threshold is a scope decision, not a data gap.}
+\end{table}
+
+The economic gradient of Section~5.1.3 is given in full in
+Table~\ref{tab:econ_grad}. The three dimensions are computed independently from the
+same scorecard and do not partition the fleet identically, which is why the row
+counts differ across panels while the fleet total does not.
+
+\begin{table}[htbp]
+\centering
+\caption{Economic categories across all 3,778 scored sites}
+\label{tab:econ_grad}
+\footnotesize
+\begin{tabular}{@{}llrr@{}}
+\toprule
+Dimension & Band & Sites & Energy (GWh/yr) \\
+\midrule
+Payback & $\leq$ 5 yr            & 94      & 181.7 \\
+        & 5--10 yr               & 507     & 153.9 \\
+        & 10--20 yr              & 537     & 73.6  \\
+        & $>$ 20 yr or never     & 2{,}640 & 105.7 \\
+\midrule
+Net present value & $\geq$ \$500k  & 103     & 241.1 \\
+                  & \$100k--500k   & 156     & 72.5  \\
+                  & \$0--100k      & 879     & 95.6  \\
+                  & $\leq$ \$0     & 2{,}640 & 105.7 \\
+\midrule
+Rate of return & $\geq$ 15 \%      & 195     & 242.0 \\
+               & 8--15 \%          & 579     & 120.9 \\
+               & 0--8 \%           & 2{,}181 & 138.8 \\
+               & none real         & 823     & 13.2  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Section~5.1.3 reports that 360 project-viable sites still carry the Phase~2
+archetype head rather than an elevation-derived one, and that they hold
+110.29~GWh/yr. Table~\ref{tab:archetype_states} distributes those sites by state so
+the claim can be audited. They appear in 45 states, and the concentration in
+California and Pennsylvania follows the concentration of viable sites generally
+rather than any state-specific data problem. Washington is the exception worth
+noting: two plants there carry an archetype head and 9.38~GWh/yr between them,
+which is the largest energy exposure to that assumption in any state.
+
+\begin{table}[htbp]
+\centering
+\caption{Project-viable sites still carrying the Phase 2 archetype head}
+\label{tab:archetype_states}
+\footnotesize
+\begin{tabular}{@{}lrrlrr@{}}
+\toprule
+State & Sites & GWh/yr & State & Sites & GWh/yr \\
+\midrule
+CA & 51 & 13.88 & MN & 2  & 5.03 \\
+PA & 44 & 11.82 & OR & 10 & 4.88 \\
+WA & 2  & 9.38  & CO & 7  & 3.93 \\
+MO & 7  & 6.78  & OH & 10 & 3.74 \\
+TX & 18 & 6.36  & NC & 16 & 3.02 \\
+IL & 26 & 6.01  & NY & 6  & 2.57 \\
+\midrule
+\multicolumn{6}{@{}l}{Remaining 33 states: 161 sites, 33.09 GWh/yr} \\
+\multicolumn{6}{@{}l}{\textbf{Total: 360 sites in 45 states, 110.29 GWh/yr}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \chapter{Calibration and Sensitivity Captures}
-\wptodo{T7 · Appendix B}{Implied-CF vs EHA-CF captures; sensitivity NPV bands.}
+
+This appendix carries the raw captures behind Sections~4.4.1 and 4.3.6.
+Table~\ref{tab:eha_buckets} is the empirical capacity-factor distribution used to
+set the calibration floor, recomputed from the EHA workbook rather than read from
+its percentage column; the recompute agrees with that column to a mean absolute
+difference of 0.00250 across 23{,}483 clean plant-years, with a quartile range of
+0.00125 to 0.00375. The 2013--2022 row is the stability check: restricting to the
+most recent decade moves the median capacity factor from 0.3902 to 0.3817, which is
+inside the spread and confirms the floor is not an artefact of one period.
+
+\begin{table}[htbp]
+\centering
+\caption{Empirical capacity factor of EHA small-hydro plants, recomputed}
+\label{tab:eha_buckets}
+\footnotesize
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+Bucket & Plants & Plant-yrs & p10 & p25 & p50 & p75 & p90 & Mean \\
+\midrule
+0.1--5 MW, all years  & 629 & 9{,}798 & 0.1379 & 0.2535 & 0.3902 & 0.5409 & 0.6925 & 0.4038 \\
+0.1--5 MW, 2013--2022 & 611 & 5{,}530 & 0.1229 & 0.2415 & 0.3817 & 0.5288 & 0.6838 & 0.3932 \\
+0.1--1 MW, all years  & 59  & 802     & 0.1265 & 0.2676 & 0.4145 & 0.5457 & 0.6838 & 0.4097 \\
+\midrule
+WOWERS implied        & --- & ---     & 0.8556 & 0.8651 & 0.8725 & 0.8810 & 0.8833 & --- \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize Filters: conventional hydro only, capacity at least 0.1 MW,
+recomputed capacity factor above 0 and no greater than 1.2. The WOWERS row is
+\texttt{capacity\_factor\_p50} over the 1,138 project-viable sites.}
+\end{table}
+
+Table~\ref{tab:band_both} gives the calibration band computed from both buckets.
+They agree closely above the first quartile and differ most at the pessimistic end,
+which is why Section~5.1.4 quotes the floor as a range of 118.9--194.4~GWh/yr
+rather than as a single number.
+
+\begin{table}[htbp]
+\centering
+\caption{Calibration band computed from each EHA bucket}
+\label{tab:band_both}
+\footnotesize
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Tier & CF (0.1--5 MW) & GWh/yr & CF (0.1--1 MW) & GWh/yr \\
+\midrule
+Floor p25        & 0.2535 & 118.9 & 0.2676 & 125.5 \\
+Floor p50        & 0.3902 & 183.0 & 0.4145 & 194.4 \\
+Floor p75        & 0.5409 & 253.7 & 0.5457 & 255.9 \\
+Central, CF 0.60 & 0.6000 & 281.4 & 0.6000 & 281.4 \\
+Physics ceiling  & 0.8725 & 409.2 & 0.8725 & 409.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The sensitivity capture behind Figure~\ref{fig:tornado} is
+Table~\ref{tab:sens_capture}. It covers the 848 project-viable plants that carry a
+measured flow duration curve, because head and flow can only be perturbed
+physically where one exists; at the other 290 viable plants both perturbations
+collapse to the same linear scaling of energy and are reported as inseparable. Head
+is the widest band by a wide margin and the only input whose low case turns the
+portfolio negative.
+
+\begin{table}[htbp]
+\centering
+\caption{Portfolio NPV under each sensitivity sweep, 848 viable plants with a
+measured flow duration curve}
+\label{tab:sens_capture}
+\footnotesize
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Input & Low case & Base & High case & Swing \\
+\midrule
+Net head, $\times$0.50 / $\times$1.50         & $-17.27$ & 116.51 & 250.29 & 267.56 \\
+Electricity rate, $\times$0.70 / $\times$1.30 & 45.53    & 116.51 & 187.49 & 141.96 \\
+Flow, $\times$0.80 / $\times$1.20             & 75.73    & 116.51 & 133.55 & 57.82  \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize All values are portfolio net present value in \$M. Across all 3,778
+scored plants the dominant input is head at 2,803 sites and the electricity rate at
+1; the remaining 974 carry no measured duration curve, so head and flow are not
+separable there.}
+\end{table}
+
 \chapter{Monte-Carlo Distribution Figures}
-\wptodo{T7 · Appendix C}{P10/P50/P90 distributions.}
+
+The Monte-Carlo engine of Section~4.3.3 writes three energy percentiles per plant
+from 10{,}000 samples. Figure~\ref{fig:mcbands} shows what those percentiles look
+like across the whole retained fleet and Table~\ref{tab:mc_capture} gives the
+totals.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig11_mc_bands.png}
+\caption{Monte-Carlo energy band across the 5,464 retained plants, and the
+distribution of the per-site band width}
+\label{fig:mcbands}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Monte-Carlo energy percentiles across the retained fleet}
+\label{tab:mc_capture}
+\footnotesize
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Quantity & P10 & P50 & P90 \\
+\midrule
+Fleet total (GWh/yr)  & 444.31   & 699.18   & 1{,}002.13 \\
+Median plant (kWh/yr) & 15{,}347 & 24{,}146 & 35{,}041   \\
+\midrule
+\multicolumn{4}{@{}l}{Per-site P90:P10 ratio --- p10 2.243, median 2.276, p90 2.409, max 2.470} \\
+\multicolumn{4}{@{}l}{By head archetype --- large 2.243 (919 plants), medium 2.275
+(3,454), small 2.409 (1,091)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two features of that figure are worth naming. The band is uniform in relative
+width: the ninetieth percentile is between 2.24 and 2.47 times the tenth at every
+plant in the fleet, with a median of 2.276. That uniformity is not evidence of a
+well-behaved estimate --- it is the signature of an assumption. The width is set
+almost entirely by the triangular head distribution of
+Table~\ref{tab:head_archetypes}, which takes the same three shapes across all
+5{,}464 plants, so the histogram separates into exactly three clusters, one per
+archetype, with the small-plant archetype the widest at 2.409. The flow duration
+curve, the only measured input to the sampler, contributes almost none of the
+spread. The correct reading is that the P10--P90 band quantifies the head
+assumption rather than the uncertainty of the estimate, and that a plant's true
+energy can sit outside it whenever the assumed head is wrong --- which
+Section~5.1.2 shows it frequently is, since replacing the archetype with a measured
+elevation difference moved fleet energy by 104.44~GWh/yr.
 
 \end{document}

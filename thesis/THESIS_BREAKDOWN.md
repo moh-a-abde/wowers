@@ -221,7 +221,7 @@ understanding only — these are never citable sources; see the RULE on internal
     **Every measured≠expected gap needs the mandatory discrepancy paragraph (§5).**
   - **Fig/Tab:** national site map, funnel diagram, ideal + expected tables, calibration table.
 
-- [ ] **T7 · Appendices A–C** — ~800 w + tables
+- [x] **T7 · Appendices A–C** — ~800 w + tables
   - **Feeds:** geojson property list, funnel tables, sensitivity/MC captures.
   - **Beats:** data dictionary (58 props), funnel tables, MC/calibration raw captures.
 
@@ -376,7 +376,7 @@ So neither of you has to re-read the whole format prompt each session:
 | T | T4 | Ch4.3 Pipeline P3–P4 | Tom | 2,400 | ☑ |
 | T | T5 | Ch4.4–4.5 Calibration + Export | Tom | 2,000 | ☑ |
 | T | T6 | Ch5 Results (energy/funnel/calib) | Tom | 3,000 | ☑ |
-| T | T7 | Appendices A–C | Tom | 800 | ☐ |
+| T | T7 | Appendices A–C | Tom | 800 | ☑ |
 | M | M1 | Ch4.6 Frontend system | Mohamed | 2,000 | ☐ |
 | M | M2 | Ch5 Frontend results | Mohamed | 700 | ☐ |
 | J | J1 | Ch3 Business Model | Joint | 2,300 | ☐ |
