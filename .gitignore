@@ -42,3 +42,7 @@ WOWERS_Project_Report.pdf
 # Frontend dependencies (teammate's vite/react app installs its own)
 frontend/node_modules/
 thesis/.mplconfig/
+
+# LaTeX build products (thesis/figures/*.pdf are committed figure assets)
+thesis/thesis_tom.pdf
+thesis/thesis_tom.log
