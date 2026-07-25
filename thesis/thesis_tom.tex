@@ -1328,14 +1328,375 @@ bands. How the energy figures behind all of these economics were tested against
 real generating plants is the subject of Section~4.4.
 
 \section{Calibration and Validation}                     % WP T5 — Tom
-\wptodo{T5 · 4.4 (~part of 2,000 w)}{Feeds: scripts/cf\_calibration.py,
-CF\_CALIBRATION\_REPORT.md, src/phase5/*, FERC\_CONDUIT\_LABEL\_REPORT.md. Implied-CF vs EHA-CF
-$\rightarrow$ 119--281 GWh band (strongest element). Phase-5 ML KILL as an honest negative
-result — report it, do not hide it.}
+
+Everything reported to this point is modelled. Phases~1--4 turn public records
+into an energy figure and a cash flow for 3{,}778 plants without comparing one
+number against an operating machine, and no WOWERS site has been instrumented.
+This section reports the two attempts made at that comparison: a benchmark of the
+model's implied capacity factor against measured generation, in Section~4.4.1,
+and an abandoned attempt to learn a correction from the same data, in
+Section~4.4.2. Neither is validation. The first produces a bound, and it is that
+bound, rather than the physics point estimate, that this work claims.
+
+\subsection{Capacity-Factor Calibration}
+
+The Monte-Carlo estimate of Section~4.3.3 embeds one scalar that carries every
+operating assumption it makes: the capacity factor, here the ratio of median
+annual energy to the energy the same site would make at its median-condition
+power --- median head, median efficiency, mean flow --- held for every one of the
+8{,}766~h the pipeline counts in a year. Across the 1{,}138 project-viable sites
+the Phase~2 estimate implies a
+median capacity factor of 0.8725, with a tenth-to-ninetieth-percentile spread of
+0.8556--0.8833. That describes a turbine at or near rated output for 87~\% of the
+year, every year. This subsystem is responsible for asking whether that number
+survives contact with plants that exist, and for restating the headline as a band
+where it does not.
+
+Four options were considered. Option~(A) was direct measurement at a WWTP outfall,
+which is the correct answer and is out of scope for a desk study with no hardware
+budget. Option~(B) was comparison against published national assessments such as
+the DOE hydropower resource work~\cite{doe_vision, ornl2014}; those are modelled
+estimates too, so the comparison would set one model against another and measure
+nothing. Option~(C) was to re-tune the Phase~2 sampling distributions until the
+implied capacity factor matched real plants. Option~(D) was to hold the physics
+model fixed and benchmark its implied capacity factor against measured annual
+capacity factors from operating plants, publishing the ratio as a multiplier
+band. Option~(C) was rejected because it buries the correction inside the model,
+where a reader cannot see it and cannot undo it. Option~(D) won on three grounds:
+measured capacity factors exist at scale and at no cost, the capacity factor is
+exactly where the optimism of Section~4.3.3 lives, and a published multiplier is
+reversible --- dividing by it returns the physics number.
+
+Where 0.8725 comes from is worth stating before it is benchmarked, because part
+of it is defensible. It decomposes as availability times flow-duration-curve
+utilisation, $0.943 \times 0.925 = 0.872$. The first term is the mean of the
+Triangular(0.90, 0.95, 0.98) availability sampled in Section~4.3.3. The second is
+a property of the input data rather than an assumption: municipal discharge
+tracks population, not rainfall, so the duration curve is nearly flat and a
+turbine rated at design flow sits near its rating almost continuously. The flat
+curve is real. The 0.95 modal availability, and the absence of any minimum-flow
+cutoff or debris-fouling model, are not.
+
+The calibration is implemented in \texttt{scripts/cf\_calibration.py}, which is
+strictly read-only: it prints tables and writes no parquet, config, or source
+file. Its reference data is the DOE HydroSource EHA annual capacity-factor
+workbook covering 2005--2022~\cite{hydrosource_eha}, whose net-generation column
+is the figure each plant reports to the Energy Information Administration on Form
+EIA-923~\cite{eia923}. Capacity factor is recomputed from net generation, plant
+capacity, and hours rather than read from the workbook's own percentage string;
+the two agree to a mean absolute difference of 0.00250 across 23{,}483 rows,
+which is rounding and confirms the arithmetic. Rows are then filtered to
+conventional hydro, capacity of at least 0.1~MW, and a recomputed capacity factor
+above zero and no greater than 1.2, the last two dropping reporting artefacts.
+Three buckets are cut: a primary 0.1--5~MW bucket of 629 plants and 9{,}798
+plant-years with a median capacity factor of 0.3902, a 0.1--1~MW bucket closest
+in scale to a WWTP machine at 59 plants and 802 plant-years and 0.4145, and a
+2013--2022 slice of the primary bucket, run as a stability check, at 611 plants
+and 5{,}530 plant-years and 0.3817. The empirical figure is therefore not an
+artefact of a particular decade.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig07_cf_calibration.png}
+\caption{Measured annual capacity factor of real small-hydro plants against the
+capacity factor implied by the Phase 2 estimate at the 1,138 project-viable sites}
+\label{fig:cfcalib}
+\end{figure}
+
+The two distributions are drawn together in Figure~\ref{fig:cfcalib}. They barely
+overlap, and the gap has two causes that must not be conflated. Part of it is
+genuine: river plants are sized for flood flows and idle through droughts, their
+inflow varies by an order of magnitude across a year against roughly 15--25~\%
+for municipal discharge, and many carry licence conditions releasing ecological
+minimum flows around the turbine, none of which applies at an outfall. The rest
+is the optimism named above. Because the first part is real, the river-hydro
+figure is treated throughout as a floor and never as a best estimate.
+
+The central tier needs a plant that shares the hydraulics, and one qualifies. The
+LucidPipe installation in Portland, Oregon runs four spherical turbines inside a
+1.07~m drinking-water transmission main at 200~kW installed capacity and a
+reported 1{,}100~MWh/yr~\cite{lucidpipe}, which is a measured capacity factor of
+$1{,}100{,}000 \div (200 \times 8{,}760) = 0.628$. It is drinking water rather
+than wastewater, but the hydraulic case is the same: continuous pressurised
+conduit flow, no seasonal drought, no minimum-flow reservation. The central
+anchor was set at 0.60, about 4~\% below that measured value, to acknowledge that
+one project is a thin basis and that the Phase~2 optimism is real. Rentricity and
+CINK both operate in-conduit machines on potable and wastewater
+systems~\cite{rentricity, cink} and both confirm the operating regime, but
+neither publishes annual energy per site, so they widen confidence in the range
+without setting a number in it.
+
+\begin{table}[htbp]
+\centering
+\caption{Capacity-factor calibration band on the 1,138-site portfolio}
+\label{tab:cfband}
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Tier & Capacity factor & Multiplier & Energy (GWh/yr) \\
+\midrule
+Floor, river-hydro p25       & 0.2535 & 0.291 & 118.9 \\
+Floor, river-hydro p50       & 0.3902 & 0.447 & 183.0 \\
+Floor, river-hydro p75       & 0.5409 & 0.620 & 253.7 \\
+Central, WWTP-appropriate    & 0.6000 & 0.688 & 281.4 \\
+Physics ceiling, Phase 2     & 0.8725 & 1.000 & 409.2 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize Multiplier is the tier capacity factor divided by the Phase 2
+implied median of 0.8725. Floor tiers are the 0.1--5 MW EHA bucket (629 plants,
+9,798 plant-years).}
+\end{table}
+
+The band itself is Table~\ref{tab:cfband}, drawn as Figure~\ref{fig:cfband}. Each
+multiplier is the tier's capacity factor divided by 0.8725, applied to the
+409.2~GWh/yr physics figure, and the result is the sentence this work reports: a
+409.2~GWh/yr ceiling, a conservative floor of 118.9--194.4~GWh/yr, and a
+plausible central estimate of 281.4~GWh/yr. The floor is a range because the
+narrower 0.1--1~MW bucket sits above the primary bucket at every percentile,
+giving 125.5 and 194.4~GWh/yr at its first two quartiles against 118.9 and
+183.0~GWh/yr. Section~5.1.4 reports the band as a result and states what it does
+to the economics of Section~4.3.6.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig08_calibration_band.png}
+\caption{Portfolio energy under each calibration tier, against the Phase 2
+physics ceiling}
+\label{fig:cfband}
+\end{figure}
+
+\begin{sloppypar}
+Three of those tiers are carried into the pipeline rather than left in a report.
+\texttt{add\_calibrated\_energy\_cols} in \texttt{financials.py} appends
+\texttt{energy\_kwh\_calib\_floor\_p25}, \texttt{energy\_kwh\_calib\_floor\_p50},
+and \texttt{energy\_kwh\_calib\_central} to every Phase~4 scorecard row, reading
+the multipliers 0.291, 0.447, and 0.688 from \texttt{config/settings.yaml}. They
+are global fleet multipliers rather than per-site capacity-factor ratios, which
+is defensible only because the per-site spread is narrow, 0.8556--0.8833 between
+the tenth and ninetieth percentiles. Summed over the viable cohort the three
+columns give 119.07, 182.90, and 281.51~GWh/yr against the 409.17~GWh/yr ceiling,
+and over all 3{,}778 scored plants 149.83, 230.15, and 354.23~GWh/yr against
+514.87~GWh/yr. No ceiling column was added and none was overwritten, so every
+downstream consumer, including the map of Section~4.6, carries the band beside
+the physics number instead of in place of it.
+\end{sloppypar}
+
+Five limitations are named. First, the floor imports variability that outfalls do
+not have, so a portfolio held to it is being asked to perform no better than a
+run-of-river plant in a dry year; it is a defensible worst case and nothing
+stronger. Second, the central tier rests on one project, in drinking water, at a
+generation figure this work did not measure. Third, the reference workbook covers
+plants of about 1~MW and above, so the bucket nearest WWTP scale is 59 plants,
+while the median viable WOWERS machine is rated at 3.80~kW --- three orders of
+magnitude below the calibration set, and the gap is not closed by any data
+currently published. Fourth, the multiplier assumes energy scales with capacity
+factor at a fixed rating, which holds inside this model and has not been tested
+outside it. Fifth, and most important, this is calibration of a single scalar
+against somebody else's plants, not validation of any site in the portfolio; the
+quantity being checked is a fleet-level plausibility, and no claim is made here
+about any individual facility. The calibrated result is reported in
+Section~5.1.4. Why a learned correction was not built instead will now be
+discussed.
+
+\subsection{Machine-Learning Feasibility}
+
+The original architecture reserved a fifth phase for a supervised model that would
+learn the residual between the physics estimate and measured generation, and would
+supply the physics-versus-measured check the rest of the pipeline lacks. That
+phase was designed, its data path was built, and it was then killed. This
+subsection records that decision, because a negative result obtained against a
+stated gate is evidence, and because the shape of the failure names what the
+platform would need in order to become predictive.
+
+Three options were considered. Option~(A) was to train on measured generation at
+conduit and outfall scale, which is the only training set that would transfer to
+the target population. Option~(B) was to train on the labelled fleet actually in
+hand --- 1{,}360 plants combined from EIA-860/923 and the EHA inventory,
+1{,}268~EHA and 92~EIA, 250{,}643.66~GWh/yr of measured annual generation --- and
+transfer that model to outfalls. Option~(C) was to use the same fleet as a
+calibration reference only, as Section~4.4.1 does, and build no model. Option~(A)
+required labels that had not been found, so the work of this subsystem became the
+hunt for them, run against a gate fixed in advance: at least 50 new usable sites
+carrying both installed capacity and measured annual energy, or Option~(C) stands.
+
+The hunt covered every source that plausibly carries measured micro-scale
+generation. The Bureau of Reclamation RISE service was probed first and holds
+water-operations data --- canal stage, reservoir release, dissolved gas --- with
+zero result records against its powerplant-generation parameter and no sub-megawatt
+coverage. The FERC databases were downloaded in full: 222 active conduit
+exemptions, 1{,}016 active licences, and the qualifying-conduit notices of intent
+created by the Hydropower Regulatory Efficiency Act~\cite{ferc_conduit}. Every one
+of them carries authorised capacity and none carries measured generation, which
+is structural rather than an oversight: FERC is a permitting system, and operating
+generation is reported instead to the Energy Information Administration on Form
+EIA-923~\cite{eia923}, which is the source the EHA workbook already
+republishes~\cite{hydrosource_eha}. The remaining path was therefore a cross-link
+inside data already held. Of 338 canal and conduit plants in the EHA inventory,
+115 carry measured annual generation, 80 of them at or below 5~MW and 6 at or
+below 1~MW. Cross-referencing by plant code against the 1{,}360 labels already
+combined showed that 103 of the 115 were already owned. Eleven were genuinely
+new, all of them irrigation canal drops of at least 1~MW, none with head or flow.
+Eleven against a gate of fifty is a clear fail.
+
+One site deserves its own paragraph, because it is the closest analogue in the
+label universe and because reporting it correctly took two attempts. Point Loma
+in San Diego is a 1{,}500~kW machine on a treated-wastewater effluent outfall,
+the only true wastewater site among the 115, and its reported net generation is
+0~MWh for every year from 2018 through 2022. The first pass selected each plant's
+latest non-zero year, which returned 2017 and 2{,}515~MWh and silently concealed
+a plant offline for four years; the error was caught in review and the rule
+replaced. The rest of the wastewater-adjacent labels are three municipal
+drinking-water sites and 111 irrigation canal drops.
+
+The model was killed for four specific reasons, each of which would have to be
+removed before it is worth revisiting. The labelled plants have a median installed
+capacity of 7{,}700~kW and span 100~kW to 6{,}495~MW, against a target population
+whose median viable machine is 3.80~kW. Head and flow are null in 1{,}360 of the
+1{,}360 labels, because neither EIA nor EHA collects them, so the architecture's
+physics-versus-measured check cannot be run at all --- not poorly, but not at
+all. The transferable feature intersection between the label set and the scoring
+matrix is five columns: latitude, longitude, log installed capacity, a five-band
+climate proxy derived from latitude, and state. And the one wastewater data point
+is offline.
+
+What survives is the pipeline itself, exercised once as a smoke test to prove the
+rails rather than to produce a deliverable. \texttt{src/phase5/train.py} runs
+label combination, feature construction, a leakage check, nested cross-validation,
+and a final fit on all 1{,}360 rows, using LightGBM~4.6.0~\cite{lightgbm} at
+fixed hyper-parameters --- 400 trees, learning rate 0.05, 31 leaves, minimum 20
+samples per leaf, deterministic mode, seed 0 --- with no sweep, by design. The
+outer loop is five folds stratified by state and the inner loop three folds
+grouped by source plant code, so no plant appears on both sides of a split. The
+leakage lock is the part worth keeping: \texttt{assert\_no\_leakage} refuses any
+feature list containing a column derived from the physics estimate, including
+every financial output, the viability flags, and the capacity factor itself, and
+it is called both when the training frame is built and again on entry to
+cross-validation. Annual revenue is on that denylist because it correlates 0.915
+with measured energy, revenue being energy multiplied by a rate. The measured
+outcome of that run is reported, with its metrics and its caveats, in
+Section~5.1.5.
+
+Three limitations close this subsection. The smoke-test metrics have no product
+significance and are labelled as such wherever they appear. The
+physics-versus-measured comparison the architecture specified remains un-run and
+will remain so until labels carry head and flow. The unblock is a set of
+sub-megawatt conduit or outfall installations with measured annual energy, and no
+bulk source publishes them; the only path identified is manual collection from
+municipal utility reports and WWTP energy audits, one plant at a time. How the
+results of the calibrated pipeline are published will now be discussed.
 
 \section{Data Export and Serving Layer}                  % WP T5 — Tom
-\wptodo{T5 · 4.5}{Feeds: scripts/export\_geojson.py, exports/viable\_sites.geojson +
-scored\_sites.geojson. The 58-property contract, byte-determinism.}
+
+The export layer is the single boundary between the pipeline and everything
+downstream of it: the dashboard of Section~4.6, the figures and tables in this
+document, and any reader who wants the underlying numbers. It is responsible for
+carrying the full result of Phases~1--4 across that boundary in a form that can be
+read without running any of them, and for doing so reproducibly enough that two
+people who export the same parquets get the same bytes.
+
+Four options were considered. Option~(A) was a database and a service in front of
+it, a PostGIS table behind a query API. Option~(B) was a set of purpose-built JSON
+files, one per view, which is what the first implementation did: national totals,
+a plant collection for the map, a per-state portfolio file, and a per-plant detail
+file. Option~(C) was to ship the parquets to the browser and query them in the
+page. Option~(D) was one static GeoJSON feature collection carrying every
+property, with every view shape derived on the client. Option~(A) was rejected on
+operational cost: a screening artefact that changes only when the pipeline is
+re-run does not justify a server, credentials, and an uptime commitment. Option~(B)
+was rejected from experience with it --- four files computed by four code paths
+drift, and every new column means editing all of them. Option~(C) needs a query
+engine in the browser and still needs a geometry conversion, so it buys nothing at
+this size. Option~(D) won because the frontend then needs no backend at all, the
+artefact is a single git-tracked file that can be diffed and hashed, and one file
+cannot disagree with itself.
+
+The exporter is \texttt{scripts/export\_geojson.py}. It joins on \texttt{npdes\_id}
+with the Phase~4 scorecard as the spine, left-joining Phase~1 for facility name,
+city, coordinates, and flow statistics, Phase~2 for the P10, P50, and P90 energy
+band and the equivalent-homes conversion, and Phase~3 for gross and net head, both
+elevations, head source and confidence, rated flow, and peak efficiency. The result
+is 58 properties per feature, grouped as in Table~\ref{tab:geojson_props}: the
+original 24 that the first map needed, plus 34 added when the four legacy files
+were retired and everything they had computed had to be derivable on the client.
+Geometry is a point in longitude-latitude order as RFC~7946 requires~\cite{rfc7946},
+rounded to five decimals, which is about a metre. Numeric properties are rounded by
+class rather than individually: dollars, kilowatt-hours, and counts to whole
+numbers, ratios such as internal rate of return and levelised cost to four
+decimals, and metres, million-gallons-per-day flows, cubic-metres-per-second
+ratings, and efficiencies to one decimal. Any value that is not finite becomes a
+JSON null instead of a \texttt{NaN} token, which is not valid JSON. A \texttt{meta}
+foreign member, permitted by RFC~7946~\S6.1, carries the number of plants analysed,
+the number scored, and a baseline label, and all three are read from parquet row
+counts rather than typed in, so the file cannot claim a provenance its own contents
+contradict.
+
+\begin{table}[htbp]
+\centering
+\caption{Property groups in the exported GeoJSON contract}
+\label{tab:geojson_props}
+\footnotesize
+\begin{tabular}{@{}lrl@{}}
+\toprule
+Group & Properties & Examples \\
+\midrule
+Identity and siting        & 4  & \texttt{npdes\_id}, \texttt{facility\_name} \\
+Machine and energy         & 7  & \texttt{turbine\_type}, three calibrated tiers \\
+Economics and categories   & 13 & \texttt{npv\_usd}, \texttt{payback\_years} \\
+Phase 1 flow statistics    & 5  & \texttt{mean\_flow\_mgd}, \texttt{n\_months\_data} \\
+Phase 2 Monte-Carlo band   & 4  & \texttt{energy\_p10\_kwh\_yr} \\
+Phase 3 head and turbine   & 8  & \texttt{head\_net\_m}, \texttt{head\_source} \\
+Phase 4 cost breakdown     & 8  & \texttt{equipment\_capex\_usd} \\
+Sensitivity and provenance & 9  & \texttt{dominant\_sensitivity}, \texttt{data\_quality} \\
+\midrule
+Total                      & 58 & \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize The full dictionary, one row per property with type and units, is
+Appendix~A.}
+\end{table}
+
+Two files are written into \texttt{exports/} on every default run so that they
+cannot drift apart. The first, \texttt{viable\_sites.geojson}, holds the
+1{,}138 project-viable sites at 1.85~MB and is the file this document's portfolio
+figures are drawn from. The second, \texttt{scored\_sites.geojson}, holds all
+3{,}778 scored plants at 6.13~MB
+and is what the dashboard loads, so plants that failed the viability gate stay on
+the map as evidence rather than disappearing from it. Both carry the same 58
+properties on every feature. The write path validates before it returns: the
+collection type, the feature count, the coordinate ranges, and the types inside
+\texttt{meta}. Features whose coordinates are null or unparseable are dropped and
+counted rather than written with a placeholder position; that count is zero in
+both files, which it was not before the coordinate guard of Section~4.2.
+
+Determinism was a requirement rather than a happy accident, because a file that
+changes when nothing changed cannot be reviewed. The output carries no timestamp
+and no run identifier, is written with compact separators, and takes its feature
+order from the parquet. Re-running the exporter twice while writing this section
+produced files byte-identical to the tracked ones, at SHA-256 digests beginning
+\texttt{f359b413} for the viable file and \texttt{420ad5f4} for the scored file.
+The practical consequence is that the export is testable in the strongest sense
+available: any change to any site's economics changes the digest, and any run that
+changed nothing leaves it alone.
+
+Five limitations are named. The dashboard downloads the whole 6.13~MB file before
+it draws anything, which is acceptable at 3{,}778 sites and is the wrong shape at
+ten times that; vector tiles or a query service is the named fix, and neither was
+built. The contract has no version field beyond its baseline label, so renaming a
+property breaks consumers silently, and a schema version is the cheapest thing to
+add before anyone else builds on it. Infinite payback and levelised cost are
+written as a sentinel value of $10^6$, which occurs 823 times in the scored file
+and never in the viable file; a consumer that treats it as a number reads a
+million-year payback, and the frontend has to guard it explicitly. Regeneration is
+manual --- nothing in the test suite asserts that the tracked files match the
+current parquets, so they can go stale between a pipeline run and a commit.
+Finally, the rounding is deliberately lossy, most consequentially at one decimal
+place on head, so the exported file is a reporting artefact and any reanalysis
+should start from the parquets instead. The visualisation system that consumes
+this contract will now be discussed.
 
 \section{Frontend Visualization System}                  % WP M1 — Mohamed [MERGE]
 \wptodo{M1 · 4.6 — MERGE FROM MOHAMED (~2,000 w)}{Mohamed drafts in his file; paste here at
@@ -1487,6 +1848,23 @@ B.~Ogayar and P.~G.~Vidal,
 ``Cost determination of the electro-mechanical equipment of a small hydro-power plant,''
 \emph{Renewable Energy}, vol.~34, no.~1, pp.~6--13, 2009.
 doi:10.1016/j.renene.2008.03.015
+
+\bibitem{eia923}
+U.S.\ Energy Information Administration,
+``Form EIA-923 detailed data --- Power Plant Operations Report,''
+annual and monthly net generation by plant.
+[Online]. Available: https://www.eia.gov/electricity/data/eia923/
+
+\bibitem{rfc7946}
+H.~Butler, M.~Daly, A.~Doyle, S.~Gillies, S.~Hagen and T.~Schaub,
+``The GeoJSON Format,'' Internet Engineering Task Force, RFC~7946, Aug.\ 2016.
+doi:10.17487/RFC7946
+
+\bibitem{lightgbm}
+G.~Ke, Q.~Meng, T.~Finley, T.~Wang, W.~Chen, W.~Ma, Q.~Ye and T.-Y.~Liu,
+``LightGBM: a highly efficient gradient boosting decision tree,''
+in \emph{Advances in Neural Information Processing Systems 30 (NIPS 2017)},
+pp.~3146--3154, 2017.
 % Additional Track M / Joint citations merge here at WP J5.
 
 \end{thebibliography}
