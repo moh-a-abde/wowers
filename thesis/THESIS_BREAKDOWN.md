@@ -191,7 +191,7 @@ understanding only — these are never citable sources; see the RULE on internal
     P10/P50/P90). Options-considered → chosen → how-built → limitations for each.
   - **Fig/Tab:** ranking-weight table, MC distribution figure.
 
-- [ ] **T4 · Ch4.3 Processing Pipeline — Phases 3–4** — ~2,400 w
+- [x] **T4 · Ch4.3 Processing Pipeline — Phases 3–4** — ~2,400 w
   - **Feeds:** `src/phase3/head_estimation.py`, `outfall_coords.py`, `turbine_selection.py`,
     `data/turbines/turbine_manufacturers.csv`, `src/phase4/cost_models.py`, `financials.py`,
     `revenue.py`, `plant_consumption.py`, `sensitivity.py`, `EXCLUSION_FUNNEL_REPORT.md`.
@@ -373,7 +373,7 @@ So neither of you has to re-read the whole format prompt each session:
 | T | T1 | Ch2 Background | Tom | 2,400 | ☑ |
 | T | T2 | Ch4.1–4.2 Overview + Acquisition | Tom | 1,600 | ☑ |
 | T | T3 | Ch4.3 Pipeline P1–P2 | Tom | 2,200 | ☑ |
-| T | T4 | Ch4.3 Pipeline P3–P4 | Tom | 2,400 | ☐ |
+| T | T4 | Ch4.3 Pipeline P3–P4 | Tom | 2,400 | ☑ |
 | T | T5 | Ch4.4–4.5 Calibration + Export | Tom | 2,000 | ☐ |
 | T | T6 | Ch5 Results (energy/funnel/calib) | Tom | 3,000 | ☐ |
 | T | T7 | Appendices A–C | Tom | 800 | ☐ |
