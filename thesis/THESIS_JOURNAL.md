@@ -588,3 +588,248 @@ Any draft that cites these must match exactly (P2-SEED re-baseline):
 **Open items / follow-ups:**
 - J5 must carry the expansion into the abstract on first use there as well, since the abstract is read standalone. The title page keeps the bare acronym followed by the descriptive subtitle, which is conventional and needs no change.
 - If a List of Abbreviations is ever added at J5, WOWERS, POTW, DMR, NPDES, FDC, EHA, and BCM are the candidates.
+
+### Session: 2026-07-25 — Review-response editorial pass (spelling, figure order, em-dashes, LucidPipe citation, four new figures) — Tom
+
+**Work package:** Editorial fix pass against a full-draft review (not a new WP). Five items were
+scoped as fix-now; the rest were logged for J5 and are listed at the bottom of this entry.
+
+**1. Spelling unified to US English.**
+- Chapter 2 was American; Chapters 1, 3--6 and the appendices were British. The format prompt
+  itself is written in US spelling (`labeled`, `summarizing`, `Organization`), and the degree is
+  from a US university, so US was the target.
+- 30 word families converted: metre(s), modelled/modelling, utilisation, artefact(s),
+  programme(s), licence(s), honours, centreline, visualisation(s), normalised/normalisation,
+  optimisation/optimiser/optimising, labelled, defence, fulfil, summarised, analysed,
+  behaviour(s), authorised, levelised, maximising, pressurised, serialisation, vectorised.
+- Two words that look British but are correct and were deliberately left alone: `optimism`
+  (4 occurrences, not a British -ise form) and `exercised` / `supervised`.
+- Verified no British form sat inside a `\texttt{}` literal, a `\label`, a `\ref`, or a URL
+  before running the pass, so no code identifier was renamed. `sparse_dmr_artifact` was already
+  US in code; the prose describing it in the funnel table said "artefact" and is now consistent
+  with the identifier.
+- BSD `sed` on macOS does not honour `\b`, so the first attempt silently changed nothing. The
+  pass was redone in `perl -i -pe` with explicit word boundaries. Worth remembering for any
+  future find-replace in this repo.
+
+**2. LucidPipe citation replaced — and this turned out to be substantive, not cosmetic.**
+The review flagged `\bibitem{lucidpipe}` ("project documentation and press materials; see also
+thecivilengineer.org") as the weakest citation carrying the strongest claim. Chasing the primary
+source found three separate factual problems in the draft, not just a formatting one:
+- **Wrong project.** The draft called it the "Bull Run transmission main". The installation is the
+  **Conduit 3 Hydroelectric Project**, FERC docket **P-14498**, on a pipeline at SE 147th Avenue
+  and SE Powell Boulevard. Bull Run is a separate, much larger conventional hydro project. The
+  wrong name was in the bibliography entry and in the Chapter 2 prose.
+- **"Measured" was false.** The draft computed a *measured* capacity factor of 0.628 from
+  1,100 MWh/yr ÷ 200 kW. Both numbers are design projections. The FERC application gives 170 kW
+  nameplate and an estimated 1,200 MWh/yr; the as-built press figures are 200 kW and an expected
+  1,100 MWh/yr. Every published figure is an expectation. There is no metered generation record
+  because at 170--200 kW the plant is below the 1 MW threshold for Form EIA-923 reporting — which
+  is the *same* reporting gap that killed Phase 5. Confirmed directly: searched
+  `data/raw/ground_truth/combined_ground_truth.parquet` for "onduit", "ortland", "ucid",
+  "ull Run" and for any Oregon plant under 300 kW. Nothing. The two Portland hits are Portland
+  No. 1 and No. 2 at 23.7 MW and 11.8 MW.
+- **The draft contradicted itself on the anchor margin.** Chapter 2 said CF 0.60 was "5 % below"
+  0.628; Chapter 4 said "about 4 % below". The true figure is 4.46 %. The percentage framing is
+  now gone, so the inconsistency goes with it.
+
+Rewrite: the anchor is stated as a **range of 0.628--0.806** across the four filed/as-built
+pairings, both endpoints labelled as design estimates rather than measurements, with the EIA-923
+threshold given as the reason no measured value exists. **CF 0.60 is unchanged**, so no headline
+number moved — 281.4 GWh/yr, 281.51, 136.65, 152.64 and every table all stand as drafted. The
+justification is now that 0.60 sits below the *entire* documented range, which is a stronger and
+more honest claim than sitting 5 % below a single false "measurement". Five passages were
+rewritten (Ch 2 §2.1 twice, §2.2, §2.4, and Ch 4.4.1) plus the Ch 5 shorthand
+"LucidPipe-anchored" → "Conduit 3-anchored".
+
+Two bibitems replace the one: `ferc_p14498` (Federal Register vol. 78, no. 63, p. 19698,
+2 April 2013 — a government primary source) and `lucidpipe` (D. Day, "Water pipe power: using
+hydroturbines to harvest energy," *Treatment Plant Operator*, Oct. 2015 — a trade journal with a
+real byline and date). Both carry `[Accessed 25 July 2026]`. Reference count 20 → 21.
+
+**3. Figure order fixed.** `fig:cfcalib` (block preceded its first `\ref` by 8 lines) and
+`fig:natmap` (by 8 lines) both moved below the naming paragraph. A scripted check now confirms
+all 15 figures satisfy name-before-appear; `fig:mc_energy` was flagged by the review's grep but
+was already correct — the pattern had missed the underscore in the label.
+
+**4. Em-dash asides — scope was much smaller than the review reported.** The review counted
+"dozens, 16 lines with 2+ pairs". That grep had counted `---` used as an empty-cell filler inside
+`tabular` and `longtable` bodies, plus `%` comment rules and the `\newcommand` definitions. After
+masking those out: **187 em-dashes across the document, but only 2 genuine prose paragraphs carry
+two aside pairs, and no single sentence carries a nested aside at all.** Per Tom's decision
+(convert nested/double only, accept single asides as a conscious deviation), both were converted
+to parentheses: the WOWERS expansion in Ch 1 and the Phase 1--2 / Phase 3--4 pair in Ch 4.3. The
+remaining single asides stand as an accepted, logged deviation from `thesis_format_prompt.md` §4.
+**Note against the previous journal entry:** that entry recorded the WOWERS expansion as
+`WOWERS --- the Waste Outfall Water Energy Recovery System ---`; it now reads
+`WOWERS (the Waste Outfall Water Energy Recovery System)`. The expansion itself is unchanged and
+the Recovery-vs-Recovering question raised in that entry is still open.
+
+**5. Four new T-side figures built, all generated from the parquets rather than hard-coded.**
+Figure count 11 → 15. Tables were already at 23.
+- **Figure 12, `fig12_pipeline_dataflow.png`** — build-process flowchart, one swim lane per phase
+  plus the export layer, each naming its modules, the parquet it writes, and the surviving count.
+  Satisfies the format's mandatory build-process flowchart with per-tool swim lanes, and fills the
+  "pipeline dataflow (T)" slot that BREAKDOWN §4 listed but the document never had. Placed in 4.1.
+- **Figure 13, `fig13_site_state_machine.png`** — the mandatory state-machine figure, which nothing
+  in the document previously satisfied. Named states along the retention spine, labelled
+  transitions, and six terminal states carrying the pipeline's own reason strings. The script
+  self-checks its arithmetic: 17,148 − 16,010 dropped = 1,138, matching Table `tab:funnel`
+  exactly. Placed in 4.1.
+- **Figure 14, `fig14_mc_by_tier.png`** — Appendix C second figure, so "Monte-Carlo Distribution
+  Figures" is now plural. Keyed on `permitting_tier`, **not** `site_tier`: every one of the 1,138
+  project-viable sites carries `site_tier = "A"`, so a site-tier split would have had no variance.
+  Shows the three permitting tiers separated by about an order of magnitude in median energy per
+  site (72 / 565 / 3,092 MWh/yr) and the count-against-energy inversion — 834 qualified-conduit
+  sites are 73.3 % by count but 16.1 % of energy, while 42 full-NEPA sites are 3.7 % by count and
+  43.7 % of energy. Tier energies sum to 409.16 GWh/yr against the 409.17 baseline.
+- **Figure 15, `fig15_head_confidence.png`** — DEM head against archetype head, placed in 4.3.4 to
+  make the "largest methodological assumption" visible instead of only asserted. This one earned
+  its place by accident: the scatter resolves into **three vertical stripes**, because the
+  archetype is indexed by design-flow band and therefore carries no site-specific information
+  whatsoever. That reads as a stronger argument than a scatter cloud would have. 36.8 % of 3DEP
+  estimates sit above the 1:1 line at a median ratio of 0.77×. Panel (b) reproduces
+  Table `tab:head_outcome` exactly (3DEP n=3,178 at 1.617 / 4.144 / 12.217 m; archetype n=1,682 at
+  2.772 / 4.695 / 7.230 m), which is a useful independent check that the table was right.
+
+**Verification:**
+- `tectonic -X compile thesis_tom.tex` → **0 errors, 0 undefined references, 0 undefined
+  citations, 88 pages** (was 85; +3 from the four figures). List of Figures = 15 entries. All four
+  new PNGs confirmed read by the engine.
+- Only `tectonic` is installed on this machine — no `pdflatex`, `xelatex`, `lualatex` or
+  `latexmk`. A `pdflatex` invocation exits 127 and leaves the previous log in place, which reads
+  as a successful compile if you only check the log. Use `tectonic -X compile`.
+- The long `tpomag` URL in the new bibitem initially overflowed the measure by 147 pt; wrapped in
+  `\url{}` (hyperref is already loaded) and it now fits.
+- The worst remaining overfull box, 189 pt at line 509, is pre-existing and lives inside the red
+  `\wptodo` stub for J1 §3.4 — it disappears when the business chapter is written. The 126 pt box
+  at line 941 is the unbreakable `\texttt{concurrent.futures.ProcessPoolExecutor}` token and is
+  also pre-existing; left alone as cosmetic.
+
+**Open items / follow-ups (deferred to J5 — logged here so they are not lost):**
+- **Bibliography order violates "numbered by first appearance."** `epa2013` is [2] but is first
+  cited near the end of Chapter 2, after sources numbered higher. Reorder all bibitems at merge
+  time, after Mohamed's and the J1 references land — reordering before then would be wasted work.
+- **`[Accessed DD Month YYYY]` missing on 7 web references** — `epa_echo`, `usgs_3dep`,
+  `hydrosource_eha`, `rentricity`, `cink`, `eia_rates`, `eia923`. Deliberately not added this
+  session: the dates should be re-verified at final stitch, not backdated now. The two new
+  bibitems already carry theirs.
+- **Reference count is 21 against a target of 40--50.** J1's business sources and Mohamed's stack
+  citations have to carry most of that gap. **Flag to Mohamed now** so he collects citations while
+  writing M1 rather than retrofitting them.
+- **"P2-SEED" is used in 4.1 prose but never defined for the reader.** Either define the codename
+  once at first use or say "the re-baselined 6 July 2026 run", which is how Chapter 5 phrases it.
+- **4.3.1 and 4.3.2 end without a forward signpost**, against the §5 convention.
+- **Four of the six limitation paragraphs in 2.1 do not end with a bracketed citation**, which the
+  format asks for.
+- **`{{MONTH_YEAR}}` placeholder still on the title page** (already tracked from an earlier
+  session).
+- **Figure count will be ~20 only if Mohamed delivers ~5.** Currently 15 T-side and Joint. His
+  planned set is app flow diagram, NationalMap and PlantDetail screenshots, and per-state
+  portfolio and analytics screenshots. If M1 ships fewer than 5, the shortfall lands back on
+  Track T, and the cheapest remaining T-side additions would be a per-state choropleth and a
+  CapEx-breakdown stacked bar. Worth telling Mohamed the count is load-bearing.
+
+**Breakdown updated:**
+- No work-package checkbox changed — this was an editorial pass, not a new WP. BREAKDOWN §4's
+  figure inventory is now understated (it predates Figures 12--15); refresh it at J5 when figures
+  are renumbered globally.
+
+**Next work package suggested:**
+- Unchanged from the previous entry: J1 · Ch3 Business Model (~2,300 w), needs both authors.
+  J4 and J5 stay gated on M1 and M2 per the §6 combine gate.
+
+### Session: 2026-07-25 — Calibration tier re-label: CF 0.60 demoted to optimistic, measured conduit tier added — Tom
+
+**Work package:** Editorial + evidential revision to §4.4.1 and its dependents (not a new WP).
+Follows directly from the LucidPipe citation fix logged in the previous entry, which exposed
+this. Full code-side detail is in `WOWERS_PROJECT_JOURNAL.md` under the same date.
+
+**Why this was needed.** The previous entry replaced a weak citation with two sound ones and
+relabeled the Conduit 3 figures as projections. That fixed the citation but left the argument
+standing on it: the calibration band's upper tier, CF 0.60, was still called the "plausible
+central estimate" of the whole thesis while resting on one project's design projection. Then
+`data/raw/ground_truth/ferc_conduit_candidates.parquet` turned out to hold 115 Canal/Conduit
+plants with **metered** EIA-923 generation — gathered for the Phase-5 label hunt and rejected
+there on newness, which is the right test for ML training data and the wrong one for a
+capacity-factor benchmark. Their median CF is 0.2439, and the four plants carrying continuous
+municipal or wastewater duty run 0.0242 / 0.1584 / 0.1914 / 0.3690. Point Loma, the only
+metered treated-wastewater conduit plant in the country and thus the closest analog this
+thesis has, sits at 0.1914.
+
+**Decision recorded: re-label, do not re-center.** CF 0.60 stays at 0.60. Re-centering on the
+measured figures was considered and rejected — n=4 for the on-point analogs, the Badger value
+(297 MWh from 1,400 kW) looks like a partial or curtailed reporting year, and the seasonality
+objection is legitimate for the 111 irrigation canals in the set. Re-centering on n=4 would
+repeat the n=1 error at a different number. **No headline number moved**, and this was verified
+rather than assumed (below).
+
+**What changed in the draft:**
+- **§4.4.1 — three new paragraphs** after the Conduit 3 passage: the metered evidence with all
+  four plants named and valued; then the three consequences, written so they do not all point
+  the same way (floor corroborated / upper tier unsupported / comparison genuinely not like for
+  like at 500 kW minimum against a 12.96 kW median site); then the retention-and-relabel
+  paragraph stating the design argument for 0.60 and calling it plausible and untested.
+- **`tab:cfband` — two measured rows added** (Point Loma 0.1914 → 89.8 GWh/yr; all conduit
+  0.2439 → 114.4) and the tier renamed "Central, WWTP-appropriate" → "Optimistic, Conduit 3
+  proj." Footnote now says which rows rest on metered generation and which do not. The 0.1914
+  row is labeled "Point Loma (WWTP)" and not "municipal conduit" on purpose: polars'
+  nearest-rank quantile makes the 4-plant median coincidentally 0.1914 too, and attributing a
+  single plant's value to a group median would have been misleading.
+- **Limitation 2 of §4.4.1** now names the four metered municipal plants and their range, so
+  the limitation carries the counter-evidence rather than only conceding thinness.
+- **§2.1 and §2.4** — "central tier" → "optimistic upper tier", each with a forward pointer to
+  the §4.4.1 measured benchmark.
+- **§5.1.4** — the substitution paragraph now reports the 114.4 GWh/yr metered landing beside
+  the 118.9 floor and states that the floor is the tier the chapter treats as evidenced.
+  `tab:rescore` row renamed. The closing sentence, which read "the defensible planning figure
+  is the central tier", was **directly contradicted** by the re-label and now reads that the
+  defensible planning figure is the floor, with 281.4 as the ceiling of plausibility.
+- **`tab:expected`** — caption and footnote now say "optimistic-tier", and the footnote points
+  to `tab:rescore` for the floor-tier outcomes. Worth flagging: the format requires an
+  "Expected system performance" table, and that table is built on the 0.688 multiplier, so
+  after this re-label the format's "expected" case is this thesis's optimistic case. Resolved
+  by labeling it explicitly rather than by moving numbers. **If the band floor is ever lowered,
+  this table is the one that has to be rebuilt.**
+- **Ch6** — "plausible central estimate" → the corroborated floor plus an optimistic upper
+  scenario. The existing closing sentence, "the headline this work stands behind is the band
+  and not its upper end", needed no change; Ch4 and Ch5 now match the posture it already had.
+- **Appendix B — new `tab:conduit_measured`** with the four metered plants, the 115-plant
+  quartiles, the Pearson r, and the smallest-quartile median, plus the Badger caveat.
+
+**Verification:**
+- `tectonic -X compile` → **0 errors, 0 undefined references, 0 undefined citations, 91 pages**
+  (was 88; +3 from the new prose and table). Figures still 15, tables now 24.
+- **No headline number moved.** Counted every key figure in the draft against `git show HEAD`:
+  409.17, 409.2, 281.51, 310.13, 152.64, 136.65, 9.83, 58.59, 211.33, 17,148 all identical.
+  281.4, 118.9, 194.4 and 1,138 rose in *count* only, from new prose referencing them; no
+  occurrence changed value and no count fell.
+- Every new number was taken from `scripts/cf_calibration.py` output, not transcribed by hand,
+  and then re-checked: 409.2 × 0.2439/0.8725 = 114.39 → 114.4; × 0.1914/0.8725 = 89.77 → 89.8;
+  floor agreement 118.9 − 114.39 = **4.51 GWh/yr**.
+- `data/`, `config/`, `src/` confirmed untouched — `settings.yaml` multipliers 0.291 / 0.447 /
+  0.688 unchanged, so no re-export and no geojson change. The three
+  `energy_kwh_calib_*` property names were deliberately **not** renamed; they are part of the
+  frozen 58-property contract and only the prose labels moved.
+
+**Open items / follow-ups:**
+- **Deferred decision, needs Tom + advisor:** whether to lower the reported band floor from
+  118.9 to the 89.8 GWh/yr Point Loma implies. Argued both ways in §4.4.1 on purpose. If taken
+  it is one line in `settings.yaml` plus a re-export, and `tab:expected` must be rebuilt.
+- The abstract (J5) must describe the band as floor-plus-optimistic-scenario, not
+  floor-plus-central-estimate. It is unwritten, so this is a constraint on J5 rather than a fix.
+- Ch6's pilot-outfall future-work theme is now the thing that would resolve the weakest link in
+  the headline. Worth sharpening that paragraph at J5 to say so explicitly.
+- `CF_CALIBRATION_REPORT.md` is stale (old project name, "measured 0.628", central framing). It
+  is an internal artifact and never cited, so it cannot leak into the thesis, but it should be
+  annotated so the error is not reintroduced from it.
+- All deferred items from the previous entry still stand: bibliography reordering, `[Accessed]`
+  dates on 7 web refs, reference count now 21 against 40–50, "P2-SEED" undefined in 4.1,
+  missing signposts in 4.3.1/4.3.2, 2.1 limitation citations, `{{MONTH_YEAR}}`, and the figure
+  count depending on Mohamed delivering ~5.
+
+**Breakdown updated:**
+- No checkbox changed; this was a revision to already-drafted T5 and T6 content.
+
+**Next work package suggested:**
+- Unchanged: J1 · Ch3 Business Model, needs both authors. J4 and J5 stay gated on M1 and M2.
