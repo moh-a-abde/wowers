@@ -145,16 +145,102 @@ named industry practitioners; one-line catch-all.}
 % CHAPTER 1 — INTRODUCTION                              (WP J2 — Joint)
 % =====================================================================
 \chapter{Introduction}
-\wptodo{J2 · Introduction (~1,100 w)}{Macro trend + hard number; why current approach does
-not scale; "We propose the creation of a company, WOWERS, to\dots"; end-state workflow;
-split technical vs.\ logistical development. Feeds: ARCHITECTURE.md, project journal.}
+
+Municipal wastewater treatment is one of the largest electricity loads a local
+government controls. The publicly owned treatment works of the United States draw
+on the order of 30.2~TWh/yr, close to 0.8~\% of national electricity
+consumption~\cite{epri2013}, and for many municipalities the treatment plant is
+the single largest line on the utility bill. Those same plants discharge treated
+effluent continuously, day and night, through outfalls that drop several metres
+into a receiving river or estuary. The energy in that drop is real, it is
+recoverable with machines that already exist, and at almost every plant in the
+country it is currently dissipated as turbulence and heat. Recovering even a
+fraction of it would turn a small part of a municipality's largest electricity
+bill back into generation, using an asset the municipality already owns and
+already operates around the clock.
+
+The reason this has not happened at scale is not that the turbines are missing.
+In-conduit machines suited to low head and continuous flow are commercially
+available from several vendors, and a small number of installations have operated
+for years. The obstacle is that nobody knows which plants are worth approaching.
+A conventional feasibility study costs tens of thousands of dollars and takes
+weeks of engineering time, and it must be commissioned plant by plant, before
+anyone knows whether the site has usable head at all. With more than seventeen
+thousand permitted treatment works in the country, a process that costs real money
+per site to answer a yes-or-no question cannot be run across the fleet. The
+constraint is not turbine technology or capital availability. It is the cost of
+finding out, and it is a screening problem rather than an engineering one.
+
+We propose the creation of a company, WOWERS, to solve that screening problem as
+an infrastructure-intelligence service: a platform that identifies, ranks, and
+bounds micro-hydropower recovery opportunities at wastewater outfalls nationally,
+from public data, before anyone visits a site. The proposition is that the first
+pass of a feasibility study --- how much flow, how much head, what machine, what
+it would cost, what it would return --- can be performed from regulatory records
+that every plant in the country already files, at a marginal cost per site of
+approximately zero, and that the resulting ranked shortlist is what a developer, a
+municipality, or a state energy office actually needs in order to spend
+engineering money in the right place.
+
+In its end state the service runs as a continuous pipeline. Public discharge
+records are ingested as they are published and converted into a flow signal for
+every permitted plant; a national elevation model supplies the drop between each
+plant and its permitted outfall; a physical model converts flow and head into an
+energy estimate with an explicit uncertainty band; a turbine catalogue selects the
+machine that suits each site's operating point; a cost and financial model turns
+that machine into capital cost, revenue, payback, and return; and the whole
+national result is published to an interactive map where a user filters to a
+state, a size class, or an economic band and exports the shortlist. A customer
+arrives with a question --- which plants in our state are worth a feasibility
+study --- and leaves with a ranked, priced, and bounded answer in minutes rather
+than months.
+
+The development required to reach that end state is substantial, and it divides
+into two tracks. The technical development covers data acquisition and cleaning
+from federal regulatory sources, the physical and financial modelling chain, the
+calibration of that chain against real operating plants, the serving layer that
+publishes results, and the interface a customer uses. The logistical development
+covers everything the technology does not touch: customer discovery with
+municipalities and developers, the regulatory pathway through FERC conduit
+exemptions, relationships with turbine manufacturers and installers, financing
+structures for municipal customers who cannot carry capital cost, and the field
+validation programme that would eventually replace modelled head with measured
+head. This work will discuss the business model of WOWERS with additional focus on
+the first steps in its technical development.
 
 \section{Thesis Statement}
-\wptodo{J2}{One paragraph ~120 words: the proposition, scope of the business discussion,
-what the proof-of-concept develops.}
+
+We propose that a national screen for micro-hydropower recovery at wastewater
+outfalls can be built entirely from public regulatory data, and that its output is
+commercially useful provided its uncertainty is stated rather than hidden. The
+business discussion covers the problem, the service, the target market, the
+competitive landscape, pricing, distribution, market size, and the growth path for
+WOWERS as a venture. The proof-of-concept develops the technical half of that
+proposition: a four-phase pipeline that screens 17{,}148 treatment works, models
+energy and project economics for those that survive, calibrates the energy result
+against measured capacity factors from real operating plants, and publishes the
+outcome through a static data contract to an interactive national map.
 
 \section{Thesis Outline}
-\wptodo{J2}{One paragraph walking each chapter in order.}
+
+Chapter~2 reviews the background: where outfall energy is lost, the six
+limitations that keep recovery from scaling, what current practice already does
+well, a first-principles primer on hydropower screening from public data, and the
+prior national assessments this work sits beside. Chapter~3 presents the business
+model for WOWERS across problem, service, target market, competition, pricing,
+distribution, market potential, and growth. Chapter~4 is the design chapter and
+the bulk of the work: the system overview, the acquisition of regulatory and
+elevation data, the four-phase processing pipeline from flow features through
+Monte-Carlo energy, head estimation, turbine selection and project economics, the
+calibration and validation work including the machine-learning path that was
+abandoned, the export layer, and the visualisation system. Chapter~5 reports what
+the platform produced --- best-case and calibrated performance, the exclusion
+funnel and its defence, energy and financial results, the capacity-factor
+calibration, the machine-learning negative result, frontend performance, and the
+end-to-end integration test. Chapter~6 concludes and names the work that would
+carry the platform from a screen to a validated product. Three appendices carry
+the data dictionary and funnel tables, the calibration and sensitivity captures,
+and the Monte-Carlo distributions.
 
 % =====================================================================
 % CHAPTER 2 — BACKGROUND AND PRIOR WORK                 (WP T1 — Tom)
@@ -2070,10 +2156,84 @@ dashboard; P2-SEED baseline matches across the boundary (1,138 / 409.17 GWh / \$
 % CHAPTER 6 — CONCLUSIONS AND FUTURE WORK               (WP J3 — Joint)
 % =====================================================================
 \chapter{Conclusions and Future Work}
-\wptodo{J3 · Ch6 (~900 w)}{What was designed/tested + which MVP requirements it fulfills;
-restate headline metrics at full precision; three future-work themes (Tom-side validation /
-head-error; Mohamed-side code-splitting / clustering / live backend; joint customer pilot);
-position as first step to customer value.}
+
+We designed and built a national screening platform for micro-hydropower recovery
+at wastewater outfalls, and tested it end to end on the full United States fleet.
+The system ingests federal discharge records and national elevation data, converts
+them into a flow duration curve and a net head for every plant it can, samples an
+energy estimate with an explicit uncertainty band, selects a machine from a vendor
+catalogue, builds a thirty-year financial scorecard, calibrates the energy result
+against measured capacity factors from real operating plants, and publishes the
+outcome as a single deterministic data contract that a static web application
+renders as an interactive national map. Measured against the minimum viable
+product WOWERS would need, that fulfils the screening requirement, the ranking
+requirement, the bounded-estimate requirement, and the delivery requirement. It
+does not fulfil the validation requirement, and Chapter~5 is explicit about why.
+
+The demonstration screened 17{,}148 publicly owned treatment works and carried
+5{,}464 of them through the energy model, 4{,}860 through head estimation, and
+3{,}778 through turbine selection to a full financial scorecard, of which 1{,}138
+clear a viability gate of positive net present value, payback within twenty years,
+and a real internal rate of return. Those 1{,}138 sites represent 58.59~MW of
+rated capacity and 409.17~GWh/yr under the model's own assumptions, against
+\$211.33M of capital cost, \$41.23M/yr of revenue, a portfolio net present value
+of \$310.13M, and a median payback of 9.83~yr. Benchmarked against 629 real
+small-hydro plants over 9{,}798 plant-years, the same portfolio bounds to a
+conservative floor of 118.9--194.4~GWh/yr and a plausible central estimate of
+281.4~GWh/yr, and re-scoring every site through the cash-flow model at that
+central capacity factor leaves 439 sites viable and \$152.64M of net present
+value. The headline this work stands behind is the band and not its upper end.
+
+Three themes would carry the platform from a screen to a product: replacing
+modelled head with measured head, turning the delivery layer from a static file
+into a service, and validating the whole chain against a real installation.
+
+The first theme is the one that matters most, because head is both the input the
+model cannot measure and the input the answer depends on most. Across the scored
+fleet, net head is the dominant sensitivity at 2{,}803 of 3{,}778 sites, and
+halving it turns the portfolio net present value negative. The elevation
+difference the platform uses has a published vertical accuracy of 2.44~m RMSE at
+each of the two points it differences, while the median accepted head is 4.144~m,
+and 360 project-viable sites carry no elevation-derived head at all --- they still
+run on a literature archetype and hold 27.0~\% of the portfolio energy. Three
+specific changes would close this. Snapping each outfall coordinate onto the
+nearest National Hydrography Dataset flowline would fix the 1{,}203 sites whose
+outfall currently resolves above their plant, which is physically impossible for a
+gravity outfall. Computing a per-site head error bound, rather than the fleet-level
+argument this work gives, would let each site carry an honest interval instead of
+a point. And surveying a sample of outfall inverts would establish whether the
+elevation proxy is biased or merely noisy, which is currently unknown.
+
+The second theme is the delivery layer. The dashboard reads a single 6.13~MB
+GeoJSON file and derives every view from it in the browser, which is the right
+architecture at 3{,}778 sites and the wrong one an order of magnitude above that.
+The specific work is to split the client bundle so the mapping library loads
+independently of the application shell, to cluster map markers so dense regions
+stay legible and responsive, and to replace the static file with a query service
+so a client fetches the state it is looking at rather than the whole country. The
+data contract should also carry a schema version, which it currently does not, so
+that a renamed property fails loudly at the consumer rather than silently.
+
+The third theme is validation, and it is the one that requires leaving the desk.
+No WOWERS site has been instrumented, and the machine-learning path that would
+have learned a correction from measured generation was abandoned because the
+labels do not exist: an exhaustive search of federal sources returned eleven new
+conduit-scale plants against a threshold of fifty, none of them wastewater, and
+the single true wastewater installation in the national inventory has been offline
+since 2018. That is a data-availability finding rather than a modelling failure,
+and only a field programme resolves it. A single pilot --- one instrumented
+outfall at a plant from the shortlist, reporting head, flow, and generation for a
+year --- would convert the calibration band from a substituted assumption into a
+measurement, and would be worth more to this platform than any further modelling
+work.
+
+What this work delivers is the first step toward customer value rather than the
+finished service: a defensible, reproducible, national answer to the question of
+which wastewater treatment plants are worth a feasibility study, delivered at a
+marginal cost per site of approximately zero, with its uncertainty stated in the
+open. The screen is the part of WOWERS that had to be de-risked first, because
+everything the venture proposes to sell depends on it being credible. It now is,
+within bounds this document names precisely.
 
 % =====================================================================
 % REFERENCES  (IEEE-adjacent, numbered by first appearance; target 40-50)
