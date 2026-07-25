@@ -573,3 +573,18 @@ Any draft that cites these must match exactly (P2-SEED re-baseline):
 
 **Next work package suggested:**
 - J1 · Ch3 Business Model (~2,300 w) — needs both authors in the room. J4 and J5 remain gated on Mohamed's M1 and M2 per the §6 combine gate.
+
+### Session: 2026-07-25 — Acronym expansion at first use — Tom
+
+**Work package:** Editorial fix (not a new WP)
+
+**What was changed:**
+- The thesis never expanded WOWERS anywhere: not on the title page, not in Chapter 1, not in Chapter 2. Added the expansion at first use in the Chapter 1 proposal paragraph — "a company, WOWERS --- the Waste Outfall Water Energy Recovery System ---".
+- Form used is **Recovery**, not Recovering. Tom stated the name as "Waste Outfall Water Energy Recovering System" in conversation, but every existing occurrence in the repository uses Recovery: `ARCHITECTURE.md:5`, `SETUP.md:3`, `pyproject.toml:8`, `config/settings.yaml:3`, and `WOWERS_PROJECT_JOURNAL.md:51`. Recovery is also the standard construction. Flagged to Tom; if the official Fowler-registered name really is Recovering, six occurrences change together, not one.
+
+**Verification:**
+- `tectonic -X compile thesis_tom.tex` → 0 errors, 0 undefined references, 85 pages.
+
+**Open items / follow-ups:**
+- J5 must carry the expansion into the abstract on first use there as well, since the abstract is read standalone. The title page keeps the bare acronym followed by the descriptive subtitle, which is conventional and needs no change.
+- If a List of Abbreviations is ever added at J5, WOWERS, POTW, DMR, NPDES, FDC, EHA, and BCM are the candidates.
