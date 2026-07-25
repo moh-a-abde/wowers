@@ -5871,3 +5871,102 @@ Assessment of what the repo already provides for a research paper vs. what still
 4. Paper track unchanged.
 
 ---
+
+### Session: 2026-07-25 — Measured conduit CF found in our own rejected Phase-5 data; central tier demoted to optimistic — Tom
+
+**What was done:**
+Started as a thesis citation fix and turned into a substantive calibration finding. Chasing
+the weakest reference in the draft (`\bibitem{lucidpipe}`, "project documentation and press
+materials") produced three corrections and then exposed a real evidence gap in the CF
+calibration band.
+
+**1. The LucidPipe anchor was wrong in three ways.**
+- **Wrong project.** We had it as the "Bull Run transmission main". It is the **Conduit 3
+  Hydroelectric Project**, FERC docket **P-14498**, on a pipeline at SE 147th Ave / SE Powell
+  Blvd, Portland. Bull Run is a separate, much larger conventional plant. The error was in
+  `cf_calibration.py:WWTP_INSTALLS`, in `CF_CALIBRATION_REPORT.md`, and in the thesis.
+- **"Measured" was false.** We computed a *measured* CF of 0.628 from 1,100 MWh/yr ÷ 200 kW.
+  Both figures are design projections. FERC's 2013 filing gives **170 kW / 1,200 MWh/yr
+  estimated**; as-built trade reporting gives **200 kW / 1,100 MWh/yr expected**. The four
+  pairings span CF **0.628–0.806**. No metered figure exists for this plant anywhere, because
+  at 170–200 kW it is below the 1 MW Form EIA-923 reporting threshold — the same reporting gap
+  that killed Phase 5.
+- **Internal contradiction.** Ch2 said CF 0.60 was "5 % below" 0.628; Ch4 said "about 4 %".
+  True value 4.46 %. Percentage framing dropped entirely.
+
+**2. The real finding: we already had measured conduit CF and never used it for calibration.**
+`data/raw/ground_truth/ferc_conduit_candidates.parquet` — 115 EHA Canal/Conduit plants with
+metered EIA-923 generation. Gathered during the Jul-4 Phase-5 label hunt, rejected there
+because only 11 of 115 were *new* (gate wanted 50) and none carried head/flow.
+
+**That rejection was correct for ML and wrong for calibration.** Newness is irrelevant to a
+capacity-factor benchmark and head/flow are not CF inputs. The 103 "already owned" plants are
+perfectly good calibration evidence. They were never routed into `cf_calibration.py`, which
+benchmarked only against EHA *river* hydro plus the single LucidPipe projection.
+
+What the data says:
+
+| Bucket | n | CF |
+|---|---|---|
+| All metered Canal/Conduit | 115 | p25 0.1337, **median 0.2439**, p75 0.3410 |
+| R E Badger Filtration, CA | 1,400 kW / 297 MWh (2013) | **0.0242** |
+| Ruxton Park, CO | 1,000 kW / 1,388 MWh (2022) | **0.1584** |
+| Point Loma, CA *(treated wastewater)* | 1,500 kW / 2,515 MWh (2017) | **0.1914** |
+| Manitou Springs, CO | 5,600 kW / 18,102 MWh (2022) | **0.3690** |
+
+Point Loma is the only metered treated-wastewater conduit plant in the country and therefore
+the single most on-point number in the whole calibration. It sits at 0.1914, not near 0.60.
+Note we had already flagged Point Loma as offline since 2018 and unusable as an *ML label*;
+its 2017 metered year is still perfectly valid as a *CF datapoint*. Two different questions.
+
+**3. The scale defense fails.** "Small plants run higher CF" would rescue 0.60. Tested it:
+Pearson r(log10 nameplate, CF) = **+0.093** across the 115, and the smallest quartile
+(500–1,800 kW) has the *lowest* median CF at 0.2101. No downward-scale trend to extrapolate
+along. So CF 0.60 at a 12.96 kW median site rests on an argument from design (we size rated
+flow on the measured FDC; a retrofit inherits whatever nameplate the installer picked), not
+on evidence. That argument is plausible and untested, and is now labeled as such.
+
+**4. The good half — the floor is now double-sourced.** Metered conduit median 0.2439 maps to
+**114.4 GWh/yr** against **118.9 GWh/yr** from the EHA river-hydro first quartile. Two datasets
+sharing no plants and no methodology, agreeing to **4.51 GWh/yr**. That is the strongest
+evidential result in the calibration and we were not claiming it.
+
+**Decision taken (Tom, this session): re-label, do not re-center.** CF 0.60 is retained at
+0.60 and demoted from "plausible central" to an explicitly **optimistic scenario**. Rejected
+re-centering on ~0.24 because n=4 for the on-point analogs, Badger's 0.0242 (297 MWh from
+1,400 kW) looks like a partial or curtailed year, and the seasonality argument is legitimate
+for the 111 irrigation canals — re-centering on n=4 repeats the same error at a different
+number. Widening the reported band floor from 118.9 to the 89.8 GWh/yr Point Loma implies is
+**deferred**, not rejected.
+
+**Consequence: zero recomputation.** `config/settings.yaml` `phase4.cf_calibration`
+multipliers (0.291 / 0.447 / 0.688) are **unchanged**, so no Phase-4 re-run, no re-export, no
+geojson change, and every headline number stands: 409.17 GWh/yr, 281.4 / 281.51, $310.13M,
+$152.64M, $136.65M, 9.83 yr, 58.59 MW, the 1,138 / 439 / 129 / 27 tier counts. Verified
+`data/`, `config/`, `src/` all untouched by this session.
+
+**Files modified:**
+- `scripts/cf_calibration.py` — corrected the Conduit 3 anchor entry (name, FERC docket,
+  projection caveat, 0.628–0.806 range); new pure function `conduit_cf_stats()`; new
+  `_load_conduit()`; new `--conduit` CLI flag; new `[4b]` report section printing the metered
+  buckets, the four on-point plants, and the CF-vs-capacity scale test; `calibration_band()`
+  tier label "Central (WWTP-appropriate)" → "Optimistic (Conduit 3 proj.)"; headline summary
+  rewritten to lead with the double-sourced floor and to warn before the 281 GWh figure is
+  cited. Read-only contract preserved and re-verified.
+- `thesis/thesis_tom.tex` — see the thesis journal entry for the prose detail.
+- `thesis/THESIS_JOURNAL.md`, `WOWERS_PROJECT_JOURNAL.md` — entries.
+
+**Open / next steps:**
+1. **`CF_CALIBRATION_REPORT.md` is now stale** — it still carries the Bull Run name, the
+   "measured 0.628" claim, and the three-tier framing with 0.60 as central. Regenerate or
+   annotate it. It is an internal artifact and never cited in the thesis, so this is not
+   urgent, but leaving a wrong project name in it invites the error back.
+2. **`FERC_CONDUIT_LABEL_REPORT.md`** should gain a note that the 115 plants it correctly
+   rejected as ML labels are valid CF-calibration evidence, so the next person does not
+   re-reject them for the wrong reason.
+3. **Band-floor decision deferred** — whether to report 89.8–281 rather than 118.9–281. Needs
+   Tom + advisor. If taken, it is a one-line `settings.yaml` change plus a re-export, not a
+   pipeline run.
+4. **Worth asking the advisor** whether one instrumented pilot outfall (already Ch6 future
+   work) should be reframed as the thing that resolves the central tier specifically, since
+   that is now the single weakest link in the headline.
