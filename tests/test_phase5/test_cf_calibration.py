@@ -9,6 +9,7 @@ Coverage:
   - filter_clean_hy: HY filter, CF bounds, Capacity_MW floor
   - bucket_stats: correct p-tiles, plant/plant-year counts, year filter
   - calibration_band: multiplier math, monotonicity, 5-row output
+  - conduit_cf_stats: metered conduit CF, municipal subset, scale-trend reporting
   - phase2_viable_cf_stats: join + headline GWh computation
   - recompute_validation: |diff| statistics
 
@@ -32,6 +33,7 @@ from cf_calibration import (
     filter_clean_hy,
     bucket_stats,
     calibration_band,
+    conduit_cf_stats,
     phase2_viable_cf_stats,
     recompute_validation,
     _DEFAULT_EHA_DIR,
@@ -256,26 +258,114 @@ class TestCalibrationBand:
         assert p25_row["multiplier"] == pytest.approx(0.5, rel=1e-3)
         assert p25_row["gwh"] == pytest.approx(50.0, rel=1e-3)
 
-    def test_monotonicity_floor_le_central_le_ceiling(self):
+    def test_monotonicity_floor_le_optimistic_le_ceiling(self):
         band = calibration_band(409.1, 0.872, self._empirical(), WWTP_CENTRAL_CF)
         gwh_by_tier = {r["tier"]: r["gwh"] for r in band}
-        floor_min = gwh_by_tier["Floor (river-hydro p25)"]
-        floor_med = gwh_by_tier["Floor (river-hydro p50)"]
-        floor_max = gwh_by_tier["Floor (river-hydro p75)"]
-        central   = gwh_by_tier["Central (WWTP-appropriate)"]
-        ceiling   = gwh_by_tier["Physics ceiling (Phase 2)"]
-        assert floor_min <= floor_med <= floor_max <= central <= ceiling
+        floor_min  = gwh_by_tier["Floor (river-hydro p25)"]
+        floor_med  = gwh_by_tier["Floor (river-hydro p50)"]
+        floor_max  = gwh_by_tier["Floor (river-hydro p75)"]
+        # Tier relabelled 2026-07-25: "Central (WWTP-appropriate)" → "Optimistic
+        # (Conduit 3 proj.)". The CF value is unchanged at 0.60; only the label moved,
+        # because the tier rests on a design projection rather than a measurement.
+        optimistic = gwh_by_tier["Optimistic (Conduit 3 proj.)"]
+        ceiling    = gwh_by_tier["Physics ceiling (Phase 2)"]
+        assert floor_min <= floor_med <= floor_max <= optimistic <= ceiling
 
     def test_physics_ceiling_equals_headline(self):
         band = calibration_band(400.0, 0.80, self._empirical(), 0.60)
         ceiling = [r for r in band if "ceiling" in r["tier"].lower()][0]
         assert ceiling["gwh"] == pytest.approx(400.0, rel=1e-4)
 
-    def test_central_above_floor_p50(self):
+    def test_optimistic_above_floor_p50(self):
         band = calibration_band(409.1, 0.872, self._empirical(), WWTP_CENTRAL_CF)
-        p50_gwh   = [r["gwh"] for r in band if "p50" in r["tier"]][0]
-        central   = [r["gwh"] for r in band if "Central" in r["tier"]][0]
-        assert central > p50_gwh
+        p50_gwh    = [r["gwh"] for r in band if "p50" in r["tier"]][0]
+        optimistic = [r["gwh"] for r in band if "Optimistic" in r["tier"]][0]
+        assert optimistic > p50_gwh
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# conduit_cf_stats  (added 2026-07-25 with the measured-conduit calibration tier)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestConduitCfStats:
+
+    def _frame(self) -> pl.DataFrame:
+        """Four plants: two municipal, two canal. CF = energy / (kw × 8760).
+
+        Capacities differ so the scale-trend correlation is defined; the frame
+        deliberately omits the descriptive columns (state, source_year,
+        water_source) to prove the function does not require them.
+        """
+        return pl.DataFrame([
+            # 1000 kW × 8760 = 8,760,000 → CF 0.10
+            {"site_name": "Muni A", "capacity_kw": 1000.0,
+             "annual_energy_kwh": 876_000.0, "is_wwtp_type": True},
+            # 2000 kW → CF 0.20
+            {"site_name": "Muni B", "capacity_kw": 2000.0,
+             "annual_energy_kwh": 3_504_000.0, "is_wwtp_type": True},
+            # 4000 kW → CF 0.30
+            {"site_name": "Canal A", "capacity_kw": 4000.0,
+             "annual_energy_kwh": 10_512_000.0, "is_wwtp_type": False},
+            # 8000 kW → CF 0.40
+            {"site_name": "Canal B", "capacity_kw": 8000.0,
+             "annual_energy_kwh": 28_032_000.0, "is_wwtp_type": False},
+        ])
+
+    def test_cf_formula_and_counts(self):
+        s = conduit_cf_stats(self._frame())
+        assert s["all"]["n"] == 4
+        assert s["municipal"]["n"] == 2
+        # median of 0.10/0.20/0.30/0.40 lands between the two middle values
+        assert 0.20 <= s["all"]["p50"] <= 0.30
+
+    def test_municipal_subset_is_the_wwtp_rows_only(self):
+        s = conduit_cf_stats(self._frame())
+        # municipal rows are CF 0.10 and 0.20, so the subset mean is 0.15
+        assert s["municipal"]["mean"] == pytest.approx(0.15, rel=1e-6)
+
+    def test_drops_out_of_range_cf(self):
+        """Rows outside (0, CF_DROP_ABOVE] are dropped, matching filter_clean_hy."""
+        bad = pl.DataFrame([
+            {"site_name": "Zero", "capacity_kw": 1000.0,
+             "annual_energy_kwh": 0.0, "is_wwtp_type": False},
+            {"site_name": "Impossible", "capacity_kw": 1000.0,
+             "annual_energy_kwh": 99_000_000.0, "is_wwtp_type": False},
+            {"site_name": "Good", "capacity_kw": 1000.0,
+             "annual_energy_kwh": 1_752_000.0, "is_wwtp_type": False},
+        ])
+        s = conduit_cf_stats(bad)
+        assert s["all"]["n"] == 1
+        # none of those rows are municipal, so that subset is empty; polars returns
+        # None from quantile() on an empty series and must not reach float()
+        assert s["municipal"]["n"] == 0
+        assert s["municipal"]["p50"] is None
+
+    def test_reports_scale_trend_and_quartiles(self):
+        """The scale test must be reported, since it is what rules out extrapolating
+        the 0.60 tier down to WOWERS scale."""
+        s = conduit_cf_stats(self._frame())
+        assert -1.0 <= s["corr_logkw_cf"] <= 1.0
+        assert len(s["quartiles"]) == 4
+        assert sum(q["n"] for q in s["quartiles"]) >= s["all"]["n"]
+
+    def test_correlation_is_none_when_undefined(self):
+        """Constant capacity leaves the correlation undefined. It must come back as
+        None rather than NaN, because the caller prints a caveat off the back of it
+        and a NaN comparison would silently suppress that caveat."""
+        flat = pl.DataFrame([
+            {"site_name": "A", "capacity_kw": 1000.0,
+             "annual_energy_kwh": 876_000.0, "is_wwtp_type": False},
+            {"site_name": "B", "capacity_kw": 1000.0,
+             "annual_energy_kwh": 1_752_000.0, "is_wwtp_type": False},
+            {"site_name": "C", "capacity_kw": 1000.0,
+             "annual_energy_kwh": 2_628_000.0, "is_wwtp_type": False},
+        ])
+        assert conduit_cf_stats(flat)["corr_logkw_cf"] is None
+
+    def test_muni_rows_sorted_ascending_by_cf(self):
+        s = conduit_cf_stats(self._frame())
+        cfs = s["muni_rows"]["cf"].to_list()
+        assert cfs == sorted(cfs)
 
 
 # ══════════════════════════════════════════════════════════════════════════════

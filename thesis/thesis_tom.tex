@@ -151,7 +151,7 @@ government controls. The publicly owned treatment works of the United States dra
 on the order of 30.2~TWh/yr, close to 0.8~\% of national electricity
 consumption~\cite{epri2013}, and for many municipalities the treatment plant is
 the single largest line on the utility bill. Those same plants discharge treated
-effluent continuously, day and night, through outfalls that drop several metres
+effluent continuously, day and night, through outfalls that drop several meters
 into a receiving river or estuary. The energy in that drop is real, it is
 recoverable with machines that already exist, and at almost every plant in the
 country it is currently dissipated as turbulence and heat. Recovering even a
@@ -175,8 +175,8 @@ money per site to answer a yes-or-no question cannot be run across the fleet. Th
 constraint is not turbine technology or capital availability. It is the cost of
 finding out, and it is a screening problem rather than an engineering one.
 
-We propose the creation of a company, WOWERS --- the Waste Outfall Water Energy
-Recovery System --- to solve that screening problem as an
+We propose the creation of a company, WOWERS (the Waste Outfall Water Energy
+Recovery System), to solve that screening problem as an
 infrastructure-intelligence service: a platform that identifies, ranks, and bounds
 micro-hydropower recovery opportunities at wastewater outfalls nationally, from
 public data, before anyone visits a site. The proposition is that the first
@@ -202,14 +202,14 @@ than months.
 
 The development required to reach that end state is substantial, and it divides
 into two tracks. The technical development covers data acquisition and cleaning
-from federal regulatory sources, the physical and financial modelling chain, the
+from federal regulatory sources, the physical and financial modeling chain, the
 calibration of that chain against real operating plants, the serving layer that
 publishes results, and the interface a customer uses. The logistical development
 covers everything the technology does not touch: customer discovery with
 municipalities and developers, the regulatory pathway through FERC conduit
 exemptions, relationships with turbine manufacturers and installers, financing
 structures for municipal customers who cannot carry capital cost, and the field
-validation programme that would eventually replace modelled head with measured
+validation program that would eventually replace modeled head with measured
 head. This work will discuss the business model of WOWERS with additional focus on
 the first steps in its technical development.
 
@@ -238,9 +238,9 @@ the bulk of the work: the system overview, the acquisition of regulatory and
 elevation data, the four-phase processing pipeline from flow features through
 Monte-Carlo energy, head estimation, turbine selection and project economics, the
 calibration and validation work including the machine-learning path that was
-abandoned, the export layer, and the visualisation system. Chapter~5 reports what
+abandoned, the export layer, and the visualization system. Chapter~5 reports what
 the platform produced --- best-case and calibrated performance, the exclusion
-funnel and its defence, energy and financial results, the capacity-factor
+funnel and its defense, energy and financial results, the capacity-factor
 calibration, the machine-learning negative result, frontend performance, and the
 end-to-end integration test. Chapter~6 concludes and names the work that would
 carry the platform from a screen to a validated product. Three appendices carry
@@ -303,15 +303,20 @@ seasonal drought, peak sizing, and environmental-flow bypasses~\cite{hydrosource
 WWTP outfalls track municipal demand, typically varying only $\pm$15--25\% seasonally, and
 have no ecological minimum-flow reservation on the effluent itself. Applying the river
 median CF to a continuous municipal conduit therefore understates recoverable energy by
-roughly a factor of two relative to a WWTP-appropriate CF near 0.60, the central
-tier we adopt after anchoring to LucidPipe~\cite{lucidpipe}.
+roughly a factor of two relative to a WWTP-appropriate CF near 0.60, the
+optimistic upper tier we adopt after anchoring to the Portland Conduit~3 in-pipe
+installation~\cite{ferc_p14498, lucidpipe}. That anchor is a design projection
+rather than a measurement, and Section~4.4.1 sets it against the metered conduit
+plants that sit well below it.
 
 Debris fouling, minimum-flow cutoffs, and maintenance downtime constitute the fourth
 limitation. Physics ceilings that integrate $\eta\rho g Q H$ over a flow-duration curve
 with high availability (implied CF near 0.87 in the WOWERS Phase~2 P50 ceiling of
 409.2~GWh/yr) omit screens clogging, grit abrasion in wastewater, and planned outages.
-Even the best-documented continuous-conduit anchor---LucidPipe Portland at measured CF
-0.628---already sits well below a pure physics ceiling~\cite{lucidpipe}. Expecting
+The best-documented continuous-conduit anchor, the Portland Conduit~3 in-pipe
+installation, carries a design capacity factor between 0.628 and 0.806 depending on which
+filed and as-built figures are paired, and every value in that range sits below a pure
+physics ceiling~\cite{ferc_p14498, lucidpipe}. Expecting
 fleet-wide CF above about 0.65 without site-specific O\&M modeling is not supported by
 published installs.
 
@@ -339,13 +344,20 @@ commercial lines illustrate what practitioners already do well, which of the six
 limitations they address, and which they leave open.
 
 LucidEnergy's LucidPipe system places spherical in-pipe turbines in large-diameter
-pressurized transmission mains (approximately 24--96~in). The flagship Portland, Oregon,
-installation on the Bull Run drinking-water main deploys four 42~in machines for 200~kW
-nameplate capacity and reports 1,100~MWh/yr of generation, implying a measured capacity
-factor of $1{,}100{,}000/(200\times 8{,}760)=0.628$~\cite{lucidpipe}. That project
-demonstrates continuous municipal-conduit duty cycles with CF well above river-hydro
-medians, and it catches limitation~(3) by proving the WWTP/conduit CF argument in the
-field. It does not catch limitations~(1),~(5), or~(6) for the national WWTP fleet: head and
+pressurized transmission mains (approximately 24--96~in). The flagship installation is the
+Conduit~3 Hydroelectric Project in Portland, Oregon, developed with the Portland Water
+Bureau under Federal Energy Regulatory Commission docket P-14498. The 2013 application
+describes four customized pipe sections, each holding a sealed vertical turbine unit, at a
+total nameplate capacity of 170~kW and an estimated 1,200~MWh/yr~\cite{ferc_p14498}, while
+the as-built system is reported at 200~kW across four 42~in machines and an expected
+1,100~MWh/yr~\cite{lucidpipe}. Both energy figures are design estimates rather than metered
+output: the plant sits below the 1~MW threshold at which generators file Form
+EIA-923~\cite{eia923}, so no public annual generation record exists for it. Pairing the
+filed and as-built figures gives an implied capacity factor between
+$1{,}100{,}000/(200\times 8{,}760)=0.628$ and $1{,}200{,}000/(170\times 8{,}760)=0.806$.
+That project demonstrates that continuous municipal-conduit duty is designed and financed
+at capacity factors well above river-hydro medians, and it addresses limitation~(3) in an
+operating installation, though on projected rather than metered generation. It does not catch limitations~(1),~(5), or~(6) for the national WWTP fleet: head and
 flow are known because the utility already operates the main, and the project was
 originated as a single utility partnership rather than from a ranked national list. The
 hydraulic regime is also drinking water rather than wastewater, so debris and corrosion
@@ -461,8 +473,13 @@ calibration source available without site visits. Restricting to the 0.1--5~MW c
 floor} for any small-hydro claim. They incorrectly describe WWTP duty cycles if used as a
 central estimate, because seasonal river drivers listed in Section~2.1 do not apply to
 municipal effluent. The WOWERS calibration therefore keeps the EHA floor (119--194~GWh/yr
-depending on percentile and MW sub-bucket) and adds a WWTP-appropriate central tier at
-CF~0.60 (281~GWh/yr) anchored 5\% below LucidPipe's measured 0.628~\cite{lucidpipe}.
+depending on percentile and MW sub-bucket) and adds a WWTP-appropriate optimistic tier at
+CF~0.60 (281~GWh/yr), set below the 0.628--0.806 range implied by the Portland Conduit~3
+filed and as-built figures~\cite{ferc_p14498, lucidpipe}. Because those figures are
+projections rather than metered output, the same section benchmarks them against the 115
+EHA Canal/Conduit plants that do report measured generation to
+EIA-923~\cite{hydrosource_eha, eia923}, whose median capacity factor of 0.2439
+corroborates the floor and undercuts the upper tier.
 
 ORNL conduit and canal work, including municipal conduit install-cost samples and the
 baseload cost model (BCM) canal/conduit installed-capital-cost equation, improves CapEx
@@ -551,6 +568,30 @@ NPV/IRR/payback gates that define the project-viable cohort. The P2-SEED re-base
 that Chapter~5 reports screens 17,148 POTWs and retains 1,138 project-viable sites
 with a physics ceiling of 409.2~GWh/yr, a calibrated band of 119--281~GWh/yr,
 portfolio NPV of \$310.1M, and median payback of 9.8~yr.
+
+The same pipeline is shown as a build process in Figure~\ref{fig:dataflow}, with one
+swim lane per phase naming the modules that run in it, the parquet each lane writes,
+and the number of plants surviving at the lane boundary. Figure~\ref{fig:statemachine}
+gives the complementary view from a single plant's perspective: the states one site
+passes through, the transition that carries it forward, and the terminal state it
+reaches if it is excluded. Both figures are generated from the parquets themselves, so
+their counts cannot drift from the run they describe.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig12_pipeline_dataflow.png}
+  \caption{Build-process flowchart of the four-phase pipeline and export layer, with
+  one swim lane per phase and the plant count surviving at each lane boundary}
+  \label{fig:dataflow}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig13_site_state_machine.png}
+  \caption{Screening state machine for a single plant, with named states, labeled
+  transitions, and the terminal exclusion state recorded by the pipeline}
+  \label{fig:statemachine}
+\end{figure}
 
 Configuration is centralized in \texttt{config/settings.yaml} (URLs, fiscal-year
 list, sanity caps, ranking weights, physics constants, cost-model coefficients).
@@ -677,7 +718,7 @@ but were already identified in Chapter~2 as a ranking risk. Offline tiles add
 licensing and batch GIS overhead without improving the first national pass.
 EPQS won for rebuildability: \texttt{src/phase3/elevation.py} queries
 \texttt{https://epqs.nationalmap.gov/v1/json} with \texttt{httpx}/\texttt{asyncio},
-honours \texttt{phase3.max\_concurrent\_requests} and \texttt{request\_delay\_s},
+honors \texttt{phase3.max\_concurrent\_requests} and \texttt{request\_delay\_s},
 caches JSON under \texttt{data/elevation\_cache/} keyed by rounded lat/lon, and
 treats the EPQS ocean sentinel $-1{,}000{,}000$ as a failed query~\cite{usgs_3dep}.
 Outfall coordinates, when present in
@@ -690,7 +731,7 @@ Section~4.3.4.
 Calibration and ground-truth acquisition compared (A)~no empirical CF check,
 (B)~vendor case sheets only, and (C)~DOE HydroSource EHA annual capacity-factor
 tables plus EIA-860/923 conventional-hydro generation. Option~(C) won for the
-floor and central band reported in Chapter~2: EHA supplies 629 plants /
+calibration band reported in Chapter~2: EHA supplies 629 plants /
 9{,}798 plant-years in the 0.1--5~MW class, ingested via
 \texttt{ground\_truth.py} / \texttt{cf\_calibration.py} from
 \texttt{ORNL\_EHAHydroPlant\_PublicFY2024.xlsx} and
@@ -722,9 +763,9 @@ position in the national candidate list, an annual-energy estimate carrying its
 own uncertainty, a net head, a matched turbine, and a financial scorecard. It is
 implemented as four sequential phases, each writing a parquet file that the next
 phase reads, so any phase can be re-run without repeating the ones before it.
-Phases~1 and~2 --- filtering, flow features, ranking, and Monte-Carlo energy ---
-are described in Sections~4.3.1 through~4.3.3. Phases~3 and~4 --- head
-estimation, turbine selection, and cost and financial modelling --- follow in
+Phases~1 and~2 (filtering, flow features, ranking, and Monte-Carlo energy)
+are described in Sections~4.3.1 through~4.3.3. Phases~3 and~4 (head
+estimation, turbine selection, and cost and financial modeling) follow in
 Sections~4.3.4 through~4.3.6. Each subsystem is presented in the same order:
 what it is responsible for, the options considered, why the chosen option won,
 how it was built, and the limitations deferred to future work.
@@ -742,7 +783,7 @@ permitted design flow alone, a single scalar available for most plants.
 Option~(B) was the arithmetic mean of the reported monthly average flows.
 Option~(C) was a 20-point flow duration curve (FDC) evaluated at fixed
 exceedance probabilities from 0.01 to 0.95. Option~(A) was rejected because
-design flow is a permit ceiling rather than an observation, and utilisation at
+design flow is a permit ceiling rather than an observation, and utilization at
 U.S.\ plants varies widely enough that a design-flow screen would rank permit
 paperwork rather than water. Option~(B) was rejected because hydropower energy
 is an integral over the whole flow distribution: two plants with the same mean
@@ -805,7 +846,7 @@ instantaneous flow at a plant is higher than any point on the curve, and the
 low-flow tail is correspondingly smoother than reality. Second, the
 primary-outfall rule assumes one outfall carries the recoverable discharge, which
 is wrong for plants that split flow across parallel outfalls. Third, the 75~\%
-utilisation factor applied to \texttt{design\_only} plants is an assumption, not
+utilization factor applied to \texttt{design\_only} plants is an assumption, not
 a measurement; those 2{,}207 plants carry it into every downstream number and are
 flagged by data-quality tier so they can be excluded from any later analysis that
 requires measured flow.
@@ -818,7 +859,7 @@ later validation effort start where the evidence is strongest.
 
 Three options were considered. Option~(A) was ordering by mean flow alone.
 Option~(B) was ordering by a first-pass energy estimate. Option~(C) was a
-weighted composite of several normalised flow features. Option~(A) is a single
+weighted composite of several normalized flow features. Option~(A) is a single
 axis and treats a plant with six months of erratic records identically to one
 with sixteen years of stable records at the same mean. Option~(B) is
 circular at this stage: energy requires head, and head does not exist until
@@ -833,12 +874,12 @@ The weights are given in Table~\ref{tab:rank_weights}.
 \label{tab:rank_weights}
 \begin{tabular}{llr}
 \toprule
-Component & Normalised input & Weight \\
+Component & Normalized input & Weight \\
 \midrule
 Mean flow          & \texttt{mean\_flow\_mgd}, higher is better        & 0.35 \\
 Reliable baseline  & \texttt{p10\_flow\_mgd}, higher is better         & 0.20 \\
 Flow consistency   & \texttt{cv\_flow} capped at 2.0, inverted         & 0.20 \\
-Utilisation        & mean/design ratio capped at 2.0                   & 0.15 \\
+Utilization        & mean/design ratio capped at 2.0                   & 0.15 \\
 Record depth       & \texttt{n\_years\_data}, higher is better         & 0.10 \\
 \midrule
 Total              &                                                   & 1.00 \\
@@ -846,12 +887,12 @@ Total              &                                                   & 1.00 \\
 \end{tabular}
 \end{table}
 
-Implementation is in \texttt{ranking.py}. Each component is min-max normalised
+Implementation is in \texttt{ranking.py}. Each component is min-max normalized
 across the fleet with a $10^{-12}$ term added to the denominator so a degenerate
 column cannot divide by zero, then combined by the weights above, which are
-re-normalised to sum to 1.0 at load so a partial override in
+re-normalized to sum to 1.0 at load so a partial override in
 \texttt{settings.yaml} cannot silently rescale the score. Missing values are
-filled with zero rather than a neutral midpoint, so a plant with no utilisation
+filled with zero rather than a neutral midpoint, so a plant with no utilization
 signal ranks last on that axis instead of scoring as average. Plants whose
 design flow is explicitly zero --- misclassified industrial dischargers that
 carry high DMR flow, of which KYP000044 is the documented example --- have their
@@ -861,9 +902,9 @@ genuine treatment works with incomplete permit records. The final ordinal rank i
 assigned by descending score.
 
 Two limitations are named. The weights are engineering judgment, not fitted
-parameters: no labelled outcome existed to fit them against, which is the same
+parameters: no labeled outcome existed to fit them against, which is the same
 scarcity that ends the machine-learning attempt reported in Section~4.4. And
-because normalisation is fleet-relative, a ranking score is only comparable
+because normalization is fleet-relative, a ranking score is only comparable
 within one pipeline run. Neither limitation propagates into the energy or
 financial results, because ranking is not a gate: all 17{,}148 plants pass to
 Phase~2 regardless of rank, so a mis-weighted score costs review order, not
@@ -873,7 +914,7 @@ exclusion.
 
 Phase~2 is responsible for converting each plant's flow duration curve into an
 annual-energy estimate that carries its own uncertainty, and for excluding plants
-that cannot support a turbine before any per-site network or optimisation work is
+that cannot support a turbine before any per-site network or optimization work is
 spent on them. It applies the hydropower relation of Equation~\eqref{eq:hydro} with
 the constants held in \texttt{settings.yaml}: water density 998.2~kg/m\textsuperscript{3},
 gravitational acceleration 9.81~m/s\textsuperscript{2}, the conversion
@@ -888,7 +929,7 @@ yet, and a point estimate presents an assumption with the same authority as a
 measurement. Option~(B) improves on that but yields three numbers whose
 probability content is undefined --- there is no basis for calling the high
 scenario a P90. Option~(C) won because it produces genuine percentiles from
-stated input distributions, costs about 10~ms per plant once vectorised, and
+stated input distributions, costs about 10~ms per plant once vectorized, and
 makes the uncertainty of the screen reportable rather than implied.
 
 Each iteration draws three independent samples. Head is drawn from a triangular
@@ -990,7 +1031,7 @@ the 1{,}138 plants that survive to project viability in Phase~4 it is 0.872
 (0.856 to 0.883). Part of that is real --- treated wastewater discharge is far
 flatter than river flow --- and part is optimism, because a smooth monthly FDC is
 integrated as though the machine ran at every point on it with no debris, minimum
-flow, or outage modelling. That discrepancy is
+flow, or outage modeling. That discrepancy is
 not corrected inside Phase~2; it is measured against real capacity factors and
 turned into the calibration band in Section~4.4. Head estimation, which removes
 the archetype assumption these energy figures rest on, will now be discussed.
@@ -1025,7 +1066,7 @@ the facility registration point rather than the pipe. Within either source the
 feature numbered \texttt{001} is preferred, then the lowest numeric feature, then
 the first row, and null or geographically implausible coordinates are dropped.
 \texttt{elevation.py} queries the USGS 3DEP Elevation Point Query
-Service~\cite{usgs_3dep} in WGS-84 for elevations in metres, batching through
+Service~\cite{usgs_3dep} in WGS-84 for elevations in meters, batching through
 \texttt{asyncio} and \texttt{httpx} at ten concurrent connections with a 0.5~s
 delay, and caching every response on disk under its coordinate rounded to five
 decimals so re-runs are free and reproducible. Of the 5{,}464 plants entering
@@ -1045,7 +1086,7 @@ projects. A candidate above 1.0~m is accepted unless it diverges from the
 archetype by more than four times the archetype value. That limit was originally
 two, and was raised once it was found to reject legitimate 10--20~m readings at
 Appalachian and mountain-west plants whose real relief exceeds a national median
-by design. Elevation heads are labelled high confidence and archetype heads
+by design. Elevation heads are labeled high confidence and archetype heads
 medium confidence, and both labels travel to the export layer of Section~4.5.
 
 \begin{table}[htbp]
@@ -1078,6 +1119,15 @@ median admits. The 1{,}682 fallbacks decompose into 1{,}203 plants whose outfall
 coordinate sat at or above the plant, 286 with no usable outfall coordinate or
 elevation, and 193 rejected by the divergence limit.
 
+Figure~\ref{fig:headconf} plots the two estimates against each other for the 3,178
+plants where both exist, and it is the clearest statement of why this subsystem is the
+work's largest assumption. The archetype resolves into three vertical stripes because
+it is indexed by design-flow band rather than by site, so it carries no site-specific
+information at all; the elevation estimate disagrees with it in both directions, sitting
+above the one-to-one line at 36.8~\% of plants and at a median ratio of
+$0.77\times$. Neither series is a measurement, and the figure is included so that the
+reader can see the size of the disagreement rather than take the assumption on trust.
+
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/fig03_head_estimation.png}
@@ -1086,12 +1136,20 @@ elevation difference was not used at the remaining sites}
 \label{fig:head}
 \end{figure}
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig15_head_confidence.png}
+\caption{Elevation-derived net head against the archetype head for the same plant, and
+the net-head distribution under each confidence label}
+\label{fig:headconf}
+\end{figure}
+
 Five limitations are named, and the first is why this subsystem is flagged as the
 work's largest assumption. The 1/3~arc-second national elevation data behind the
 query service has a published overall absolute vertical accuracy of 2.44~m RMSE
 against roughly 25{,}000 geodetic control points~\cite{usgs_ned_accuracy}, while
 head here is a \emph{difference} of two such values and the median accepted head
-is 4.144~m. Errors at two points a few hundred metres apart are spatially
+is 4.144~m. Errors at two points a few hundred meters apart are spatially
 correlated, so the error on their difference is smaller than the
 $\sqrt{2} \times 2.44 = 3.45$~m bound independent errors would give, but no
 site-specific error bound was computed, and the honest reading is that per-site
@@ -1106,7 +1164,7 @@ pipe length, diameter, and roughness. Fourth, 1{,}682 plants --- and 360 of the
 1{,}138 project-viable sites of Chapter~5 --- still carry the archetype head, so
 their economics rest on the assumption this phase exists to remove. Fifth, the
 deferred fix for the negative-head cohort is a snap of the outfall coordinate
-onto the nearest National Hydrography Dataset flowline centreline, whose endpoint
+onto the nearest National Hydrography Dataset flowline centerline, whose endpoint
 is always on the receiving stream and therefore always below the plant; it was
 scoped and not built. What this assumption is worth in dollars is quantified in
 Section~4.3.6. Turbine selection, which consumes this head, will now be
@@ -1116,19 +1174,19 @@ discussed.
 
 This subsystem is responsible for choosing a machine class for each plant's
 head-flow operating point, sizing its rated flow, and recomputing annual energy
-with that machine's part-load behaviour rather than the pooled efficiency
+with that machine's part-load behavior rather than the pooled efficiency
 distribution of Phase~2.
 
 Three options were considered. Option~(A) was a single generic machine at fixed
 efficiency. Option~(B) was rule-based type selection from the standard head-flow
 envelope, a type-specific part-load curve, and a sweep over rated flow.
-Option~(C) was per-site optimisation against a catalogue of real machine models.
-Option~(A) was rejected because part-load behaviour is what separates machine
+Option~(C) was per-site optimization against a catalogue of real machine models.
+Option~(A) was rejected because part-load behavior is what separates machine
 classes at these heads --- an in-conduit unit holds a flat 75~\% where a Kaplan
 holds 93~\% at rating --- and the difference compounds over every point of a flow
 duration curve. Option~(C) was rejected because manufacturers publish an
 operating envelope and a price band, not a performance curve per model, so
-optimising against the catalogue would fit vendor marketing rather than physics.
+optimizing against the catalogue would fit vendor marketing rather than physics.
 Option~(B) won because its rules are auditable and it needs nothing the pipeline
 does not already hold.
 
@@ -1142,7 +1200,7 @@ $q = Q/Q_{rated}$: Kaplan follows $-0.30q^2 + 0.60q + 0.63$ capped at 0.93,
 Francis $-0.50q^2 + 0.90q + 0.45$ capped at 0.91 and reaching 0.85 at rating,
 Crossflow $-0.10q^2 + 0.20q + 0.72$ capped at 0.82 and zero below $q = 0.10$,
 Pelton a flat 0.88 above the 0.15 nozzle minimum, and the in-conduit unit a flat
-0.75 above $q = 0.10$. The optimiser sweeps rated flow from 0.3 to 1.0 times
+0.75 above $q = 0.10$. The optimizer sweeps rated flow from 0.3 to 1.0 times
 design flow, integrates $\eta(q)\,\rho g Q H$ over the Phase~1 flow duration
 curve by the trapezoidal rule at each candidate, discards ratings below a 0.40
 capacity factor or 1~kW of rated power, and keeps the rating yielding the most
@@ -1199,7 +1257,7 @@ the selection-rule boundaries, and the rated-power distribution per machine type
 Five limitations are named, and the first is a negative result about our own
 design. The rated-flow sweep is very nearly a no-op: 3{,}771 of 3{,}778 plants
 are rated at 100~\% of design flow, because undersizing raises capacity factor
-but caps the top of the flow duration curve, and against an energy-maximising
+but caps the top of the flow duration curve, and against an energy-maximizing
 objective the full rating almost always wins. The sweep therefore changes the
 answer at seven sites while costing run time at all of them, and is worth keeping
 only once the objective becomes economic rather than energetic --- maximum net
@@ -1207,7 +1265,7 @@ present value would trade clipped energy against a smaller machine --- which is
 deferred. Second, the 1{,}082 head-valid plants that fail here split into 977
 below the 1~kW rated-power floor and 105 below the 0.40 capacity-factor floor;
 seven of the 977 store a rated power that rounds to 1.00~kW in the output file
-but were sized just under the floor, a reporting artefact of writing that column
+but were sized just under the floor, a reporting artifact of writing that column
 at two decimals. Third, the efficiency curves are quadratic fits to published
 hill charts, not vendor-certified performance on screened wastewater, and carry
 no term for debris, screen fouling, or grit wear. Fourth, the manufacturer field
@@ -1285,12 +1343,12 @@ averages~\cite{eia_rates}, and a \$0.01/kWh renewable energy certificate value;
 the median viable site sees \$0.0740/kWh. Net present value is the discounted
 cash-flow sum less capital cost, internal rate of return is solved by Brent's
 method from $-99$~\% to $+300$~\% with explicit sentinels written when no sign
-change exists in that interval, payback is simple and undiscounted, and levelised
+change exists in that interval, payback is simple and undiscounted, and levelized
 cost is capital cost plus the present value of operations over the present value
 of energy. A site is project-viable when net present value is positive, payback is
 20~years or less, and the rate of return is a real solver result rather than a
 sentinel --- that exclusion matters, because a nano-scale project whose return
-pegs above 300~\% is an artefact of a tiny denominator, not an investment. A
+pegs above 300~\% is an artifact of a tiny denominator, not an investment. A
 minimum annual revenue floor of \$20{,}000 previously gated viability; it was
 removed by project decision so sites are judged on cash flow alone, and the lever
 is kept at zero in configuration so the gate stays documented and reversible.
@@ -1328,10 +1386,10 @@ A second finding concerns which cost line decides a micro project. At the median
 plant in the 25~kW cohort the machine costs \$18{,}408 and its installation
 \$3{,}221, against \$5{,}000 of interconnection and \$5{,}000 of permitting.
 Before the conduit and behind-the-meter corrections above, those two lines were
-modelled at \$50{,}000 and \$25{,}000 --- a fixed \$75{,}000 of
+modeled at \$50{,}000 and \$25{,}000 --- a fixed \$75{,}000 of
 balance-of-system overhead at 4.2 times the cost of the turbine, flat with
 respect to size, so it fell hardest on the smallest sites. Correcting them cut
-modelled portfolio capital cost by \$236M and changed the viable count by
+modeled portfolio capital cost by \$236M and changed the viable count by
 nothing, because the binding constraint at that time was the \$20{,}000/yr
 revenue floor: 1{,}026 micro sites passed every cash-flow test and were failed by
 the floor alone. That is the sequence that led to the floor being removed, and the
@@ -1359,14 +1417,14 @@ Total                             & 3{,}778 & 1{,}138 &        &               &
 {\footnotesize Rated power, all-in CapEx, and revenue are per-plant medians.}
 \end{table}
 
-The scored portfolio is summarised by permitting tier in
+The scored portfolio is summarized by permitting tier in
 Table~\ref{tab:tier_econ}. All 3{,}778 sites carry \$353.5M of all-in capital
 cost --- \$181.6M of equipment, \$31.8M of installation, \$82.9M of
 interconnection, \$57.2M of permitting --- against \$4.08M/yr of operations and
 maintenance. The 1{,}138 sites clearing the viability gate carry \$211.3M of that
 capital cost and \$41.23M/yr of revenue, and return a portfolio net present value
 of \$310.1M, a median payback of 9.83~yr, a median rate of return of 9.40~\%, a
-median levelised cost of \$0.0683/kWh, a median equipment cost of \$3{,}676/kW,
+median levelized cost of \$0.0683/kWh, a median equipment cost of \$3{,}676/kW,
 and a median all-in cost of \$5{,}577/kW. Viability concentrates with size: all 42 plants above 250~kW are
 viable, while only 834 of the 3{,}275 plants at or below 25~kW are, though that
 small cohort is 86.7~\% of the scored fleet.
@@ -1374,7 +1432,7 @@ small cohort is 86.7~\% of the scored fleet.
 Sensitivity is computed per site by re-running the model at low and high values of
 three inputs, as shown in Figure~\ref{fig:tornado}. Head and flow are perturbed
 physically rather than by scaling energy: a head perturbation re-runs the
-rated-flow optimiser at the new head, since the best rating moves with head, and a
+rated-flow optimizer at the new head, since the best rating moves with head, and a
 flow perturbation rescales every point of the flow duration curve and
 re-integrates at the original rating, since part-load efficiency makes that
 response non-linear. Only the electricity rate scales linearly. Across the 848
@@ -1382,7 +1440,7 @@ viable sites carrying a measured flow duration curve, a base net present value o
 \$116.51M falls to $-\$17.27$M when head is halved and rises to \$250.29M when
 head is multiplied by 1.5; the same portfolio moves between \$45.53M and
 \$187.49M over a $\pm$30~\% rate range and between \$75.73M and \$133.55M over a
-$\pm$20~\% flow range. Normalised per unit of input change, head dominates at
+$\pm$20~\% flow range. Normalized per unit of input change, head dominates at
 2{,}803 of the 3{,}778 scored sites. This is the price of the Section~4.3.4
 assumption in dollars: the input the pipeline cannot measure is the one the answer
 depends on most.
@@ -1412,7 +1470,7 @@ subsidy. Civil works are excluded by scope, so a site needing a wet well, a
 bypass, or structural work on the outfall is under-costed here. Electricity rates
 are single-year state averages held flat in real terms for 30~years, which
 suppresses both escalation and the tariff structure a municipal customer would
-face. Payback and levelised cost are written with a sentinel value where they are
+face. Payback and levelized cost are written with a sentinel value where they are
 infinite, and a downstream consumer treating that sentinel as a number will
 misread it. Finally, 290 of the 1{,}138 viable sites have no measured flow
 duration curve, so their head and flow sensitivities collapse to the same linear
@@ -1422,7 +1480,7 @@ real generating plants is the subject of Section~4.4.
 
 \section{Calibration and Validation}                     % WP T5 — Tom
 
-Everything reported to this point is modelled. Phases~1--4 turn public records
+Everything reported to this point is modeled. Phases~1--4 turn public records
 into an energy figure and a cash flow for 3{,}778 plants without comparing one
 number against an operating machine, and no WOWERS site has been instrumented.
 This section reports the two attempts made at that comparison: a benchmark of the
@@ -1448,7 +1506,7 @@ where it does not.
 Four options were considered. Option~(A) was direct measurement at a WWTP outfall,
 which is the correct answer and is out of scope for a desk study with no hardware
 budget. Option~(B) was comparison against published national assessments such as
-the DOE hydropower resource work~\cite{doe_vision, ornl2014}; those are modelled
+the DOE hydropower resource work~\cite{doe_vision, ornl2014}; those are modeled
 estimates too, so the comparison would set one model against another and measure
 nothing. Option~(C) was to re-tune the Phase~2 sampling distributions until the
 implied capacity factor matched real plants. Option~(D) was to hold the physics
@@ -1462,7 +1520,7 @@ reversible --- dividing by it returns the physics number.
 
 Where 0.8725 comes from is worth stating before it is benchmarked, because part
 of it is defensible. It decomposes as availability times flow-duration-curve
-utilisation, $0.943 \times 0.925 = 0.872$. The first term is the mean of the
+utilization, $0.943 \times 0.925 = 0.872$. The first term is the mean of the
 Triangular(0.90, 0.95, 0.98) availability sampled in Section~4.3.3. The second is
 a property of the input data rather than an assumption: municipal discharge
 tracks population, not rainfall, so the duration curve is nearly flat and a
@@ -1480,13 +1538,22 @@ capacity, and hours rather than read from the workbook's own percentage string;
 the two agree to a mean absolute difference of 0.00250 across 23{,}483 rows,
 which is rounding and confirms the arithmetic. Rows are then filtered to
 conventional hydro, capacity of at least 0.1~MW, and a recomputed capacity factor
-above zero and no greater than 1.2, the last two dropping reporting artefacts.
+above zero and no greater than 1.2, the last two dropping reporting artifacts.
 Three buckets are cut: a primary 0.1--5~MW bucket of 629 plants and 9{,}798
 plant-years with a median capacity factor of 0.3902, a 0.1--1~MW bucket closest
 in scale to a WWTP machine at 59 plants and 802 plant-years and 0.4145, and a
 2013--2022 slice of the primary bucket, run as a stability check, at 611 plants
 and 5{,}530 plant-years and 0.3817. The empirical figure is therefore not an
-artefact of a particular decade.
+artifact of a particular decade.
+
+The two distributions are drawn together in Figure~\ref{fig:cfcalib}. They barely
+overlap, and the gap has two causes that must not be conflated. Part of it is
+genuine: river plants are sized for flood flows and idle through droughts, their
+inflow varies by an order of magnitude across a year against roughly 15--25~\%
+for municipal discharge, and many carry license conditions releasing ecological
+minimum flows around the turbine, none of which applies at an outfall. The rest
+is the optimism named above. Because the first part is real, the river-hydro
+figure is treated throughout as a floor and never as a best estimate.
 
 \begin{figure}[htbp]
 \centering
@@ -1496,28 +1563,71 @@ capacity factor implied by the Phase 2 estimate at the 1,138 project-viable site
 \label{fig:cfcalib}
 \end{figure}
 
-The two distributions are drawn together in Figure~\ref{fig:cfcalib}. They barely
-overlap, and the gap has two causes that must not be conflated. Part of it is
-genuine: river plants are sized for flood flows and idle through droughts, their
-inflow varies by an order of magnitude across a year against roughly 15--25~\%
-for municipal discharge, and many carry licence conditions releasing ecological
-minimum flows around the turbine, none of which applies at an outfall. The rest
-is the optimism named above. Because the first part is real, the river-hydro
-figure is treated throughout as a floor and never as a best estimate.
-
-The central tier needs a plant that shares the hydraulics, and one qualifies. The
-LucidPipe installation in Portland, Oregon runs four spherical turbines inside a
-1.07~m drinking-water transmission main at 200~kW installed capacity and a
-reported 1{,}100~MWh/yr~\cite{lucidpipe}, which is a measured capacity factor of
-$1{,}100{,}000 \div (200 \times 8{,}760) = 0.628$. It is drinking water rather
-than wastewater, but the hydraulic case is the same: continuous pressurised
-conduit flow, no seasonal drought, no minimum-flow reservation. The central
-anchor was set at 0.60, about 4~\% below that measured value, to acknowledge that
-one project is a thin basis and that the Phase~2 optimism is real. Rentricity and
+The upper tier needs a plant that shares the hydraulics, and one qualifies. The
+Conduit~3 Hydroelectric Project in Portland, Oregon runs four spherical turbines
+inside a 1.07~m drinking-water transmission main. Its Federal Energy Regulatory
+Commission application under docket P-14498 gives a nameplate capacity of 170~kW
+and an estimated 1{,}200~MWh/yr~\cite{ferc_p14498}; the as-built system is
+reported at 200~kW and an expected 1{,}100~MWh/yr~\cite{lucidpipe}. Those pairs
+imply capacity factors of $1{,}200{,}000 \div (170 \times 8{,}760) = 0.806$ and
+$1{,}100{,}000 \div (200 \times 8{,}760) = 0.628$ respectively. Both are design
+estimates, not metered generation: at 170--200~kW the plant falls below the 1~MW
+threshold for Form EIA-923 reporting~\cite{eia923}, so it has no public annual
+generation record, which is the same reporting gap that ends the Phase~5 effort in
+Section~4.4.2. It is drinking water rather
+than wastewater, but the hydraulic case is the same: continuous pressurized
+conduit flow, no seasonal drought, no minimum-flow reservation. The anchor
+was set at 0.60, below the whole 0.628--0.806 documented range, to
+acknowledge that one project is a thin basis, that its generation figures are
+projections rather than measurements, and that the Phase~2 optimism is real. Rentricity and
 CINK both operate in-conduit machines on potable and wastewater
 systems~\cite{rentricity, cink} and both confirm the operating regime, but
 neither publishes annual energy per site, so they widen confidence in the range
 without setting a number in it.
+
+That anchor is a projection, and the honest question is what measurement says. It
+says something less comfortable. The EHA Canal/Conduit class contains 115 plants whose
+annual generation is metered and filed on Form EIA-923~\cite{hydrosource_eha, eia923},
+and their median capacity factor is 0.2439, which maps to 114.4~GWh/yr on this
+portfolio. Four of those plants carry continuous municipal or wastewater duty rather
+than seasonal irrigation flow, and they are the closest operating analogs to a WWTP
+outfall that exist in the United States: R~E~Badger Filtration Plant at 1{,}400~kW and
+297~MWh in 2013 (CF 0.0242), Ruxton Park at 1{,}000~kW and 1{,}388~MWh in 2022
+(0.1584), Point Loma at 1{,}500~kW and 2{,}515~MWh in 2017 (0.1914), and Manitou
+Springs at 5{,}600~kW and 18{,}102~MWh in 2022 (0.3690). Point Loma is the only
+treated-wastewater conduit plant in the set and therefore the single most on-point
+figure in this entire calibration; it sits at 0.1914, not near 0.60. Three of the four
+fall below 0.20, and the Badger figure is low enough that a partial or curtailed
+reporting year is the likely explanation rather than a genuine annual capacity factor.
+
+Three things follow, and they do not all point the same way. First, the floor tier is
+now supported twice over from independent data: metered conduit plants give
+114.4~GWh/yr against 118.9~GWh/yr from the EHA river-hydro first quartile, a
+4.5~GWh/yr agreement between two datasets that share no plants and no methodology.
+That is the strongest evidential result in this section. Second, the 0.60 tier has no
+measured support at any scale, and the obvious rescue does not work: if capacity factor
+rose as capacity fell, extrapolating upward to a 12.96~kW median site would have an
+empirical basis, but across the metered population the correlation between capacity
+factor and $\log_{10}$ of nameplate is $+0.093$, and the smallest quartile,
+500--1{,}800~kW, has the \emph{lowest} median capacity factor at 0.2101. There is no
+downward-scale trend to extrapolate along. Third, the comparison is nonetheless not
+like for like, and saying so is not special pleading: every metered plant is at least
+500~kW against a WOWERS median viable site of 12.96~kW, so the 0.60 tier is an
+extrapolation two orders of magnitude outside the measured range in either direction,
+and 111 of the 115 plants are seasonal irrigation canal drops whose duty cycle is
+exactly the variability a municipal outfall does not have.
+
+The 0.60 tier is therefore retained but relabeled. It is reported in this work as an
+\emph{optimistic scenario} resting on one project's design projection and on an
+argument from design rather than from evidence: WOWERS sizes rated flow at a point on
+each plant's measured flow duration curve, where a retrofit into an existing main
+inherits whatever nameplate the original installer chose, so a purpose-sized machine
+should hold a higher capacity factor than an oversized one. That argument is plausible
+and it is untested. It is not called a central estimate anywhere in this thesis, and
+the figure this work stands behind is the band rather than its upper end. Deciding
+whether to lower the reported band floor from 118.9 to the 89.8~GWh/yr that Point Loma
+alone implies is deferred, because a single plant is exactly the thin basis this
+paragraph criticizes in the other direction.
 
 \begin{table}[htbp]
 \centering
@@ -1528,10 +1638,12 @@ without setting a number in it.
 \toprule
 Tier & Capacity factor & Multiplier & Energy (GWh/yr) \\
 \midrule
+Measured, Point Loma (WWTP)  & 0.1914 & 0.219 &  89.8 \\
+Measured, all conduit        & 0.2439 & 0.280 & 114.4 \\
 Floor, river-hydro p25       & 0.2535 & 0.291 & 118.9 \\
 Floor, river-hydro p50       & 0.3902 & 0.447 & 183.0 \\
 Floor, river-hydro p75       & 0.5409 & 0.620 & 253.7 \\
-Central, WWTP-appropriate    & 0.6000 & 0.688 & 281.4 \\
+Optimistic, Conduit 3 proj.  & 0.6000 & 0.688 & 281.4 \\
 Physics ceiling, Phase 2     & 0.8725 & 1.000 & 409.2 \\
 \bottomrule
 \end{tabular}
@@ -1539,14 +1651,21 @@ Physics ceiling, Phase 2     & 0.8725 & 1.000 & 409.2 \\
 \vspace{0.4em}
 {\footnotesize Multiplier is the tier capacity factor divided by the Phase 2
 implied median of 0.8725. Floor tiers are the 0.1--5 MW EHA bucket (629 plants,
-9,798 plant-years).}
+9,798 plant-years). Measured tiers are EIA-923 metered generation over nameplate
+for the EHA Canal/Conduit class: the median of 115 metered plants for all conduit,
+and Point Loma, the only metered treated-wastewater conduit plant in the set, on its
+own row because it is the closest single analog to a WWTP outfall. The optimistic
+tier is a design projection, not a measurement; only the measured and floor rows
+rest on metered generation.}
 \end{table}
 
 The band itself is Table~\ref{tab:cfband}, drawn as Figure~\ref{fig:cfband}. Each
 multiplier is the tier's capacity factor divided by 0.8725, applied to the
 409.2~GWh/yr physics figure, and the result is the sentence this work reports: a
-409.2~GWh/yr ceiling, a conservative floor of 118.9--194.4~GWh/yr, and a
-plausible central estimate of 281.4~GWh/yr. The floor is a range because the
+409.2~GWh/yr ceiling, a conservative floor of 118.9--194.4~GWh/yr corroborated
+independently by metered conduit plants at 114.4~GWh/yr, and an optimistic upper
+scenario of 281.4~GWh/yr that rests on a design projection rather than on any
+measurement. The floor is a range because the
 narrower 0.1--1~MW bucket sits above the primary bucket at every percentile,
 giving 125.5 and 194.4~GWh/yr at its first two quartiles against 118.9 and
 183.0~GWh/yr. Section~5.1.4 reports the band as a result and states what it does
@@ -1579,8 +1698,10 @@ the physics number instead of in place of it.
 Five limitations are named. First, the floor imports variability that outfalls do
 not have, so a portfolio held to it is being asked to perform no better than a
 run-of-river plant in a dry year; it is a defensible worst case and nothing
-stronger. Second, the central tier rests on one project, in drinking water, at a
-generation figure this work did not measure. Third, the reference workbook covers
+stronger. Second, the optimistic tier rests on one project, in drinking water, at a
+generation figure this work did not measure, and the four metered municipal-conduit
+plants that could have supported it instead sit between 0.0242 and 0.3690, so the
+tier survives as a scenario and not as an estimate. Third, the reference workbook covers
 plants of about 1~MW and above, so the bucket nearest WWTP scale is 59 plants,
 while the median viable WOWERS machine is rated at 3.80~kW --- three orders of
 magnitude below the calibration set, and the gap is not closed by any data
@@ -1605,7 +1726,7 @@ platform would need in order to become predictive.
 
 Three options were considered. Option~(A) was to train on measured generation at
 conduit and outfall scale, which is the only training set that would transfer to
-the target population. Option~(B) was to train on the labelled fleet actually in
+the target population. Option~(B) was to train on the labeled fleet actually in
 hand --- 1{,}360 plants combined from EIA-860/923 and the EHA inventory,
 1{,}268~EHA and 92~EIA, 250{,}643.66~GWh/yr of measured annual generation --- and
 transfer that model to outfalls. Option~(C) was to use the same fleet as a
@@ -1619,9 +1740,9 @@ generation. The Bureau of Reclamation RISE service was probed first and holds
 water-operations data --- canal stage, reservoir release, dissolved gas --- with
 zero result records against its powerplant-generation parameter and no sub-megawatt
 coverage. The FERC databases were downloaded in full: 222 active conduit
-exemptions, 1{,}016 active licences, and the qualifying-conduit notices of intent
+exemptions, 1{,}016 active licenses, and the qualifying-conduit notices of intent
 created by the Hydropower Regulatory Efficiency Act~\cite{ferc_conduit}. Every one
-of them carries authorised capacity and none carries measured generation, which
+of them carries authorized capacity and none carries measured generation, which
 is structural rather than an oversight: FERC is a permitting system, and operating
 generation is reported instead to the Energy Information Administration on Form
 EIA-923~\cite{eia923}, which is the source the EHA workbook already
@@ -1644,7 +1765,7 @@ replaced. The rest of the wastewater-adjacent labels are three municipal
 drinking-water sites and 111 irrigation canal drops.
 
 The model was killed for four specific reasons, each of which would have to be
-removed before it is worth revisiting. The labelled plants have a median installed
+removed before it is worth revisiting. The labeled plants have a median installed
 capacity of 7{,}700~kW and span 100~kW to 6{,}495~MW, against a target population
 whose median viable machine is 3.80~kW. Head and flow are null in 1{,}360 of the
 1{,}360 labels, because neither EIA nor EHA collects them, so the architecture's
@@ -1672,7 +1793,7 @@ outcome of that run is reported, with its metrics and its caveats, in
 Section~5.1.5.
 
 Three limitations close this subsection. The smoke-test metrics have no product
-significance and are labelled as such wherever they appear. The
+significance and are labeled as such wherever they appear. The
 physics-versus-measured comparison the architecture specified remains un-run and
 will remain so until labels carry head and flow. The unblock is a set of
 sub-megawatt conduit or outfall installations with measured annual energy, and no
@@ -1696,13 +1817,13 @@ a plant collection for the map, a per-state portfolio file, and a per-plant deta
 file. Option~(C) was to ship the parquets to the browser and query them in the
 page. Option~(D) was one static GeoJSON feature collection carrying every
 property, with every view shape derived on the client. Option~(A) was rejected on
-operational cost: a screening artefact that changes only when the pipeline is
+operational cost: a screening artifact that changes only when the pipeline is
 re-run does not justify a server, credentials, and an uptime commitment. Option~(B)
 was rejected from experience with it --- four files computed by four code paths
 drift, and every new column means editing all of them. Option~(C) needs a query
 engine in the browser and still needs a geometry conversion, so it buys nothing at
 this size. Option~(D) won because the frontend then needs no backend at all, the
-artefact is a single git-tracked file that can be diffed and hashed, and one file
+artifact is a single git-tracked file that can be diffed and hashed, and one file
 cannot disagree with itself.
 
 The exporter is \texttt{scripts/export\_geojson.py}. It joins on \texttt{npdes\_id}
@@ -1714,13 +1835,13 @@ is 58 properties per feature, grouped as in Table~\ref{tab:geojson_props}: the
 original 24 that the first map needed, plus 34 added when the four legacy files
 were retired and everything they had computed had to be derivable on the client.
 Geometry is a point in longitude-latitude order as RFC~7946 requires~\cite{rfc7946},
-rounded to five decimals, which is about a metre. Numeric properties are rounded by
+rounded to five decimals, which is about a meter. Numeric properties are rounded by
 class rather than individually: dollars, kilowatt-hours, and counts to whole
-numbers, ratios such as internal rate of return and levelised cost to four
-decimals, and metres, million-gallons-per-day flows, cubic-metres-per-second
+numbers, ratios such as internal rate of return and levelized cost to four
+decimals, and meters, million-gallons-per-day flows, cubic-meters-per-second
 ratings, and efficiencies to one decimal. Any value that is not finite becomes a
 JSON null instead of a \texttt{NaN} token, which is not valid JSON. A \texttt{meta}
-foreign member, permitted by RFC~7946~\S6.1, carries the number of plants analysed,
+foreign member, permitted by RFC~7946~\S6.1, carries the number of plants analyzed,
 the number scored, and a baseline label, and all three are read from parquet row
 counts rather than typed in, so the file cannot claim a provenance its own contents
 contradict.
@@ -1780,15 +1901,15 @@ it draws anything, which is acceptable at 3{,}778 sites and is the wrong shape a
 ten times that; vector tiles or a query service is the named fix, and neither was
 built. The contract has no version field beyond its baseline label, so renaming a
 property breaks consumers silently, and a schema version is the cheapest thing to
-add before anyone else builds on it. Infinite payback and levelised cost are
+add before anyone else builds on it. Infinite payback and levelized cost are
 written as a sentinel value of $10^6$, which occurs 823 times in the scored file
 and never in the viable file; a consumer that treats it as a number reads a
 million-year payback, and the frontend has to guard it explicitly. Regeneration is
 manual --- nothing in the test suite asserts that the tracked files match the
 current parquets, so they can go stale between a pipeline run and a commit.
 Finally, the rounding is deliberately lossy, most consequentially at one decimal
-place on head, so the exported file is a reporting artefact and any reanalysis
-should start from the parquets instead. The visualisation system that consumes
+place on head, so the exported file is a reporting artifact and any reanalysis
+should start from the parquets instead. The visualization system that consumes
 this contract will now be discussed.
 
 \section{Frontend Visualization System}                  % WP M1 — Mohamed [MERGE]
@@ -1812,9 +1933,9 @@ in it. The measured inputs are the discharge records and the elevations: monthly
 flows reported by permit holders to the Environmental Protection
 Agency~\cite{epa_echo} and point elevations returned by the 3DEP query
 service~\cite{usgs_3dep}. Everything downstream --- head, machine choice,
-efficiency, energy, cost, and cash flow --- is modelled, and no WOWERS site has
+efficiency, energy, cost, and cash flow --- is modeled, and no WOWERS site has
 been built or metered. Results are therefore reported as a screen with stated
-bounds, and wherever a modelled figure differs from what a stated assumption
+bounds, and wherever a modeled figure differs from what a stated assumption
 would give, the gap is quantified rather than absorbed.
 
 \subsection{Best Case and Expected System Performance}   % WP T6 — Tom
@@ -1854,7 +1975,7 @@ Total               & 1{,}138 & 58.59 & 0.7972 & 409.17 & 41.23 & 310.13 \\
 \begin{table}[htbp]
 \centering
 \caption{Expected system performance --- the same 1,138 sites at the calibrated
-central capacity factor}
+optimistic-tier capacity factor}
 \label{tab:expected}
 \footnotesize
 \begin{tabular}{@{}lrrrrrr@{}}
@@ -1871,12 +1992,14 @@ Total               & 1{,}138 & 58.59 & 0.5485 & 281.51 & 28.37 & 136.65 \\
 
 \vspace{0.4em}
 {\footnotesize Same sites, same capital cost, energy multiplied by the 0.688
-central calibration factor of Table~\ref{tab:cfband} and every cash flow
-recomputed. Of these 1,138 sites, 439 still clear the viability gate.}
+optimistic-tier calibration factor of Table~\ref{tab:cfband} and every cash flow
+recomputed. Of these 1,138 sites, 439 still clear the viability gate. This is the
+expected case under the most favorable calibration tier; the floor-tier outcomes
+are reported in Table~\ref{tab:rescore}.}
 \end{table}
 
 Table~\ref{tab:expected} is the same portfolio with one assumption changed. Energy
-is multiplied by the 0.688 central calibration factor, revenue follows, and each
+is multiplied by the 0.688 optimistic-tier calibration factor, revenue follows, and each
 site's discounted cash flow is recomputed with capital cost untouched. Energy
 falls to 281.51~GWh/yr and revenue to \$28.37M/yr, both by construction, but net
 present value falls from \$310.13M to \$136.65M, a drop of 55.9~\% against a
@@ -1909,7 +2032,7 @@ Stage & Retained & Dropped & Class of drop \\
 Phase 1 --- screened POTWs        & 17{,}148 & ---       & --- \\
 \quad below 0.5 MGD mean flow     &          & 10{,}182  & Scale threshold \\
 \quad no usable flow record       &          & 1{,}496   & Data gap \\
-\quad sparse DMR artefact         &          & 6         & Data gap \\
+\quad sparse DMR artifact         &          & 6         & Data gap \\
 Phase 2 --- flow-valid            & 5{,}464  & 11{,}684  & \\
 Phase 3 --- head-valid            & 4{,}860  & 604       & Data gap \\
 Phase 3 --- turbine-viable        & 3{,}778  & 1{,}082   & Physics floor \\
@@ -1970,6 +2093,16 @@ clearest available measure of what the Section~4.3.4 head assumption is worth in
 energy terms. Closing it needs surveyed outfall inverts, not a better model.
 The last stage, economics, removes a further 105.70~GWh/yr to reach 409.17.
 
+Where those sites are is shown in Figure~\ref{fig:natmap}. The viable cohort
+reaches 51 states and territories, and its geography follows population and
+terrain together: California holds 147 viable sites and 67.98~GWh/yr, New York 45
+sites and 40.02, Texas 102 and 38.95, Illinois 47 and 34.91, and Washington just 7
+sites but 20.32~GWh/yr, which is what mountain-west relief does to a small number
+of large plants. The map frame is the continental United States and excludes 52
+scored plants: 28 in Puerto Rico, 10 in Alaska, 6 in Hawaii, 3 in Guam, 2 in
+the Northern Marianas, 2 in American Samoa, and 1 in the Virgin Islands, of
+which 27 are viable and are counted in every total in this chapter.
+
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/fig10_national_map.png}
@@ -1977,16 +2110,6 @@ The last stage, economics, removes a further 105.70~GWh/yr to reach 409.17.
 states holding the most viable energy}
 \label{fig:natmap}
 \end{figure}
-
-Where those sites are is shown in Figure~\ref{fig:natmap}. The viable cohort
-reaches 51 states and territories, and its geography follows population and
-terrain together: California holds 147 viable sites and 67.98~GWh/yr, New York 45
-sites and 40.02, Texas 102 and 38.95, Illinois 47 and 34.91, and Washington just 7
-sites but 20.32~GWh/yr, which is what mountain-west relief does to a small number
-of large plants. The map frame is the continental United States and excludes 52
-scored plants --- 28 in Puerto Rico, 10 in Alaska, 6 in Hawaii, 3 in Guam, 2 in
-the Northern Marianas, 2 in American Samoa, and 1 in the Virgin Islands --- of
-which 27 are viable and are counted in every total in this chapter.
 
 \subsection{Energy and Financial Results}                % WP T6 — Tom
 
@@ -2000,7 +2123,7 @@ commercial reading of this portfolio has to account for that shape: the tail
 justifies the screen, and the head pays for it.
 
 Per-site economics at the median are a payback of 9.83~yr, a real internal rate of
-return of 9.40~\%, a levelised cost of \$0.0683/kWh, capital cost of \$66{,}421,
+return of 9.40~\%, a levelized cost of \$0.0683/kWh, capital cost of \$66{,}421,
 and net present value of \$29{,}693. Capital intensity is high for the scale:
 \$3{,}676/kW of equipment at the median and \$5{,}577/kW all-in, the difference
 being the installation, interconnection, and permitting lines that do not shrink
@@ -2037,8 +2160,11 @@ distribution at every percentile: the river-hydro median is 0.3902 and even its
 seventy-fifth percentile, 0.5409, is below the WOWERS tenth percentile of 0.8556.
 Substituting measured capacity factors gives the band of Table~\ref{tab:cfband}:
 118.9~GWh/yr at the river-hydro first quartile, 183.0 at its median, and
-281.4~GWh/yr at the LucidPipe-anchored central figure of 0.60, against the
-409.2~GWh/yr ceiling.
+281.4~GWh/yr at the Conduit~3-anchored optimistic figure of 0.60, against the
+409.2~GWh/yr ceiling. The metered conduit plants of Section~4.4.1 land at
+114.4~GWh/yr, within 4.5~GWh/yr of the river-hydro floor and from a dataset that
+shares no plants with it, so the floor is the tier this chapter treats as
+evidenced and 281.4~GWh/yr is reported as the optimistic end of the band.
 
 \begin{table}[htbp]
 \centering
@@ -2051,7 +2177,7 @@ model}
 Scenario & Viable sites & GWh/yr & CapEx \$M & NPV \$M \\
 \midrule
 Ceiling ($\times$1.000)          & 1{,}138 & 409.17 & 211.33 & 310.13 \\
-Central, CF 0.60 ($\times$0.688) & 439     & 213.80 & 132.42 & 152.64 \\
+Optimistic, CF 0.60 ($\times$0.688) & 439  & 213.80 & 132.42 & 152.64 \\
 Floor, p50 ($\times$0.447)       & 129     & 95.98  & 74.28  & 59.44  \\
 Floor, p25 ($\times$0.291)       & 27      & 30.01  & 31.06  & 19.03  \\
 \bottomrule
@@ -2066,14 +2192,14 @@ the viability gate in that scenario.}
 The band's effect on the business case is larger than its effect on the energy
 figure, and Table~\ref{tab:rescore} is that result. Re-running the full cash-flow
 model at each multiplier, the viable count falls from 1{,}138 to 439 at the
-central tier, to 129 at the river-hydro median floor, and to 27 at the first
+optimistic tier, to 129 at the river-hydro median floor, and to 27 at the first
 quartile. Portfolio net present value over the sites that remain viable falls from
 \$310.13M to \$152.64M, \$59.44M, and \$19.03M. The median payback of the
 surviving cohort barely moves, from 9.83~yr to 10.39, 10.73, and 10.57~yr, because
 each scenario is keeping a smaller and better set of sites.
 
 That is a 61.4~\% fall in viable site count against a 31.2~\% fall in energy at
-the central tier, and the mechanism is the fixed cost structure named in
+the optimistic tier, and the mechanism is the fixed cost structure named in
 Section~5.1.1: a plant whose capital cost is dominated by interconnection and
 permitting has no way to absorb a one-third revenue cut. The gap is acceptable for
 a screening deliverable, because the purpose of the screen is to rank and bound
@@ -2083,12 +2209,16 @@ proposal. Closing it needs the thing this work could not obtain: measured annual
 generation from an operating wastewater-outfall turbine, which would replace the
 substituted capacity factor with an observed one. Until then the honest headline
 is the band and not its upper end, and the defensible planning figure is the
-central tier.
+floor rather than the optimistic tier: the floor is the only part of the band
+that two independent metered datasets agree on, while the upper tier rests on a
+single project's design projection. A reader who needs one number for planning
+should take 118.9--194.4~GWh/yr and treat 281.4~GWh/yr as the ceiling of
+plausibility rather than the expectation.
 
 \subsection{Machine-Learning Feasibility (Negative Result)} % WP T6 — Tom
 
 The learned correction described in Section~4.4.2 was tested against a gate fixed
-before the search began --- at least 50 new labelled sites carrying installed
+before the search began --- at least 50 new labeled sites carrying installed
 capacity and measured annual energy --- and the search returned 11. The gate
 failed and the model was killed as a product deliverable. Reporting that outcome
 with its numbers is the point of this subsection.
@@ -2144,7 +2274,7 @@ returned every metric above unchanged to four decimals.
 
 The negative result is worth stating in one sentence, because it is the most
 transferable finding in the chapter. Micro-hydropower at wastewater outfalls does
-not lack modelling capacity; it lacks measured plants. Until sub-megawatt conduit
+not lack modeling capacity; it lacks measured plants. Until sub-megawatt conduit
 installations report head, flow, and annual energy in a public dataset, a learned
 model of this asset class cannot be trained, evaluated, or falsified.
 
@@ -2173,7 +2303,7 @@ outcome as a single deterministic data contract that a static web application
 renders as an interactive national map. Measured against the minimum viable
 product WOWERS would need, that fulfils the screening requirement, the ranking
 requirement, the bounded-estimate requirement, and the delivery requirement. It
-does not fulfil the validation requirement, and Chapter~5 is explicit about why.
+does not fulfill the validation requirement, and Chapter~5 is explicit about why.
 
 The demonstration screened 17{,}148 publicly owned treatment works and carried
 5{,}464 of them through the energy model, 4{,}860 through head estimation, and
@@ -2184,13 +2314,15 @@ rated capacity and 409.17~GWh/yr under the model's own assumptions, against
 \$211.33M of capital cost, \$41.23M/yr of revenue, a portfolio net present value
 of \$310.13M, and a median payback of 9.83~yr. Benchmarked against 629 real
 small-hydro plants over 9{,}798 plant-years, the same portfolio bounds to a
-conservative floor of 118.9--194.4~GWh/yr and a plausible central estimate of
-281.4~GWh/yr, and re-scoring every site through the cash-flow model at that
-central capacity factor leaves 439 sites viable and \$152.64M of net present
+conservative floor of 118.9--194.4~GWh/yr, independently corroborated at
+114.4~GWh/yr by 115 metered conduit plants, and an optimistic upper scenario of
+281.4~GWh/yr resting on one project's design projection; re-scoring every site
+through the cash-flow model at that upper capacity factor leaves 439 sites viable
+and \$152.64M of net present
 value. The headline this work stands behind is the band and not its upper end.
 
 Three themes would carry the platform from a screen to a product: replacing
-modelled head with measured head, turning the delivery layer from a static file
+modeled head with measured head, turning the delivery layer from a static file
 into a service, and validating the whole chain against a real installation.
 
 The first theme is the one that matters most, because head is both the input the
@@ -2225,11 +2357,11 @@ have learned a correction from measured generation was abandoned because the
 labels do not exist: an exhaustive search of federal sources returned eleven new
 conduit-scale plants against a threshold of fifty, none of them wastewater, and
 the single true wastewater installation in the national inventory has been offline
-since 2018. That is a data-availability finding rather than a modelling failure,
-and only a field programme resolves it. A single pilot --- one instrumented
+since 2018. That is a data-availability finding rather than a modeling failure,
+and only a field program resolves it. A single pilot --- one instrumented
 outfall at a plant from the shortlist, reporting head, flow, and generation for a
 year --- would convert the calibration band from a substituted assumption into a
-measurement, and would be worth more to this platform than any further modelling
+measurement, and would be worth more to this platform than any further modeling
 work.
 
 What this work delivers is the first step toward customer value rather than the
@@ -2290,10 +2422,23 @@ Oak Ridge National Laboratory,
 ``Municipal Conduit Hydropower Project Cost Data,''
 OSTI 3002705 (supporting tables), ca.\ 2020\$ basis.
 
+\bibitem{ferc_p14498}
+Federal Energy Regulatory Commission,
+``Lucid Energy, Inc., The City of Portland Water Bureau; notice of application accepted for
+filing and soliciting comments, motions to intervene, protests, recommendations, and terms
+and conditions,'' Conduit 3 Hydroelectric Project, Docket No.\ P-14498,
+\emph{Federal Register}, vol.~78, no.~63, p.~19698, 2 April 2013.
+[Online]. Available:
+\url{https://www.federalregister.gov/documents/2013/04/02/2013-07543/}
+[Accessed 25 July 2026].
+
 \bibitem{lucidpipe}
-LucidEnergy / Portland Water Bureau,
-``LucidPipe Power System --- Portland, Oregon (Bull Run transmission main),''
-project documentation and press materials; see also technical overview at thecivilengineer.org.
+D.~Day,
+``Water pipe power: using hydroturbines to harvest energy,''
+\emph{Treatment Plant Operator}, Oct.\ 2015.
+[Online]. Available:
+\url{https://www.tpomag.com/editorial/2015/11/water_pipe_power_using_hydroturbines_to_harvest_energy}
+[Accessed 25 July 2026].
 
 \bibitem{rentricity}
 Rentricity Inc.,
@@ -2365,7 +2510,7 @@ This appendix is the reference for the export contract of Section~4.5 and for th
 funnel of Section~5.1.2. Table~\ref{tab:datadict} lists all 58 properties carried
 on every feature of \texttt{scored\_sites.geojson} and
 \texttt{viable\_sites.geojson}, in the order the exporter writes them. The
-rounding column names the class each property is rounded to before serialisation:
+rounding column names the class each property is rounded to before serialization:
 whole numbers for currency, energy, and counts, four decimals for ratios, one
 decimal for lengths, flows, and efficiencies, and \texttt{raw} for text, booleans,
 and the two columns that pass through unrounded. The source column names the phase
@@ -2554,7 +2699,7 @@ its percentage column; the recompute agrees with that column to a mean absolute
 difference of 0.00250 across 23{,}483 clean plant-years, with a quartile range of
 0.00125 to 0.00375. The 2013--2022 row is the stability check: restricting to the
 most recent decade moves the median capacity factor from 0.3902 to 0.3817, which is
-inside the spread and confirms the floor is not an artefact of one period.
+inside the spread and confirms the floor is not an artifact of one period.
 
 \begin{table}[htbp]
 \centering
@@ -2579,6 +2724,47 @@ recomputed capacity factor above 0 and no greater than 1.2. The WOWERS row is
 \texttt{capacity\_factor\_p50} over the 1,138 project-viable sites.}
 \end{table}
 
+Table~\ref{tab:conduit_measured} is the metered conduit evidence introduced in
+Section~4.4.1. It matters more than its four rows suggest, because these are the only
+plants in the United States that combine continuous municipal or wastewater duty with
+an annual generation figure filed on Form EIA-923. Point Loma is the sole
+treated-wastewater entry and therefore the closest operating analog to a WWTP outfall
+in this thesis. Every value is metered rather than modeled, and every one sits below
+the 0.60 upper tier.
+
+\begin{table}[htbp]
+\centering
+\caption{Metered municipal and wastewater conduit plants, EHA Canal/Conduit class}
+\label{tab:conduit_measured}
+\footnotesize
+\begin{tabular}{@{}llrrrl@{}}
+\toprule
+Plant & State & Nameplate (kW) & Generation (MWh) & Year & CF \\
+\midrule
+R E Badger Filtration Plant & CA & 1{,}400 & 297    & 2013 & 0.0242 \\
+Ruxton Park                 & CO & 1{,}000 & 1{,}388 & 2022 & 0.1584 \\
+Point Loma (wastewater)     & CA & 1{,}500 & 2{,}515 & 2017 & 0.1914 \\
+Manitou Springs             & CO & 5{,}600 & 18{,}102 & 2022 & 0.3690 \\
+\midrule
+\multicolumn{6}{@{}l}{All 115 metered Canal/Conduit plants --- p25 0.1337,
+median 0.2439, p75 0.3410} \\
+\multicolumn{6}{@{}l}{Capacity-factor against $\log_{10}$ nameplate across those 115
+--- Pearson $r = +0.093$} \\
+\multicolumn{6}{@{}l}{Smallest capacity quartile, 500--1,800 kW --- median CF 0.2101} \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize Capacity factor is metered annual generation divided by nameplate
+capacity times 8,760 h. Source is the EHA Canal/Conduit cross-link to Form
+EIA-923~\cite{hydrosource_eha, eia923}, reached through
+\texttt{ferc\_conduit\_candidates.parquet}. The Badger figure, 297 MWh from 1,400 kW,
+is low enough that a partial or curtailed reporting year is the likely explanation
+rather than a genuine annual capacity factor. The last two rows record that capacity
+factor does not rise as nameplate falls, so the 0.60 tier cannot be justified by
+extrapolating this population down to WOWERS scale.}
+\end{table}
+
 Table~\ref{tab:band_both} gives the calibration band computed from both buckets.
 They agree closely above the first quartile and differ most at the pessimistic end,
 which is why Section~5.1.4 quotes the floor as a range of 118.9--194.4~GWh/yr
@@ -2596,7 +2782,7 @@ Tier & CF (0.1--5 MW) & GWh/yr & CF (0.1--1 MW) & GWh/yr \\
 Floor p25        & 0.2535 & 118.9 & 0.2676 & 125.5 \\
 Floor p50        & 0.3902 & 183.0 & 0.4145 & 194.4 \\
 Floor p75        & 0.5409 & 253.7 & 0.5457 & 255.9 \\
-Central, CF 0.60 & 0.6000 & 281.4 & 0.6000 & 281.4 \\
+Optimistic, 0.60 & 0.6000 & 281.4 & 0.6000 & 281.4 \\
 Physics ceiling  & 0.8725 & 409.2 & 0.8725 & 409.2 \\
 \bottomrule
 \end{tabular}
@@ -2681,5 +2867,24 @@ assumption rather than the uncertainty of the estimate, and that a plant's true
 energy can sit outside it whenever the assumed head is wrong --- which
 Section~5.1.2 shows it frequently is, since replacing the archetype with a measured
 elevation difference moved fleet energy by 104.44~GWh/yr.
+
+The same percentiles, restricted to the 1,138 project-viable sites and split by the
+permitting pathway each site falls into, are given in Figure~\ref{fig:mctier}. The
+three tiers are separated by roughly an order of magnitude in energy per site: the
+median project-viable qualified-conduit site returns 72~MWh/yr against 565~MWh/yr under
+a small FERC pathway and 3,092~MWh/yr where full review applies. The consequence for
+portfolio construction is that site count and energy pull in opposite directions. The
+834 qualified-conduit sites are 73.3~\% of the portfolio by count but only 16.1~\% of
+its energy, while the 42 full-NEPA sites are 3.7~\% by count and 43.7~\% of the energy.
+The band width within each tier is the same head assumption named above and carries the
+same caveat.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig14_mc_by_tier.png}
+\caption{Monte-Carlo energy band by permitting tier across the 1,138 project-viable
+sites, and each tier's share of portfolio site count against its share of energy}
+\label{fig:mctier}
+\end{figure}
 
 \end{document}
