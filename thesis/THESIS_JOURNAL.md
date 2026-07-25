@@ -514,3 +514,62 @@ Any draft that cites these must match exactly (P2-SEED re-baseline):
 
 **Next work package suggested:**
 - Track T is done. The remaining work is Mohamed's M1 (Ch4.6 frontend, ~2,000 w) and M2 (Ch5 frontend results, ~700 w), and the Joint packages J1–J5. Per §6 the combine gate holds J4 and J5 until both technical tracks are first-drafted, so the next Tom-side item is J1 or J2 with Mohamed, not another Track T package.
+
+### Session: 2026-07-25 — J2 Ch1 Introduction — Joint (drafted by Tom)
+
+**Work package:** J2 · Ch1 Introduction, §1.1 Thesis Statement, §1.2 Thesis Outline
+
+**Note on process:** J2 and J3 were drafted in the same session at Tom's instruction, which departs from the one-work-package-per-session rule in `THESIS_BREAKDOWN.md`. They are logged as two entries. Both are short framing chapters that read as a pair, and both were written after Track T was complete so they point at real sections and real numbers rather than at intentions.
+
+**What was written (~990 words against the ~1,100 allotted; format §5 asks for 900–1,200):**
+- Opening on the macro trend with the hard number — 30.2 TWh/yr of POTW electricity use, about 0.8 % of national consumption, cited to EPRI rather than to any internal document.
+- The scaling argument, which is framed deliberately: the constraint is not turbine technology or capital, it is the per-site cost of finding out. That framing is what makes a screening platform the product rather than an engineering service.
+- The proposal paragraph in the format's required form, opening "We propose the creation of a company, WOWERS, to…".
+- The end-state workflow as one paragraph walking the pipeline in order, written in the present tense as a description of the service rather than of this implementation.
+- The technical-versus-logistical development split, with the logistical side naming customer discovery, the FERC conduit pathway, manufacturer relationships, municipal financing, and field validation — the four items the Fowler judges pressed on, so J1 has a hook to pick up.
+- Closing sentence in the format's mandated wording.
+- §1.1 Thesis Statement, one paragraph, stating the proposition as "commercially useful provided its uncertainty is stated rather than hidden", which is the honest form of the claim the rest of the document defends.
+- §1.2 Thesis Outline, one paragraph walking Chapters 2–6 and the three appendices in order.
+
+**Sources:** `ARCHITECTURE.md` for the pipeline order; Chapter 2 for the 30.2 TWh figure and its EPRI citation, kept consistent rather than re-derived; Chapters 4 and 5 for every number referenced. No new citations were needed.
+
+**Verification:**
+- `tectonic -X compile thesis_tom.tex` → 0 errors, 0 undefined references, 85 pages. No overfull hboxes in the Chapter 1 range; the two that report near it are pre-existing Chapter 2 boxes whose line numbers shifted.
+- Chapter 1 opening page rendered and inspected.
+
+**Open items / follow-ups:**
+- The intro claims a feasibility study "costs tens of thousands of dollars and takes weeks". That is the received figure from the journal's customer conversations, not a cited source. Either find a citable engineering-services figure at J5 or soften the wording to attribute it as a practitioner estimate.
+- §1.2 describes §4.6 and §5.1.6 as if they exist. They are Mohamed's M1 and M2 and are still stubs — the outline is correct about the finished document but will read oddly until those merge.
+
+**Breakdown updated:**
+- §3 J2 checkbox → `[x]`; §7 J2 status → ☑
+
+**Next work package suggested:**
+- J3 · Ch6 Conclusions (drafted in the same session; see the next entry)
+
+### Session: 2026-07-25 — J3 Ch6 Conclusions and Future Work — Joint (drafted by Tom)
+
+**Work package:** J3 · Ch6 Conclusions and Future Work
+
+**What was written (~900 words, exactly the allotment; format §5 asks for 700–1,000):**
+- Paragraph 1: what was designed and tested, then which MVP requirements it fulfils — screening, ranking, bounded estimate, delivery — and the one it does not: validation. Naming the unmet requirement in the first paragraph rather than the last is deliberate.
+- Paragraph 2: the demonstration at full measured precision — 17,148 screened, the 5,464 / 4,860 / 3,778 / 1,138 chain, 58.59 MW, 409.17 GWh/yr, $211.33M CapEx, $41.23M/yr revenue, $310.13M NPV, 9.83 yr median payback, the 118.9–194.4 floor and 281.4 central band, and the re-scored 439 sites / $152.64M at the central tier. Ends on the sentence that the work stands behind the band and not its upper end.
+- Paragraph 3: the three future-work themes in one sentence, then one paragraph each.
+- Theme 1 (head): the sensitivity evidence (head dominant at 2,803 of 3,778 sites), the 2.44 m RMSE against a 4.144 m median head, the 360 archetype-head viable sites holding 27.0 % of portfolio energy, and three specific changes — NHD flowline snapping for the 1,203 impossible outfalls, a per-site error bound, and a surveyed sample to test for bias.
+- Theme 2 (delivery): bundle splitting, marker clustering, a query service in place of the 6.13 MB static file, and a schema version on the contract. Written from the deferred items already on record so it does not depend on M2's numbers, which are not yet drafted.
+- Theme 3 (validation): the 11-against-50 label result, Point Loma offline since 2018, and the single-pilot proposal — one instrumented outfall reporting head, flow, and generation for a year — stated as worth more than any further modelling.
+- Closing paragraph positioning the work as the first step toward customer value, per the format.
+
+**Verification:**
+- Compile clean as above; no overfull hboxes in the Chapter 6 range. Every number restated in Chapter 6 was checked against Chapter 5 rather than retyped from memory.
+
+**Open items / follow-ups:**
+- Theme 2 is written without M2's measured build numbers. When M2 merges, check that the deferred items named here match the ones Mohamed reports as deferred, and add his figures if they sharpen the paragraph.
+- Chapter 6 currently reads as Tom's conclusion. Mohamed should review the delivery-layer theme before J5, since it is his subsystem.
+- The conclusion asserts the platform "now is" credible within named bounds. If a reviewer challenges any single claim in Chapter 5, this sentence is where it lands — worth re-reading last during the J5 honesty pass.
+
+**Breakdown updated:**
+- §3 J3 checkbox → `[x]`; §7 J3 status → ☑
+
+**Next work package suggested:**
+- J1 · Ch3 Business Model (~2,300 w) — needs both authors in the room. J4 and J5 remain gated on Mohamed's M1 and M2 per the §6 combine gate.
