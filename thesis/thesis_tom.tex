@@ -439,76 +439,7 @@ backend.
 
 \begin{figure}[htbp]
   \centering
-  % Self-contained TikZ — compiles on Overleaf with no external PNG upload.
-  \resizebox{\textwidth}{!}{%
-  \begin{tikzpicture}[
-    font=\sffamily\scriptsize,
-    >=Stealth,
-    every node/.style={align=center},
-    src/.style={draw, thick, rounded corners=2pt, fill=black!8,
-      minimum width=2.7cm, minimum height=1.35cm, inner sep=3pt},
-    phase/.style={draw, thick, rounded corners=2pt, fill=black!14,
-      minimum width=2.55cm, minimum height=1.55cm, inner sep=3pt},
-    art/.style={draw, thick, rounded corners=2pt, fill=white,
-      minimum width=2.7cm, minimum height=1.35cm, inner sep=3pt},
-    kill/.style={draw, thick, densely dashed, rounded corners=2pt,
-      fill=white, text=black!55, minimum width=2.55cm, minimum height=1.0cm},
-    lbl/.style={font=\sffamily\tiny, text=black!55},
-    arr/.style={->, thick},
-  ]
-    % --- labels ---
-    \node[lbl] at (5.6, 6.05) {Public / agency inputs};
-    \node[lbl, anchor=east] at (-1.15, 1.55) {Offline Python\\screening\\pipeline\\(Phases 1--4)};
-    \node[lbl] at (4.6, -0.55) {Export / serving / visualization};
-
-    % --- sources ---
-    \node[src] (echo) at (0.0,4.8) {EPA ECHO\\ICIS facilities\\+ permits};
-    \node[src] (dmr)  at (3.5,4.3) {EPA DMR param 50050\\FY2009--24\\($\sim$279M rows)};
-    \node[src] (dep)  at (7.0,4.3) {USGS 3DEP EPQS\\elevations\\(DEM head)};
-    \node[src] (eha)  at (10.5,4.3) {DOE EHA / EIA-860/923\\CF \& generation\\labels};
-
-    % --- phases ---
-    \node[phase] (p1) at (0.4,1.55) {Phase 1\\POTW filter $\cdot$ FDC\\ranking\\$\rightarrow$ ranked\_candidates};
-    \node[phase] (p2) at (3.7,1.55) {Phase 2\\Monte-Carlo energy\\P10 / P50 / P90\\$\rightarrow$ energy\_yield};
-    \node[phase] (p3) at (7.0,1.55) {Phase 3\\3DEP head proxy\\turbine match\\$\rightarrow$ turbine\_sizing};
-    \node[phase] (p4) at (10.3,1.55) {Phase 4\\CapEx $\cdot$ NPV $\cdot$ payback\\econ gates\\$\rightarrow$ scorecards};
-
-    % --- CF side analysis + Phase 5 kill ---
-    \node[art] (cf) at (10.5,3.15) {CF calibration\\119--281 GWh/yr band\\(side analysis)};
-    \node[kill] (p5) at (10.3,-0.55) {Phase 5 ML --- killed\\(only 11 FERC labels)};
-
-    % --- export row ---
-    \node[art] (exp) at (1.2,-2.25) {\texttt{export\_geojson.py}\\58-property contract\\byte-deterministic};
-    \node[art] (gj)  at (5.6,-2.25) {\texttt{scored\_sites.geojson}\\(+ \texttt{viable\_sites})\\1,138 project-viable};
-    \node[art] (ui)  at (10.0,-2.25) {React + MapLibre UI\\7 views $\cdot$ static build\\no live backend};
-
-    % --- arrows: sources -> phases ---
-    \draw[arr] (echo.south) -- (p1.north);
-    \draw[arr] (dmr.south)  -- (p1.north east);
-    \draw[arr] (dep.south)  -- (p3.north);
-    \draw[arr] (eha.south)  -- (cf.north);
-    \draw[arr, densely dashed] (cf.west) -| (p2.north);
-
-    % --- phase chain ---
-    \draw[arr] (p1) -- (p2);
-    \draw[arr] (p2) -- (p3);
-    \draw[arr] (p3) -- (p4);
-
-    % --- phases fan into export ---
-    \draw[arr] (p1.south) -- ++(0,-0.25) -| (exp.north);
-    \draw[arr] (p2.south) -- ++(0,-0.25) -| ([xshift=6pt]exp.north);
-    \draw[arr] (p3.south) -- ++(0,-0.35) -| ([xshift=14pt]exp.north);
-    \draw[arr] (p4.south) -- ++(0,-0.45) -| ([xshift=22pt]exp.north);
-
-    % --- export chain ---
-    \draw[arr] (exp) -- (gj);
-    \draw[arr] (gj) -- (ui);
-
-    \node[lbl, anchor=west] at (-1.5,-3.55)
-      {Config: \texttt{settings.yaml}\quad
-       Intermediates: \texttt{data/processed/phase\{1--4\}/*.parquet}};
-  \end{tikzpicture}%
-  }
+  \includegraphics[width=\linewidth]{figures/fig01_system_block.pdf}
   \caption{System block diagram of the WOWERS platform}
   \label{fig:1}
 \end{figure}
@@ -971,13 +902,430 @@ not corrected inside Phase~2; it is measured against real capacity factors and
 turned into the calibration band in Section~4.4. Head estimation, which removes
 the archetype assumption these energy figures rest on, will now be discussed.
 \subsection{Head Estimation}
-\wptodo{T4 · 4.3.4}{Feeds: head\_estimation.py, outfall\_coords.py. Flag DEM-proxy as the
-LARGEST methodological assumption; the plausibility gate.}
+
+Phase~3 is responsible for replacing the archetype head of Section~4.3.3 with a
+site-specific value, and for deciding which plants have enough vertical drop to
+be worth sizing a machine for. Head enters Equation~\eqref{eq:hydro} linearly and
+is the one term in it that no acquired dataset reports, so this subsystem carries
+the largest methodological assumption in the work.
+
+Three options were considered. Option~(A) was to keep the Phase~2 triangular
+archetypes. Option~(B) was the difference between the ground elevation at the
+plant and at its permitted discharge point, sampled from a national digital
+elevation model. Option~(C) was to compute head hydraulically from as-built
+drawings --- effluent channel water surface, outfall pipe invert, receiving water
+level. Option~(A) is the thing being replaced: a national median with no site
+geography in it, and Section~4.3.3 showed it alone imposes a median P90-to-P10
+ratio of 2.28 on a plant's energy. Option~(C) is the correct engineering answer
+and was rejected on availability, because no national dataset of outfall invert
+elevations exists and drawings for 17{,}148 plants are not a screening activity.
+Option~(B) won because it is the only site-specific option available nationally
+at no marginal cost, and because its failures are detectable: a wrong coordinate
+usually produces a negative or absurd drop rather than a plausible wrong number.
+
+Implementation runs in three modules. \texttt{outfall\_coords.py} resolves one
+discharge coordinate per permit, preferring the rows of the NPDES outfalls layer
+whose feature type is an external outfall --- actual discharge-pipe locations ---
+and consulting the generic permit-feature coordinate file only for permits absent
+from that layer, because it does not label feature type and its rows are often
+the facility registration point rather than the pipe. Within either source the
+feature numbered \texttt{001} is preferred, then the lowest numeric feature, then
+the first row, and null or geographically implausible coordinates are dropped.
+\texttt{elevation.py} queries the USGS 3DEP Elevation Point Query
+Service~\cite{usgs_3dep} in WGS-84 for elevations in metres, batching through
+\texttt{asyncio} and \texttt{httpx} at ten concurrent connections with a 0.5~s
+delay, and caching every response on disk under its coordinate rounded to five
+decimals so re-runs are free and reproducible. Of the 5{,}464 plants entering
+Phase~3, 5{,}461 facility elevations came from that cache and 3 queries failed;
+outfall elevations resolved for 5{,}178 plants. \texttt{head\_estimation.py} takes
+gross head as facility elevation minus outfall elevation and net head as
+$H_{net} = H_{gross}(1 - 0.15)$, the loss fraction standing for pipe friction,
+valves, bends, and screen losses.
+
+The plausibility gate is the substance of this subsystem and runs in a fixed
+order. A candidate at or below zero means the outfall sits at or above the plant,
+which is impossible for a gravity outfall, so the reading is discarded and the
+archetype used. A candidate between zero and the 1.0~m minimum is kept as
+measured and the plant marked head-invalid: the data is saying the site lacks
+head, and overwriting it with a 5~m design assumption would manufacture viable
+projects. A candidate above 1.0~m is accepted unless it diverges from the
+archetype by more than four times the archetype value. That limit was originally
+two, and was raised once it was found to reject legitimate 10--20~m readings at
+Appalachian and mountain-west plants whose real relief exceeds a national median
+by design. Elevation heads are labelled high confidence and archetype heads
+medium confidence, and both labels travel to the export layer of Section~4.5.
+
+\begin{table}[htbp]
+\centering
+\caption{Net-head estimation outcome by source for the 5,464 plants entering Phase 3}
+\label{tab:head_outcome}
+\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Head source & Plants & Valid & $H_{P10}$ (m) & $H_{P50}$ (m) & $H_{P90}$ (m) \\
+\midrule
+3DEP elevation difference & 3{,}782 & 3{,}178 & 1.617 & 4.144 & 12.217 \\
+Phase 2 archetype         & 1{,}682 & 1{,}682 & 2.772 & 4.695 & 7.230 \\
+Design fallback (5 m)     & 0       & 0       & ---   & ---   & ---   \\
+\midrule
+Total                     & 5{,}464 & 4{,}860 &       &       &       \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The outcome is given in Table~\ref{tab:head_outcome} and Figure~\ref{fig:head}.
+Elevation-derived head reaches 3{,}782 plants (69.2~\%) against 1{,}682
+(30.8~\%) left on the archetype, and the static 5~m fallback is never used. Of
+the elevation readings 604 are kept but marked invalid below 1.0~m, with a median
+of 0.430~m. The two populations differ in the way that matters: the archetype
+takes three discrete values spanning 2.772--7.230~m between its tenth and
+ninetieth percentiles, while the elevation estimate spans 1.617--12.217~m with a
+maximum of 40.647~m, so real terrain is both flatter and steeper than a national
+median admits. The 1{,}682 fallbacks decompose into 1{,}203 plants whose outfall
+coordinate sat at or above the plant, 286 with no usable outfall coordinate or
+elevation, and 193 rejected by the divergence limit.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig03_head_estimation.png}
+\caption{Net head by source for the 4,860 head-valid plants, and the reasons the
+elevation difference was not used at the remaining sites}
+\label{fig:head}
+\end{figure}
+
+Five limitations are named, and the first is why this subsystem is flagged as the
+work's largest assumption. The 1/3~arc-second national elevation data behind the
+query service has a published overall absolute vertical accuracy of 2.44~m RMSE
+against roughly 25{,}000 geodetic control points~\cite{usgs_ned_accuracy}, while
+head here is a \emph{difference} of two such values and the median accepted head
+is 4.144~m. Errors at two points a few hundred metres apart are spatially
+correlated, so the error on their difference is smaller than the
+$\sqrt{2} \times 2.44 = 3.45$~m bound independent errors would give, but no
+site-specific error bound was computed, and the honest reading is that per-site
+head is an order-of-magnitude screen rather than a measurement. The negative
+readings are evidence of the same thing: their median inversion is $-0.53$~m of
+gross head, inside the noise, while the worst is $-2{,}258$~m, which is a
+coordinate on a hilltop. Second, the service returns terrain elevation, not the
+water surface in the effluent channel nor the outfall pipe invert, so submerged
+outfalls, tailwater, and backwater are invisible to it. Third, the 0.15 loss
+fraction is one constant applied to every plant rather than a value computed from
+pipe length, diameter, and roughness. Fourth, 1{,}682 plants --- and 360 of the
+1{,}138 project-viable sites of Chapter~5 --- still carry the archetype head, so
+their economics rest on the assumption this phase exists to remove. Fifth, the
+deferred fix for the negative-head cohort is a snap of the outfall coordinate
+onto the nearest National Hydrography Dataset flowline centreline, whose endpoint
+is always on the receiving stream and therefore always below the plant; it was
+scoped and not built. What this assumption is worth in dollars is quantified in
+Section~4.3.6. Turbine selection, which consumes this head, will now be
+discussed.
+
 \subsection{Turbine Selection}
-\wptodo{T4 · 4.3.5}{Feeds: turbine\_selection.py, data/turbines/turbine\_manufacturers.csv.}
+
+This subsystem is responsible for choosing a machine class for each plant's
+head-flow operating point, sizing its rated flow, and recomputing annual energy
+with that machine's part-load behaviour rather than the pooled efficiency
+distribution of Phase~2.
+
+Three options were considered. Option~(A) was a single generic machine at fixed
+efficiency. Option~(B) was rule-based type selection from the standard head-flow
+envelope, a type-specific part-load curve, and a sweep over rated flow.
+Option~(C) was per-site optimisation against a catalogue of real machine models.
+Option~(A) was rejected because part-load behaviour is what separates machine
+classes at these heads --- an in-conduit unit holds a flat 75~\% where a Kaplan
+holds 93~\% at rating --- and the difference compounds over every point of a flow
+duration curve. Option~(C) was rejected because manufacturers publish an
+operating envelope and a price band, not a performance curve per model, so
+optimising against the catalogue would fit vendor marketing rather than physics.
+Option~(B) won because its rules are auditable and it needs nothing the pipeline
+does not already hold.
+
+Implementation is in \texttt{turbine\_selection.py}. Type follows a decision tree
+evaluated in order: Pelton when $H > 50$~m and
+$Q < 2$~m\textsuperscript{3}/s; Francis when $H \geq 10$~m; Crossflow when
+$2 \leq H < 10$~m and $Q < 0.5$~m\textsuperscript{3}/s; Kaplan when
+$2 \leq H < 10$~m and $Q \geq 0.5$~m\textsuperscript{3}/s; and an in-conduit
+micro-turbine below 2~m. Efficiency is a function of the part-load ratio
+$q = Q/Q_{rated}$: Kaplan follows $-0.30q^2 + 0.60q + 0.63$ capped at 0.93,
+Francis $-0.50q^2 + 0.90q + 0.45$ capped at 0.91 and reaching 0.85 at rating,
+Crossflow $-0.10q^2 + 0.20q + 0.72$ capped at 0.82 and zero below $q = 0.10$,
+Pelton a flat 0.88 above the 0.15 nozzle minimum, and the in-conduit unit a flat
+0.75 above $q = 0.10$. The optimiser sweeps rated flow from 0.3 to 1.0 times
+design flow, integrates $\eta(q)\,\rho g Q H$ over the Phase~1 flow duration
+curve by the trapezoidal rule at each candidate, discards ratings below a 0.40
+capacity factor or 1~kW of rated power, and keeps the rating yielding the most
+annual energy. A manufacturer is matched on type with the operating point inside
+the published flow and head envelope, preferring vendors listing wastewater
+certification and then the lowest published cost per kilowatt; when no envelope
+contains the point the match relaxes to type alone, so the field records that a
+commercial machine class exists rather than that a model was quoted.
+
+\begin{table}[htbp]
+\centering
+\caption{Machine mix across the 3,778 turbine-viable plants}
+\label{tab:turbine_mix}
+\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Machine & Plants & Rated (kW) & $H$ (m) & CF & Energy (GWh/yr) \\
+\midrule
+Crossflow        & 2{,}765 & 2.99  & 4.70  & 0.819 & 96.88  \\
+Francis          & 454     & 11.34 & 14.43 & 0.815 & 141.58 \\
+Kaplan           & 363     & 52.98 & 6.91  & 0.799 & 269.08 \\
+In-conduit micro & 196     & 2.19  & 1.59  & 0.820 & 7.34   \\
+Pelton           & 0       & ---   & ---   & ---   & ---    \\
+\midrule
+Total            & 3{,}778 & 3.80  & 5.13  & 0.818 & 514.87 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize Rated power, head, and capacity factor are per-plant medians.}
+\end{table}
+
+The resulting fleet is given in Table~\ref{tab:turbine_mix} and plotted in
+Figure~\ref{fig:turbine}. Of the 4{,}860 head-valid plants, 3{,}778 support a
+machine of at least 1~kW at a capacity factor of at least 0.40. Crossflow
+machines take 73.2~\% of the sites but 18.8~\% of the energy, while the 363
+Kaplan sites --- 9.6~\% of the fleet --- carry 269.08~GWh/yr, or 52.3~\% of it,
+because Kaplan selection requires the high flows that dominate the energy
+integral. Median rated power is 3.80~kW against a ninetieth percentile of
+34.8~kW and a maximum of 2{,}644.2~kW, so this is a micro-scale portfolio with a
+long tail. Vendor matching resolves to CINK Hydro-Energy at 2{,}900 sites, Canyon
+Hydro at 681, Turbulent at 113, Emrgy at 83, and Andritz Hydro at 1. No plant
+selects a Pelton machine, the expected consequence of screening gravity
+outfalls: nothing in the fleet has 50~m of head.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig04_turbine_selection.png}
+\caption{Head-flow operating points of the 3,778 turbine-viable plants against
+the selection-rule boundaries, and the rated-power distribution per machine type}
+\label{fig:turbine}
+\end{figure}
+
+Five limitations are named, and the first is a negative result about our own
+design. The rated-flow sweep is very nearly a no-op: 3{,}771 of 3{,}778 plants
+are rated at 100~\% of design flow, because undersizing raises capacity factor
+but caps the top of the flow duration curve, and against an energy-maximising
+objective the full rating almost always wins. The sweep therefore changes the
+answer at seven sites while costing run time at all of them, and is worth keeping
+only once the objective becomes economic rather than energetic --- maximum net
+present value would trade clipped energy against a smaller machine --- which is
+deferred. Second, the 1{,}082 head-valid plants that fail here split into 977
+below the 1~kW rated-power floor and 105 below the 0.40 capacity-factor floor;
+seven of the 977 store a rated power that rounds to 1.00~kW in the output file
+but were sized just under the floor, a reporting artefact of writing that column
+at two decimals. Third, the efficiency curves are quadratic fits to published
+hill charts, not vendor-certified performance on screened wastewater, and carry
+no term for debris, screen fouling, or grit wear. Fourth, the manufacturer field
+is a nearest-envelope lookup against 15 machine lines from 10 manufacturers and
+must not be read as a quotation or a compatibility assessment. Fifth, the Pelton
+curve and its cost coefficients are untested, because the corpus never selects
+one. The cost and financial layer that consumes these ratings will now be
+discussed.
+
 \subsection{Cost Models and Financial Scorecard}
-\wptodo{T4 · 4.3.6}{Feeds: cost\_models.py, financials.py, revenue.py, plant\_consumption.py,
-sensitivity.py, EXCLUSION\_FUNNEL\_REPORT.md. CapEx bands, install cost, NPV/IRR/payback.}
+
+Phase~4 is responsible for turning a sized machine into a financial verdict: what
+the project costs to build and run, what its output is worth, and whether it
+clears an investment gate. It also holds the least defensible numbers in the
+pipeline, so its provenance is reported alongside its results.
+
+Three options were considered for equipment cost. Option~(A) was a flat cost per
+kilowatt. Option~(B) was a power law
+$\mathrm{CapEx}/\mathrm{kW} = A \cdot \mathrm{kW}^{B}$ clamped per machine type.
+Option~(C) was a vendor quotation per site. Option~(A) was rejected because the
+cost story at this scale is the scale effect itself --- a 3~kW machine and a
+500~kW machine differ by roughly a factor of three per kilowatt --- so a flat rate
+would either bankrupt every micro site or gift every large one. Option~(C) is
+what a developer would do for one project and is unavailable for 3{,}778, since
+manufacturers publish bands rather than quotations. Option~(B) won, in the form
+used by the national hydropower cost literature~\cite{doe_vision, ornl2014}, with
+the vendor bands kept as an independent cross-check on the model rather than as
+the model.
+
+Implementation is in \texttt{cost\_models.py} and \texttt{financials.py} with all
+coefficients in \texttt{settings.yaml}. Equipment cost per kilowatt is the power
+law clamped to a per-type floor and ceiling, as listed in
+Table~\ref{tab:cost_params}. Installation is 17.5~\% of equipment cost, the
+midpoint of the 15--20~\% range recommended by the project's industry adviser,
+and its scope is stated narrowly as mechanical labour: it excludes civil works
+and does not overlap interconnection or permitting, which are separate lines.
+Because installation is one-time, operations and maintenance stays a percentage of
+\emph{equipment} cost alone, from 1.5~\% for Pelton to 3.0~\% for in-conduit
+machines. Interconnection is \$5{,}000 at or below 25~kW, on the reasoning that a
+micro turbine at an outfall offsets its own plant's load behind its own meter and
+so needs a non-export relay, a disconnect, and utility notification rather than a
+distribution tie, an export power purchase agreement, and revenue-grade export
+metering; above 25~kW it steps through \$50{,}000, \$100{,}000, \$150{,}000, and
+\$200{,}000. Permitting is \$5{,}000 at or below 25~kW because a turbine on a
+municipal wastewater conduit is a qualifying conduit hydropower facility needing
+only a Notice of Intent with no application fee and no
+exhibits~\cite{ferc_conduit}, then \$75{,}000 to 250~kW for abbreviated review and
+\$150{,}000 above it for full licensing with environmental review.
+
+\begin{table}[htbp]
+\centering
+\caption{Equipment cost-model coefficients and their anchoring}
+\label{tab:cost_params}
+\small
+\begin{tabular}{@{}lrrrrl@{}}
+\toprule
+Machine & $A$ & $B$ & Floor & Ceiling & Anchoring \\
+\midrule
+Kaplan           & 9{,}500  & $-0.350$ & 800     & 10{,}000 & Literature form \\
+Francis          & 8{,}500  & $-0.320$ & 1{,}800 & 9{,}000  & Floor = vendor min. \\
+Pelton           & 7{,}000  & $-0.300$ & 600     & 8{,}000  & Literature form \\
+Crossflow        & 7{,}500  & $-0.280$ & 500     & 6{,}000  & Ceiling = vendor max. \\
+In-conduit micro & 20{,}283 & $-0.181$ & 2{,}000 & 15{,}000 & ORNL conduit refit \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize Floor and ceiling clamps are in USD per kW.}
+\end{table}
+
+The financial model is a 30-year discounted cash flow at a 6~\% real discount
+rate with 0.2~\%/yr output degradation. Revenue is annual energy times the sum of
+the plant's state industrial electricity rate, taken from 2023 state
+averages~\cite{eia_rates}, and a \$0.01/kWh renewable energy certificate value;
+the median viable site sees \$0.0740/kWh. Net present value is the discounted
+cash-flow sum less capital cost, internal rate of return is solved by Brent's
+method from $-99$~\% to $+300$~\% with explicit sentinels written when no sign
+change exists in that interval, payback is simple and undiscounted, and levelised
+cost is capital cost plus the present value of operations over the present value
+of energy. A site is project-viable when net present value is positive, payback is
+20~years or less, and the rate of return is a real solver result rather than a
+sentinel --- that exclusion matters, because a nano-scale project whose return
+pegs above 300~\% is an artefact of a tiny denominator, not an investment. A
+minimum annual revenue floor of \$20{,}000 previously gated viability; it was
+removed by project decision so sites are judged on cash flow alone, and the lever
+is kept at zero in configuration so the gate stays documented and reversible.
+
+Two corrections to this model are results in their own right. The vendor
+cross-check compares the power-law cost per kilowatt against the envelope
+published by the manufacturers of each machine type. On first run it flagged
+1{,}019 of 3{,}783 sites, or 26.9~\%: 989 Crossflow sites above the \$6{,}000/kW
+vendor ceiling at a model median of \$6{,}670/kW, and 30 Francis sites below the
+\$1{,}800/kW floor. Two clamp changes --- the Crossflow ceiling from \$7{,}500 to
+\$6{,}000 and the Francis floor from \$700 to \$1{,}800 --- took the count to
+zero, as Figure~\ref{fig:capex} shows, and raised portfolio capital cost by
+\$7.2M because those Francis sites had been genuinely under-costed against real
+vendor pricing. The exponents resisted the same treatment. Only the in-conduit
+coefficients were refit, against the ORNL conduit capital-cost
+equation~\cite{ornl2014} sampled at 44 power-head points, giving $A = 20{,}283$
+and $B = -0.181$ at $R^2 = 0.89$. Fits from the published European
+equipment-cost equations for small hydro~\cite{ogayar2009} were rejected for the
+other four types because they priced 150 of 463 Francis sites and 3 of 385 Kaplan
+sites below United States vendor floors, and because United States sources at this
+scale report total installed cost including civil works rather than equipment-only
+cost~\cite{osti3002705}. Those four exponents therefore remain literature-form and
+unvalidated against United States installations; closing that gap needs at least
+three real equipment-only project costs per machine type and is deferred.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig05_capex_vendor_band.png}
+\caption{Applied equipment cost per kilowatt against the vendor-published cost
+envelope for each machine type, after the two clamp corrections}
+\label{fig:capex}
+\end{figure}
+
+A second finding concerns which cost line decides a micro project. At the median
+plant in the 25~kW cohort the machine costs \$18{,}408 and its installation
+\$3{,}221, against \$5{,}000 of interconnection and \$5{,}000 of permitting.
+Before the conduit and behind-the-meter corrections above, those two lines were
+modelled at \$50{,}000 and \$25{,}000 --- a fixed \$75{,}000 of
+balance-of-system overhead at 4.2 times the cost of the turbine, flat with
+respect to size, so it fell hardest on the smallest sites. Correcting them cut
+modelled portfolio capital cost by \$236M and changed the viable count by
+nothing, because the binding constraint at that time was the \$20{,}000/yr
+revenue floor: 1{,}026 micro sites passed every cash-flow test and were failed by
+the floor alone. That is the sequence that led to the floor being removed, and the
+clearest case in this work of a policy assumption rather than physics setting a
+headline result.
+
+\begin{table}[htbp]
+\centering
+\caption{Project economics by permitting tier across the 3,778 scored plants}
+\label{tab:tier_econ}
+\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Permitting tier & Plants & Viable & Rated (kW) & CapEx (\$) & Rev.\ (\$/yr) \\
+\midrule
+Qualifying conduit, $\leq$ 25 kW & 3{,}275 & 834 & 3.20 & 31{,}629 & 1{,}915 \\
+Abbreviated, 25--250 kW          & 461     & 262     & 51.55  & 371{,}364     & 31{,}510  \\
+Full licensing, $>$ 250 kW       & 42      & 42      & 481.34 & 1{,}028{,}332 & 326{,}101 \\
+\midrule
+Total                             & 3{,}778 & 1{,}138 &        &               &           \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.4em}
+{\footnotesize Rated power, all-in CapEx, and revenue are per-plant medians.}
+\end{table}
+
+The scored portfolio is summarised by permitting tier in
+Table~\ref{tab:tier_econ}. All 3{,}778 sites carry \$353.5M of all-in capital
+cost --- \$181.6M of equipment, \$31.8M of installation, \$82.9M of
+interconnection, \$57.2M of permitting --- against \$4.08M/yr of operations and
+maintenance. The 1{,}138 sites clearing the viability gate carry \$211.3M of that
+capital cost and \$41.23M/yr of revenue, and return a portfolio net present value
+of \$310.1M, a median payback of 9.83~yr, a median rate of return of 9.40~\%, a
+median levelised cost of \$0.0683/kWh, and a median all-in cost of
+\$3{,}676/kW. Viability concentrates with size: all 42 plants above 250~kW are
+viable, while only 834 of the 3{,}275 plants at or below 25~kW are, though that
+small cohort is 86.7~\% of the scored fleet.
+
+Sensitivity is computed per site by re-running the model at low and high values of
+three inputs, as shown in Figure~\ref{fig:tornado}. Head and flow are perturbed
+physically rather than by scaling energy: a head perturbation re-runs the
+rated-flow optimiser at the new head, since the best rating moves with head, and a
+flow perturbation rescales every point of the flow duration curve and
+re-integrates at the original rating, since part-load efficiency makes that
+response non-linear. Only the electricity rate scales linearly. Across the 848
+viable sites carrying a measured flow duration curve, a base net present value of
+\$116.51M falls to $-\$17.27$M when head is halved and rises to \$250.29M when
+head is multiplied by 1.5; the same portfolio moves between \$45.53M and
+\$187.49M over a $\pm$30~\% rate range and between \$75.73M and \$133.55M over a
+$\pm$20~\% flow range. Normalised per unit of input change, head dominates at
+2{,}803 of the 3{,}778 scored sites. This is the price of the Section~4.3.4
+assumption in dollars: the input the pipeline cannot measure is the one the answer
+depends on most.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig06_sensitivity_tornado.png}
+\caption{Portfolio net-present-value sensitivity to net head, electricity rate,
+and flow, and the dominant input per site}
+\label{fig:tornado}
+\end{figure}
+
+One further column sets expectations. Each site's generation is compared against
+an estimate of its own plant's consumption, derived from published treatment
+energy-intensity curves~\cite{epri2013, wef_mop32} at the plant's mean flow. The
+median viable site offsets 2.016~\% of its plant's consumption and the median
+across all scored sites is 1.104~\%. Recovery at an outfall is a trim on a
+treatment plant's electricity bill, not a path to self-sufficiency, and any
+business case built on these results has to be built at that scale.
+
+Six limitations are named. The power-law exponents for four of five machine types
+are literature-form and unvalidated against United States installations, and the
+operations-and-maintenance percentages are industry rules of thumb with no
+derivation at all. The model carries no financing structure, tax credit, or grant
+beyond a single scenario column recomputing net present value at 50~\% capital
+subsidy. Civil works are excluded by scope, so a site needing a wet well, a
+bypass, or structural work on the outfall is under-costed here. Electricity rates
+are single-year state averages held flat in real terms for 30~years, which
+suppresses both escalation and the tariff structure a municipal customer would
+face. Payback and levelised cost are written with a sentinel value where they are
+infinite, and a downstream consumer treating that sentinel as a number will
+misread it. Finally, 290 of the 1{,}138 viable sites have no measured flow
+duration curve, so their head and flow sensitivities collapse to the same linear
+energy scaling and are reported as inseparable rather than as two independent
+bands. How the energy figures behind all of these economics were tested against
+real generating plants is the subject of Section~4.4.
 
 \section{Calibration and Validation}                     % WP T5 — Tom
 \wptodo{T5 · 4.4 (~part of 2,000 w)}{Feeds: scripts/cf\_calibration.py,
@@ -1120,6 +1468,25 @@ U.S.\ Energy Information Administration,
 ``How much electricity does an American home use?,'' Frequently Asked Questions,
 2023 residential average (10,500~kWh/yr per customer).
 [Online]. Available: https://www.eia.gov/tools/faqs/faq.php?id=97
+
+\bibitem{usgs_ned_accuracy}
+D.~B.~Gesch, M.~J.~Oimoen and G.~A.~Evans,
+``Accuracy assessment of the U.S. Geological Survey National Elevation Dataset,
+and comparison with other large-area elevation datasets --- SRTM and ASTER,''
+U.S.\ Geological Survey Open-File Report 2014--1008, 2014.
+[Online]. Available: https://pubs.usgs.gov/of/2014/1008/
+
+\bibitem{eia_rates}
+U.S.\ Energy Information Administration,
+``Average retail price of electricity, industrial,''
+\emph{Electric Power Monthly}, Table 5.6.B, 2023 annual averages.
+[Online]. Available: https://www.eia.gov/electricity/monthly/
+
+\bibitem{ogayar2009}
+B.~Ogayar and P.~G.~Vidal,
+``Cost determination of the electro-mechanical equipment of a small hydro-power plant,''
+\emph{Renewable Energy}, vol.~34, no.~1, pp.~6--13, 2009.
+doi:10.1016/j.renene.2008.03.015
 % Additional Track M / Joint citations merge here at WP J5.
 
 \end{thebibliography}
