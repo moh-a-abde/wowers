@@ -533,6 +533,156 @@ Any draft that cites these must match exactly (P2-SEED re-baseline):
 
 **Sources:** `ARCHITECTURE.md` for the pipeline order; Chapter 2 for the 30.2 TWh figure and its EPRI citation, kept consistent rather than re-derived; Chapters 4 and 5 for every number referenced. No new citations were needed.
 
+### Session: 2026-07-29 — M1 · Ch4.6 Frontend Visualization System — Mohamed
+
+**Work package:** M1 · Ch4.6 Frontend Visualization System
+
+**Note on process:** drafted in `thesis/thesis_moh.tex`, a standalone working file with the
+same preamble as `thesis_tom.tex`, per the two-file workflow set up this session. Not yet
+pasted into `thesis_tom.tex` — that paste is a J5-adjacent combine step, done once both M1
+and M2 exist.
+
+**What was drafted:**
+- Full first draft of §4.6 in `thesis/thesis_moh.tex` (~2,300 words): opening/responsibility
+  paragraph, §4.6.1 Stack Selection, §4.6.2 Data Layer and View Architecture, §4.6.3
+  Interaction/Filtering/Export, §4.6.4 Limitations (subsection numbers are provisional —
+  they renumber under §4.6 once merged into `thesis_tom.tex`)
+- Stack Selection: three architecture options (server-rendered/Flask, Streamlit-style
+  notebook app, static SPA) → static SPA; then three further decisions each with ≥3 options
+  — app framework (React 19.2 vs. framework-free vs. Vue), map library (Leaflet vs. Mapbox
+  GL vs. MapLibre GL), chart library (hand-rolled/D3 vs. Chart.js vs. Recharts) — each with
+  why-it-won tied to a stated requirement (token-free, no backend, WebGL point-count
+  scaling)
+- Data Layer and View Architecture: the two-generation history (four-file Python exporter →
+  single GeoJSON `?url` import), the `lib/data.ts` cache/derivation mechanics
+  (`payback()`/`viabilityBand()`/`siteConfidence()`, including the 4.9996 yr rounding-before-
+  banding edge case), and all seven routed views described in the required
+  responsibility → build detail shape
+- Interaction/Filtering/Export: URL-persisted filter state, shared `SiteTable` sort/search/
+  paginate/CSV pattern, map click/hover/`fitBounds`-on-`onLoad` behavior, basemap toggle
+- Limitations: six items named (whole-file download, no code-splitting, no map clustering,
+  client-side-only filtering ceiling, synthesized (non-measured) efficiency curve,
+  representative-not-endorsed vendor links), each tied to a named fix or explicit scope note
+
+**Source artifacts used:**
+- `frontend/src/` read in full: `App.tsx`, `lib/data.ts`, `lib/types.ts`, `lib/colors.ts`,
+  `lib/format.ts`, `lib/csv.ts`, `components/Shell.tsx`, `components/MapView.tsx`,
+  `components/SiteTable.tsx`, `components/charts/Gauge.tsx`, `components/charts/Charts.tsx`,
+  `views/NationalMap.tsx`, `views/PlantDetail.tsx`, `views/StatePortfolio.tsx`,
+  `views/Opportunities.tsx`, `views/Plants.tsx`, `views/Analytics.tsx`, `views/Reports.tsx`
+- `frontend/package.json` for exact dependency versions (react 19.2.0, react-dom 19.2.0,
+  typescript ~5.7.0, vite ^7.1.0, maplibre-gl ^5.1.0, react-map-gl ^8.0.1,
+  react-router-dom ^7.1.5, recharts ^3.0.0)
+- `WOWERS_PROJECT_JOURNAL.md` sessions 2026-07-06 (PM#4, PM#5, PM#5 addendum) and 2026-07-07
+  — read only, not cited — for the exporter-to-GeoJSON history, the `fitBounds`/`onLoad` race
+  finding, and the deferred code-splitting/clustering items
+- Live verification: started the `wowers-dashboard` dev server (`npm run dev`, vite),
+  screenshotted the National Opportunity Map at `/` and the Plant Detail page at
+  `/plant/OH0024732` in the Browser pane. Confirmed live: map renders 3,778 sites by band
+  color; header KPIs read 3,778 shown / 1,138 viable / \$310.1M NPV / 9.8 yr median payback
+  at default filters, matching the P2-SEED baseline; plant detail page (Jackson Pike Water
+  Resource Recovery Facility, OH0024732) populates flow, elevation, gauge, turbine, financial
+  scorecard, and sensitivity tornado correctly. Server stopped after verification.
+- No internal `.md` file is cited in the prose; six new external citations added (React,
+  TypeScript, Vite, MapLibre GL JS, react-map-gl, Recharts — official docs/vendor sites)
+
+**Figures / tables produced or specified:**
+- One real figure produced: the application-flow diagram (TikZ, inline in
+  `thesis_moh.tex`), showing all seven routed views resolving through the same four
+  `lib/data.ts` functions backed by one cached fetch of `scored_sites.geojson`
+- Two figures left as explicit `\figpending` markers per the images RULE, because they need
+  a live screenshot file this session's tooling could not save to disk (viewed and verified
+  on-screen, but no file-export path was available): National Opportunity Map view (`/`) and
+  Plant Detail view (`/plant/OH0024732`). **Open item, needs the user:** either grant a way to
+  export these two screenshots to disk, or take them manually from `npm run dev` in
+  `frontend/` and drop them in `thesis/figures/`.
+
+**Open items / follow-ups:**
+- The two `\figpending` screenshots above need real image files before this section is
+  presentation-ready.
+- `thesis_moh.tex`'s preamble adds `\usepackage{tikz}` locally for the flow diagram;
+  `thesis_tom.tex` dropped tikz in favor of drawio-exported assets for its own figures (see
+  the 2026-07-24 entry above). At J5, decide whether to keep this one figure as TikZ or
+  re-author it in drawio for style consistency with Figures 1–11.
+- Six new `\bibitem` entries live in a local `thebibliography` block in `thesis_moh.tex`,
+  keyed `react19`, `typescript`, `vite7`, `maplibregl`, `reactmapgl`, `recharts3` — checked
+  against `thesis_tom.tex`'s existing keys for collisions (none found as of this session).
+  These merge into Tom's single reference list at J5.
+- Compilation could not be verified this session — no `pdflatex`/`tectonic` binary was
+  available in the environment. A brace-balance and `\begin`/`\end` environment check was run
+  as a substitute (clean) but this is not a substitute for a real compile; run
+  `tectonic -X compile thesis_moh.tex` (or `pdflatex`, twice) before trusting the layout.
+- Word count came in at **~2,300 words against the ~2,000 allotted**, in the same direction
+  as several of Tom's Track T sessions; not trimmed, left for the J5 total-length check.
+
+**Breakdown updated:**
+- §3 M1 checkbox → `[x]`; §7 M1 status → ☑
+
+**Next work package suggested:**
+- M2 · Ch5.1.6 Frontend Results (~700 w) — build performance and QA results, to be measured
+  live (`npm run build`) rather than reused from the PM#4/#5 journal figures, per the format's
+  "recomputed this session" convention.
+
+### Session: 2026-07-29 — Compile verification + Figure 1 layout fixes on M1 — Mohamed
+
+**Work package:** Not a new WP — closes the "compilation could not be verified" open item left by
+the M1 session above, now that `tectonic` is installed locally.
+
+**What was done:**
+- Compiled `thesis/thesis_moh.tex` with `tectonic -X compile` (first real compile of this
+  file; none was available in the M1 session). Result: **0 errors**, 12-page PDF produced.
+- Found and fixed two real (non-cosmetic) issues in Figure 1, the application-flow TikZ
+  diagram, that a brace-balance check could not have caught:
+  1. Node text (route paths like `/opportunities`) was overflowing its box edge — widened
+     the `box` node style from `text width=27mm` to `31mm` with `inner sep=2pt`.
+  2. The whole picture was wider than the text block, causing overfull hboxes at the figure
+     boundary and visibly touching the page margin. Wrapped the `tikzpicture` in
+     `\resizebox{\linewidth}{!}{...}` so it scales to fit regardless of node count. Rendered
+     and visually inspected after the fix: diagram now sits fully inside margins.
+- **Self-inflicted bug found and reverted:** attempted to silence a minor overfull-hbox
+  warning on the figure's caption line by wrapping it in `\begin{sloppypar}...\end{sloppypar}`.
+  This broke the `caption` package's automatic label pickup — `\label{fig:m1-flow}`, which
+  sits immediately after `\caption{...}`, got captured by hyperref's `\caption@xref` fallback
+  instead of the real figure counter, so `Figure~\ref{fig:m1-flow}` printed literal `Figure ??`
+  in the body text no matter how many compile passes were run (confirmed via the `.aux` file:
+  `\newlabel{fig:m1-flow}{{\caption@xref{...}}...}` instead of a resolved number). Reverted the
+  `sloppypar` wrapping; the caption's overfull warning (18.24pt) is left as-is, cosmetic only,
+  same category as the warnings already accepted elsewhere in `thesis_tom.tex`. After revert
+  and a clean two-pass rebuild, `\newlabel{fig:m1-flow}{{1}{7}{...}}` resolves correctly and
+  the body text reads "Figure 1 shows this structure...".
+- Rendered and inspected pages 1–9 of the compiled PDF directly (not just checked for
+  compiler errors): front matter/chapter text, both TikZ-diagram states before and after the
+  fix, and both `\figpending` placeholder boxes all render as intended. The placeholder boxes
+  render exactly as designed — clearly labeled `[FIGURE ... PENDING --- awaiting upload: ...]`,
+  not a broken or missing image.
+
+**Remaining warnings (left as-is, cosmetic):**
+- `thesis_moh.tex:284` — 18.24pt overfull hbox on the Figure 1 caption line (a `\resizebox`
+  measurement artifact: the box is measured before scaling, so the warning fires even though
+  the rendered, scaled output fits inside the margin — confirmed visually).
+- `thesis_moh.tex:416` — underfull hbox on a single short bibliography line (`visgl,` on its
+  own line before the quoted title) — ordinary justified-text underfill on a short line, same
+  pattern as existing short lines in `thesis_tom.tex`'s own bibliography.
+
+**Verification:**
+- `tectonic -X compile thesis_moh.tex` → 0 errors, 2 warnings (both cosmetic, see above),
+  12 pages.
+- Pages 2–9 rendered and visually inspected (not just compiled without error): chapter
+  opening, §1.1–§1.4 prose, Figure 1 (both the pre-fix overflowing version and the corrected
+  version), both `\figpending` markers, and the start of §1.3.
+
+**Open items / follow-ups:**
+- The two `\figpending` screenshots (National Opportunity Map, Plant Detail) are still
+  outstanding — unchanged from the M1 entry above.
+- At J5 combine time, decide whether to keep Figure 1 as TikZ (now working correctly, wrapped
+  in `\resizebox`) or re-author it in drawio to match Tom's Figures 1–11 style convention.
+
+**Breakdown updated:**
+- No WP status change (M1 already ☑).
+
+**Next work package suggested:**
+- M2 · Ch5.1.6 Frontend Results (~700 w), unchanged from above.
+
 **Verification:**
 - `tectonic -X compile thesis_tom.tex` → 0 errors, 0 undefined references, 85 pages. No overfull hboxes in the Chapter 1 range; the two that report near it are pre-existing Chapter 2 boxes whose line numbers shifted.
 - Chapter 1 opening page rendered and inspected.

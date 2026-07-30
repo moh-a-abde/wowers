@@ -244,7 +244,7 @@ understanding only — these are never citable sources; see the RULE on internal
 
 ### Track M — Mohamed (frontend)
 
-- [ ] **M1 · Ch4.6 Frontend Visualization System** — ~2,000 w
+- [x] **M1 · Ch4.6 Frontend Visualization System** — ~2,000 w
   - **Feeds:** `frontend/src/` (App.tsx routing, `views/` × 7, `components/MapView.tsx`,
   `charts/`, `Gauge.tsx`, `SiteTable.tsx`, `lib/data.ts`, `colors.ts`, `csv.ts`,
   `vite.config.ts`), journal sessions 2026-07-06 PM#4/#5 + 2026-07-07.
@@ -405,7 +405,7 @@ map item #2); label all business numbers as estimates.
 | T     | T5  | Ch4.4–4.5 Calibration + Export    | Tom     | 2,000 | ☑      |
 | T     | T6  | Ch5 Results (energy/funnel/calib) | Tom     | 3,000 | ☑      |
 | T     | T7  | Appendices A–C                    | Tom     | 800   | ☑      |
-| M     | M1  | Ch4.6 Frontend system             | Mohamed | 2,000 | ☐      |
+| M     | M1  | Ch4.6 Frontend system             | Mohamed | 2,000 | ☑      |
 | M     | M2  | Ch5 Frontend results              | Mohamed | 700   | ☐      |
 | J     | J1  | Ch3 Business Model                | Joint   | 2,300 | ☐      |
 | J     | J2  | Ch1 Introduction                  | Joint   | 1,100 | ☑      |
