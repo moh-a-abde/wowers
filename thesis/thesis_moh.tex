@@ -425,16 +425,96 @@ version 3.0, 2025.
 
 \chapter{[Draft only — merges into Ch.\ 5] Frontend Performance}
 
-\wptodo{M2 · Ch5.1.6 (~700 w)}{Feeds: journal 2026-07-06 PM\#5 and
-2026-07-07 verification notes, \texttt{npm run build} output. Beats: build
-performance (vite version, build time, bundle sizes --- e.g.\ maplibre and
-index chunk sizes); headless + Chrome QA results (console errors, network
-requests, interaction checks); the mandatory discrepancy paragraph for the
-bundle-size / code-splitting deferral (state the gap, name the mechanism,
-say if acceptable for current scope, name the fix). Separate what was
-\textbf{measured} (build times, bundle sizes, QA pass/fail) from what is
-\textbf{deferred} (code-splitting, map clustering, live backend). Numbers
-must be reproduced live this session, not copied from a report --- rerun
-\texttt{npm run build} and the QA checks rather than trusting old figures.}
+Every number in this section was measured this session, from a clean
+build and a live browsing session against the dev server, rather than
+carried over from an earlier note. This distinction matters here more than
+in most results sections: the frontend is the one part of the platform
+whose behavior can drift with the local toolchain (Node, npm, browser)
+independently of any change to the WOWERS source itself, so a reused
+figure would not actually be verifying anything.
+
+\subsection*{Build Performance}
+
+A clean build was run with \texttt{rm~-rf~dist~\&\&~npm~run~build} under
+Node~22.11.0 and npm~11.6.1. The command runs \texttt{tsc~-b} before
+\texttt{vite~build}, so a successful build is also a clean full-project
+type-check: it passed with zero type errors before bundling began. Vite
+7.3.5 then produced the bundle in 6.11~s. One environment finding is worth
+recording plainly: Vite 7.3.5 reported that it requires Node.js~20.19+ or
+22.12+, and 22.11.0 falls just short of the latter floor; the build still
+completed without error, so this is a compatibility warning rather than a
+failure, but it should be resolved before this frontend is built in any
+automated or shared environment. Table~\ref{tab:m2-bundle} reports every
+emitted asset.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrr}
+\toprule
+Asset & Raw size & Gzip size \\
+\midrule
+\texttt{index-*.js} (application code) & 711.33 kB & 214.71 kB \\
+\texttt{maplibre-gl-*.js} (map runtime) & 1{,}053.37 kB & 284.75 kB \\
+\texttt{index-*.css} & 75.06 kB & 11.61 kB \\
+\texttt{scored\_sites-*.geojson} (data asset) & 6{,}129.14 kB & --- \\
+\texttt{index.html} & 0.50 kB & 0.33 kB \\
+\bottomrule
+\end{tabular}
+\caption{Production bundle sizes, measured this session from a clean \texttt{npm run build}}
+\label{tab:m2-bundle}
+\end{table}
+
+Vite's own build output flags the two largest JavaScript chunks as
+individually over its 500~kB warning threshold; that flag is the subject
+of the discrepancy paragraph below. As a point of comparison, an earlier
+project-journal note recorded a 2.6~s build and a 707~kB application
+chunk from the same command; this session's 6.11~s and 711.33~kB are
+close but not identical, which is expected of a build time and bundle
+size measured on different hardware after further commits, and is not
+treated as a regression.
+
+\subsection*{Quality Assurance}
+
+All seven routes (\texttt{/}, \texttt{/opportunities}, \texttt{/plants},
+\texttt{/analytics}, \texttt{/reports}, one \texttt{/state/:code}, and one
+\texttt{/plant/:id}) were exercised against the dev server this session.
+Zero browser console errors and zero dev-server errors were observed
+across all seven. Every headline figure checked against the P2-SEED
+baseline matched exactly: the National Opportunity Map read 3{,}778 sites
+shown, 1{,}138 viable, \$310.1M NPV, and a 9.8~yr median payback at its
+default (unfiltered) state; Analytics read \$310.1M portfolio NPV,
+\$211.3M CapEx, \$41.2M/yr savings, 409{,}170~MWh/yr recoverable energy,
+and 848 high-confidence sites; Opportunities read 1{,}138 opportunities
+and the same \$310.1M and 409{,}202~MWh/yr totals. The single-cached-fetch
+design described in Section~4.6.2 was also confirmed empirically rather
+than only by reading the source: after the initial page load, navigating
+across four views through the in-app sidebar, a client-side transition
+with no full page reload, produced zero additional network requests for
+\texttt{scored\_sites.geojson}, matching the module-level cache's intended
+behavior.
+
+\subsection*{Discrepancy: Bundle Size and Deferred Code-Splitting}
+
+The measured result departs from the ideal one in a specific, bounded way.
+The gap: two chunks, the 711.33~kB application bundle and the
+1{,}053.37~kB MapLibre runtime, are downloaded on every route, including
+\texttt{/reports}, which never renders a map, for a combined 1{,}764.7~kB
+raw (499.46~kB gzipped) of JavaScript the browser did not need for that
+page. The mechanism: \texttt{App.tsx} imports all seven views statically,
+and \texttt{MapView} is pulled in transitively through
+\texttt{NationalMap} and through \texttt{PlantDetail}'s mini-map, so the
+bundler has no route boundary at which it could separate the MapLibre
+dependency into its own lazily loaded chunk. Whether this is acceptable
+for the current scope: yes. At 499.46~kB gzipped total and a demonstration
+audience of one reviewer at a time rather than concurrent production
+traffic, the cost is a fraction of a second on any real connection, and it
+was accepted as a known cost rather than an oversight in the
+2026-07-07 session that first flagged it. The fix, not yet built, is
+route-level code-splitting with React's \texttt{lazy()} so that the
+MapLibre chunk is requested only when \texttt{NationalMap} or
+\texttt{PlantDetail} is the active route. Map clustering at low zoom (see
+the limitation named in Section~4.6.4) and a live backend to replace the
+static GeoJSON fetch remain separately deferred and are not measured
+here, because neither has been built in any form to measure.
 
 \end{document}

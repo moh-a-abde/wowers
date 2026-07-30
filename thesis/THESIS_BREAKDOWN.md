@@ -257,7 +257,7 @@ understanding only — these are never citable sources; see the RULE on internal
   - **Fig/Tab:** app flow diagram (**Figure 2**), NationalMap screenshot description,
   PlantDetail screenshot description, view/route table.
 
-- [ ] **M2 · Ch5 Frontend Results** — ~700 w
+- [x] **M2 · Ch5 Frontend Results** — ~700 w
   - **Feeds:** journal 2026-07-06 PM#5 + 2026-07-07 verification notes, `npm run build`
   output.
   - **Beats:** build perf (vite 7.3.5, ~2.6 s, bundle sizes — maplibre 1.05 MB, index
@@ -406,7 +406,7 @@ map item #2); label all business numbers as estimates.
 | T     | T6  | Ch5 Results (energy/funnel/calib) | Tom     | 3,000 | ☑      |
 | T     | T7  | Appendices A–C                    | Tom     | 800   | ☑      |
 | M     | M1  | Ch4.6 Frontend system             | Mohamed | 2,000 | ☑      |
-| M     | M2  | Ch5 Frontend results              | Mohamed | 700   | ☐      |
+| M     | M2  | Ch5 Frontend results              | Mohamed | 700   | ☑      |
 | J     | J1  | Ch3 Business Model                | Joint   | 2,300 | ☐      |
 | J     | J2  | Ch1 Introduction                  | Joint   | 1,100 | ☑      |
 | J     | J3  | Ch6 Conclusion                    | Joint   | 900   | ☑      |

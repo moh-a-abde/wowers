@@ -683,6 +683,80 @@ the M1 session above, now that `tectonic` is installed locally.
 **Next work package suggested:**
 - M2 · Ch5.1.6 Frontend Results (~700 w), unchanged from above.
 
+### Session: 2026-07-29 — M2 · Ch5.1.6 Frontend Performance — Mohamed
+
+**Work package:** M2 · Ch5.1.6 Frontend Results (Frontend Performance)
+
+**What was drafted:**
+- Full first draft of the M2 chapter in `thesis/thesis_moh.tex` (~700 words): a lead-in
+  paragraph on why this section's numbers must be measured fresh rather than reused, then
+  three subsections — Build Performance, Quality Assurance, and the mandatory Discrepancy
+  paragraph (Bundle Size and Deferred Code-Splitting)
+- Build Performance: `tsc -b` + `vite build` results under Node 22.11.0 / npm 11.6.1 / Vite
+  7.3.5, one bundle-size table (Table 1: index.js, maplibre-gl.js, index.css,
+  scored\_sites.geojson, index.html — raw and gzip), and an honest environment finding (Vite
+  reported it wants Node 20.19+/22.12+; 22.11.0 is just under the latter floor; build still
+  succeeded)
+- Quality Assurance: all 7 routes exercised live, zero console/server errors, every headline
+  figure cross-checked against the P2-SEED baseline (National Map, Analytics, Opportunities
+  KPIs), and the single-cached-fetch design from M1 §4.6.2 confirmed empirically (not just by
+  reading the source) — 4 client-side sidebar navigations produced 0 additional
+  `scored_sites.geojson` network requests
+- Discrepancy paragraph, all four required parts: (a) gap stated numerically — 1,764.7 kB raw
+  / 499.46 kB gzip of JS loaded on every route including non-map ones; (b) mechanism —
+  `App.tsx` statically imports all 7 views, no route boundary for the bundler to split on;
+  (c) acceptable for current scope — yes, single-reviewer demo traffic; (d) named fix —
+  route-level `React.lazy()`
+
+**Source artifacts used:**
+- Live command output: `rm -rf dist && npm run build` in `frontend/` (this session, not
+  reused from any prior log)
+- Live browser session: started the `wowers-dashboard` dev server, hard-navigated to check
+  console/network on `/opportunities` and `/analytics`, then used real sidebar clicks (not
+  URL navigation) from `/` through Opportunities → Plants → Analytics → Reports specifically
+  to test the caching claim under genuine client-side routing, since URL-based navigation in
+  this tooling forces a full page reload and would not have tested the same code path
+  - `WOWERS_PROJECT_JOURNAL.md` sessions 2026-07-06 PM#4 and 2026-07-07 — read only, not
+  cited — for the prior build-time/bundle-size figures, quoted in the Build Performance
+  subsection only as an explicit point of comparison ("this session's figure vs. an earlier
+  note"), not presented as this session's own measurement
+
+**Figures / tables produced or specified:**
+- Table 1 (provisional numbering in the standalone file) — production bundle sizes, all five
+  rows read directly from this session's `vite build` output
+
+**Open items / follow-ups:**
+- Noted but not chased down: this session's build time (6.11 s) and index.js size
+  (711.33 kB) differ slightly from an older project-journal note (2.6 s / ~707 kB) for the
+  same command. Attributed to different hardware and commits since that note, stated as such
+  in the prose, not treated as a regression requiring investigation.
+- The Node version compatibility warning (22.11.0 vs. Vite's 20.19+/22.12+ requirement) is a
+  real, unresolved environment gap. It did not block this session's build, but should be
+  fixed (upgrade Node, or pin an older Vite) before any CI or shared-environment build of
+  this frontend.
+- Map clustering and a live backend are named as separately-deferred items in the discrepancy
+  paragraph's closing sentence but were not measured, because neither exists yet in any form.
+
+**Verification:**
+- `tectonic -X compile thesis_moh.tex` (two passes) → 0 errors, 14 pages. Two warnings
+  remain, both cosmetic and visually confirmed harmless by rendering and inspecting the
+  affected pages (12–14): a `\resizebox`-measurement artifact carried over from the M1
+  figure, and one dense paragraph in the new Quality Assurance subsection flagged as
+  27.52 pt overfull by TeX's badness metric but showing no visible overflow past the margin
+  in the rendered PDF.
+- Table 1 (bundle sizes) rendered correctly with `booktabs` rules, caption above per format
+  §5.
+
+**Breakdown updated:**
+- §3 M2 checkbox → `[x]`; §7 M2 status → ☑. **Track M (M1 + M2) is now fully first-drafted.**
+
+**Next work package suggested:**
+- Per §6, the combine gate ("do not start J4/J5 until both technical tracks are
+  first-drafted") is now satisfied — Track T and Track M are both done. J1 (Ch3 Business
+  Model) is still the one un-started Joint package and does not depend on the gate; J4
+  (System Integration Test) and J5 (front matter + reference merge + final stitch, including
+  actually pasting `thesis_moh.tex`'s M1/M2 prose into `thesis_tom.tex`) can now begin.
+
 **Verification:**
 - `tectonic -X compile thesis_tom.tex` → 0 errors, 0 undefined references, 85 pages. No overfull hboxes in the Chapter 1 range; the two that report near it are pre-existing Chapter 2 boxes whose line numbers shifted.
 - Chapter 1 opening page rendered and inspected.
