@@ -291,7 +291,7 @@ assumption, not an observation — the ten calls in §4.3 are what would replace
 
 Three closed projects over five years, at the median ≥ 100 kW CapEx of $552.1k, is $1.7M of hardware
 moved. Add screening fees and channel subscriptions and the five-year revenue picture is roughly
-**$0.5–1.2M** — a consulting and data business for two people, not a venture-scale company. §7 says this
+**$0.4–1.0M** (revised down 2026-08-06 with the subscription price) — a consulting and data business for two people, not a venture-scale company. §7 says this
 out loud rather than hiding it.
 
 Note the funnel starts from the *ceiling-tier* bankable set. At the band floor under market municipal
@@ -319,9 +319,9 @@ thesis (format §3.5).
 | Product | Price | Derivation |
 |---|---|---|
 | **Screening report** — per-utility custom run, per-site detail, sensitivity bands, methodology appendix | $8–15k | Roughly 1 % of the median NPV of a 100–250 kW site (~$1.1M). **Audit benchmark corrected:** an ASHRAE Level 2 energy audit runs ~$1.8–10k, not the $15–50k previously claimed, so the audit comparison no longer supports this price — see note below |
-| **Data subscription** — filtered national database access for OEMs, ESCOs, consultants | $1–2k/month | Value ceiling of ~30 qualified leads/yr at $3k per qualified lead ≈ $90k/yr; priced well under that to make the buy trivial. The $3k/lead figure is still an assumption, not a sourced market rate |
-| **Origination success fee** — paid on financial close | 2–4 % of project CapEx | Claimed as a standard developer origination band; **no authoritative public source found** — treat as an assumption until a real term sheet or trade-association schedule is obtained. At the corrected median ≥ 100 kW CapEx of **$552.1k** the band is **$11.0–22.1k** per closed project |
-| **State / agency data layer** — GIS exports, white-label report, state-specific overlays | $25–75k per engagement | Scaled to typical state energy-office study procurement; **still unverified** — settle by pulling two real state energy-office RFPs and citing their award values |
+| **Data subscription** — filtered national database access for OEMs, ESCOs, consultants | **$300–900/month** (revised down 2026-08-06) | **Sourced:** manufacturing/industrial B2B cost per lead is **$120–350**, blended cross-industry ~$198 (Martal Group industry survey, 2026). 30 routed sites/yr = **$3.6–10.5k/yr** of lead-replacement value — not the $90k/yr the old $3k/lead assumption implied, so $1–2k/month was **not supported**. Counter-argument kept on the record: our lead is an engineered site sheet, not a marketing contact, and may command more — settle it with the §4.3 calls |
+| **Origination success fee** — paid on financial close | 2–4 % of project CapEx | **Sourced.** U.S. Treasury's position is that renewable developer fees normally fall in the **3–5 %** range of project cost; in *California Ridge Wind Energy v. United States* Treasury cut a claimed 12.3 % fee to **4.8 %** (Norton Rose Fulbright, *Project Finance NewsWire*, Aug 2019). A developer earning that carries capital and development risk; WOWERS originates only, so 2–4 % sits at or below the low end of a full developer's fee — the intended relationship. At $552.1k median CapEx that is **$11.0–22.1k** per closed project |
+| **State / agency data layer** — GIS exports, white-label report, state-specific overlays | $25–75k per engagement | **Still unsourced after a real search.** State procurement award values for this kind of study are not indexed in public web sources; NASEO's RFP listings carry no dollar figures. Settle by pulling two actual state energy-office award records. This is now the only wholly unsourced price in §5 |
 | **Grant-funded methodology work** | $50–305k | **Verified:** NSF SBIR Phase I awards are **$305,000** (NSF America's Seed Fund Phase I awardee record, 2025 awards); Phase II up to $1,250,000 |
 
 **On the screening-report price.** The audit benchmark was the weaker of the two derivations and it did
@@ -393,8 +393,11 @@ investment-ready sites, **1,133 are under 1 MW** and only 5 exceed it. So:
 - Independently, hydro projects commencing construction in **2026 or later** must comply with "material
   assistance" restrictions on prohibited foreign entities to keep §48E eligibility. This is a
   supplier-nationality compliance question and is **not** answered by the sub-1 MW exemptions above.
-  **[VERIFY]** the precise material-assistance thresholds against statutory text before any pitch relies
-  on a specific supplier.
+  **Verified 2026-08-06:** the threshold is a material-assistance cost ratio of **40 % for construction
+  beginning in 2026**, rising 45 / 50 / 55 % through 2029 and 60 % thereafter (26 U.S.C.
+  §7701(a)(52)(B); IRS Notice 2026-15 for computation safe harbours). Permissive today — up to 60 % of
+  direct costs may come from restricted sources in 2026 — but tightening, and **it applies to sub-1 MW
+  sites too**, unlike the domestic-content phaseout above.
 
 The uncomfortable symmetry is worth stating plainly: the small sites get the cleanest tax treatment and
 have no economics; the large sites have the economics and inherit the full compliance load.
@@ -569,9 +572,9 @@ pilot that needs CWSRF or an equivalent subsidy in the conversation from the fir
 | 1b | ~~Settle the band-floor decision (118.9 vs 89.8 GWh/yr)~~ **DECIDED 2026-08-06 (Tom): band moves to 89.8–281 GWh/yr.** Advisor sign-off still outstanding — was the recorded precondition and must land before Ch3 is submitted | Tom + advisor | 1 meeting | Yes — before submission |
 | 1c | ~~Propagate the 89.8 floor beyond this file~~ **DONE 2026-08-06.** Added as a fourth pipeline tier rather than overwriting `floor_p25`: `settings.yaml` gains `measured_point_loma: 0.2195`, `add_calibrated_energy_cols` emits `energy_kwh_calib_measured_point_loma`, Phase 4 re-run (49 → 50 cols, all pre-existing columns byte-identical, baseline unchanged), both geojson files re-exported at **59 properties**, `test_calib_cols.py` + `test_export_geojson.py` + `frontend/src/lib/data.ts` updated, and 119–281 replaced throughout `thesis_tom.tex` (Ch2, Ch4.1, Ch4.4, Ch4.5, Ch5.1.4, Ch6, App. A) and `thesis_moh.tex` (contract count). Fleet floor = **89.81 GWh/yr**. Tests 737 pass; frontend builds | Tom | done | — |
 | 2 | ~~Add discount rate as a documented sensitivity band (6 % / 3.5 % / 0 %)~~ **Data exists** in `TIER_LADDER_REPORT.md`; still needs writing up as a thesis sensitivity table in the install-% band's shape | Tom | small | No |
-| 3 | ~~Verify every **[VERIFY]** item in §5 and §6~~ **7 of 10 verified 2026-08-06** (IRA elective pay + §48E + the 1 MW threshold, CWSRF eligibility, WIFIA thresholds, USDA RD grant share, NSF SBIR ceiling, municipal bond yields, ASHRAE audit pricing). **3 still open:** developer origination-fee band, state energy-office study procurement scale, and the $3k/qualified-lead assumption — none has an authoritative public source yet | Both | ~half session | Yes for the 3 open items |
+| 3 | ~~Verify every **[VERIFY]** item in §5 and §6~~ **9 of 10 verified as of 2026-08-06.** Added this pass: origination fee (Treasury 3–5 % developer-fee position) and cost per qualified lead (industrial B2B $120–350, which forced the subscription price down). **1 still open:** state energy-office study procurement scale — searched twice, no public award data exists | Both | done bar one | Only the state-agency price |
 | 3b | **Collect citable sources for the 7 verified items.** Each was verified from a primary or near-primary web source this session, but the thesis needs the formal citation (agency page, IRS notice, statute, NSF award record) captured with access date. Per the no-internal-citation rule, Ch3 cannot cite this file | Tom | 1–2 hours | Yes — before Ch3 submission |
-| 3c | **Verify the §48E "material assistance" / prohibited-foreign-entity thresholds** for hydro construction starting 2026+ against statutory text. This is the one IRA question that the sub-1 MW exemptions do *not* answer, and it bears directly on recommending European OEMs | Tom | ~2 hours | Yes for any supplier-specific claim |
+| 3c | ~~Verify the §48E "material assistance" thresholds~~ **DONE 2026-08-06.** 26 U.S.C. §7701(a)(52)(B): a qualified facility fails below a material-assistance cost ratio of 40 % (2026) rising to 60 % (2030+); IRS Notice 2026-15 supplies interim safe harbours. Written into Ch3.8 with both citations. **Standing consequence:** supplier nationality becomes a procurement criterion as the bar tightens, and this rule binds sub-1 MW sites unlike the domestic-content phaseout | Tom | done | — |
 | 4 | Ten customer-validation calls per §4.3 | Both | 2 weeks | Yes for any claim that a buyer exists |
 | 5 | One-page lead sheet template + per-OEM routing from `turbine_type` | Tom | 1–2 days | No |
 | 6 | ~~Draft J1 · Ch3 against this document~~ **DONE 2026-08-06.** All 8 sections written into `thesis_tom.tex`, **2,283 words**, every section inside 150–400. 8 new bibliography entries for the funding claims; 29 cited keys / 29 bibitems, none missing or unused, no internal `.md` cited. Compiles: 0 errors, 0 undefined citations, 100 pages | Both | done | — |
@@ -593,16 +596,25 @@ directly, with an access date — see next-action 3b.
 | Municipal rate "roughly 3.5 %" | AAA 30-year municipal benchmark **4.25 %** (April 2026); AA water/sewer revenue bonds at **40–60 bp** over MMD AA → ~4.6–4.9 % | Municipal market commentary, 2026 | **Corrected.** Ladder re-run with a 4.75 % market-municipal rate; 3.5 % relabelled as below-market/subsidised |
 | NSF SBIR Phase I "~$275k" | **$305,000**; Phase II up to $1,250,000 | NSF America's Seed Fund, Phase I awardee records (2025 awards) | Corrected upward |
 | "typical ESCO energy audit at $15–50k" | ASHRAE Level 2 audits ~**$1.8–10k** commercial, ~$10k industrial. No source found for $15–50k | ASHRAE Level 2 audit pricing, multiple vendors | **Benchmark withdrawn.** Screening-report price now rests on the NPV-share derivation alone |
-| Origination fee "2–4 %, standard band" | No authoritative public source found | — | Downgraded to a labelled assumption |
-| State data layer "$25–75k, typical procurement" | No authoritative public source found | — | Downgraded; needs two real state RFPs |
-| Data subscription "$3k per qualified lead" | Not verified | — | Labelled as an assumption |
+| Origination fee "2–4 %, standard band" | **Now sourced (2026-08-06).** Treasury's position is 3–5 % of project cost for renewable developer fees; a claimed 12.3 % fee was cut to 4.8 % in *California Ridge Wind Energy v. United States* | Norton Rose Fulbright, *Project Finance NewsWire*, Aug 2019 | **Kept at 2–4 %**, now with a real derivation: a developer earning 3–5 % carries capital and development risk, WOWERS originates only, so pricing below that band is the intended relationship |
+| State data layer "$25–75k, typical procurement" | **Searched again 2026-08-06 — still nothing.** State procurement award values for studies of this type are not indexed publicly; NASEO's RFP listings carry no dollar figures | — | Remains the only wholly unsourced price in §5. Needs two actual state award records |
+| Data subscription "$3k per qualified lead" | **Now sourced, and it contradicted the price.** Manufacturing/industrial B2B cost per lead is $120–350; blended cross-industry ~$198 | Martal Group cost-per-lead industry survey, 2026 | **Price revised down $1–2k/month → $300–900/month.** 30 routed sites/yr is $3.6–10.5k/yr of lead-replacement value, not the $90k/yr the $3k/lead assumption implied. Five-year revenue in §4.2 moves $0.5–1.2M → $0.4–1.0M |
+| §48E "material assistance" thresholds (was action 3c) | **Verified against statute.** MACR = share of direct costs *not* attributable to a prohibited foreign entity; a qualified facility fails below **40 % (2026), 45 % (2027), 50 % (2028), 55 % (2029), 60 % (2030+)**. Energy storage is stricter. Interim computation safe harbours issued Feb 2026 | 26 U.S.C. §7701(a)(52)(B); IRS Notice 2026-15 | **Good news, with a deadline.** The 2026 bar is permissive — up to 60 % of direct costs may be restricted-source — so a European turbine is unlikely to fail today. It tightens to 60 % clean content by 2030, and **the sub-1 MW exemption does not apply here**, so this binds small sites too |
 
-Net: **7 of 10 verified, 2 corrected against us (muni rate, audit benchmark), 1 corrected strongly in our
-favour (IRA elective pay), 3 still unsourced.** The pattern worth noting for the thesis: every number that
-made the business look better than assumed came from a statute or agency page, and every number that made
-it look worse came from a market rate we had guessed. That is the expected direction when guesses are
-replaced by sources, and it is why §5's remaining three assumptions should be treated as probably
-optimistic until sourced.
+Net after both passes (2026-08-06): **9 of 10 verified · 3 corrected against us (municipal rate, audit
+benchmark, subscription price) · 2 corrected in our favour (IRA elective pay, origination fee) · 1 still
+unsourced (state-agency engagement scale).**
+
+The pattern held across both passes and is worth carrying into the thesis: **every number that came from
+a statute or an agency page survived or improved; every number we had guessed at from "what the market
+probably charges" moved against us.** The municipal rate was too low, the audit benchmark did not exist,
+and the per-lead figure was an order of magnitude high. Meanwhile the statutory work turned up a genuinely
+favourable finding we had not claimed — the sub-1 MW elective-pay exemption — and a real deadline we had
+not seen: the material-assistance ratio tightens to 60 % clean content by 2030 and, unlike the
+domestic-content rule, does **not** spare small sites.
+
+The one price still unsourced (state/agency data layer) should therefore be treated as probably
+optimistic, on the evidence of how the other guesses turned out.
 
 ---
 

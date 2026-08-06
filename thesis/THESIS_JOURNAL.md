@@ -1266,3 +1266,74 @@ final reference-list merge) can only be closed after it lands.
 **Next work package suggested:**
 - Mohamed's M1/M2 merge into `thesis_tom.tex`. After it lands: global figure/table
   renumbering check, final reference merge, and then J5 can be closed.
+
+---
+
+### Session: 2026-08-06 — J1 revision · Ch3 pricing derivations + §48E material assistance — Joint
+
+**Work package:** J1 · Ch3 Business Model (revision, not a new package)
+
+**What was revised:**
+- **§3.5 Pricing Model** — two of the three unsourced derivations are now sourced, and one of them
+  forced a price change. **§3.8** gains a verified passage on the §48E material-assistance rule.
+- **Four new references**, all verified this session: `usc7701` (26 U.S.C. §7701(a)(51)–(52)),
+  `irs_notice_2026_15` (IRS Notice 2026-15, 12 Feb 2026), `nrf_devfees` (Norton Rose Fulbright,
+  *Project Finance NewsWire*, Aug 2019), `cpl_benchmark` (Martal Group cost-per-lead survey, 2026).
+
+**Findings, including one that moved a price:**
+1. **Origination fee 2–4 % — sourced and strengthened.** Treasury's position is that renewable
+   developer fees normally fall in the **3–5 %** range of project cost; in *California Ridge Wind
+   Energy v. United States* a claimed 12.3 % fee was reduced to **4.8 %**. A developer earning that
+   carries capital and development risk across the project; WOWERS originates only. Pricing at 2–4 %
+   therefore sits at or below the low end of a full developer's fee, which is now written as the
+   intended relationship rather than asserted as a "standard band".
+2. **Cost per qualified lead — sourced, and it contradicted our price.** Manufacturing and industrial
+   B2B cost per lead runs **$120–350**, blended cross-industry near $198 — an order of magnitude below
+   the $3k the subscription price rested on. Thirty routed sites is $3.6–10.5k/yr of lead-replacement
+   value, not $90k/yr, which does not support $12–24k/yr of subscription revenue. **The tier was
+   revised from $1–2k/month to $300–900/month**, and §3.7's five-year revenue moved $0.5–1.2M →
+   $0.4–1.0M with it. The counter-argument is kept in the prose: a WOWERS lead is an engineered site
+   sheet, not a marketing contact, and may command more — but that needs the §3.6 customer calls, not
+   a benchmark.
+3. **State/agency engagement scale — still unsourced after a second search.** State procurement award
+   values for studies of this type are not publicly indexed and NASEO's RFP listings carry no dollar
+   figures. It is labelled in the prose as the one wholly unsourced price and names what would settle it.
+4. **§48E material assistance — verified against statute.** A qualified facility fails if its
+   material-assistance cost ratio (the share of direct costs *not* attributable to a prohibited foreign
+   entity) falls below **40 % for construction beginning 2026**, rising to 45, 50 and 55 % through 2029
+   and **60 % thereafter**; energy storage carries a stricter schedule. Interim computation safe
+   harbours were issued February 2026. Two consequences are now in §3.8: the 2026 bar is permissive, so
+   a European turbine with mixed-origin components is unlikely to fail it today; but it tightens to
+   60 % clean content by 2030, and **unlike the domestic-content phaseout it carries no sub-1 MW
+   exemption**, so it binds the small sites as much as the large. This is stated as the one tax
+   question in the chapter that scale does not resolve.
+
+**Ripple effects checked and handled:**
+- §3.7 revenue arithmetic updated for the new subscription price (the only downstream number affected).
+- `thesis/business.md` §5 pricing table, §4.2 revenue band, §6.1.1 material-assistance note, §10
+  next-actions 3 and 3c, and the §10a verification log all updated to match. Action 3c closed; action 3
+  now reads 9 of 10 verified.
+- Grepped for every other occurrence of the affected figures; nothing in Ch2, Ch4, Ch5, Ch6 or the
+  abstract depends on them.
+
+**Format deviation, recorded deliberately:**
+- §3.5 and §3.8 now run **474 and 464 words** against the breakdown's 150–400 per-subsection guide.
+  Ch3 totals **2,732 words**, inside the 8 × (150–400) = 1,200–3,200 envelope. Two rounds of trimming
+  were applied; cutting further would have meant deleting a priced tier's derivation or the statutory
+  thresholds, which are the substance the same spec asks for. Flagged rather than resolved by mangling.
+
+**Counts:** references **39** in `thesis_tom.tex` (+6 Mohamed = **45 merged**, inside 40–50); 39 cited
+keys against 39 bibitems, none missing, none unused. Compiles to **109 pages, 0 errors, 0 undefined
+citations**.
+
+**Open items / follow-ups:**
+- State/agency engagement price still unsourced — the last one.
+- Everything else from the prior J5 entry stands: `{{MONTH_YEAR}}`, acknowledgement names, 1–2 more
+  figures for the 20-figure minimum, advisor sign-off on the band floor, ten customer calls, and
+  Mohamed's M1/M2 merge.
+
+**Breakdown updated:**
+- No checkbox changed; J1 was already ticked and this is a revision to it.
+
+**Next work package suggested:**
+- Unchanged: Mohamed's M1/M2 merge, then J5 closes.

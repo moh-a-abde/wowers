@@ -740,26 +740,47 @@ chosen number.
     owner, with per-site detail, sensitivity bands and a methodology appendix.
     Derivation: approximately 1~\% of the estimated median net present value of a
     100--250~kW site, which the model puts near \$1.1M.
-  \item \emph{Data subscription, \$1--2k per month.} Filtered access to the
+  \item \emph{Data subscription, \$300--900 per month.} Filtered access to the
     national database for manufacturers, energy service companies and consultants.
-    Derivation: a value ceiling of roughly 30 qualified leads per year at an assumed
-    \$3k per qualified lead, priced well beneath that ceiling so the purchase
-    decision is trivial. The per-lead figure is an assumption and not a sourced
-    market rate.
+    Derivation: published cost-per-lead benchmarks for the manufacturing and
+    industrial sector run roughly \$120--350 per lead, against a blended
+    cross-industry figure near \$198~\cite{cpl_benchmark}. Thirty routed sites per
+    year therefore carry \$3.6--10.5k/yr of lead-replacement value, and the
+    subscription is priced beneath the middle of that range. This tier was
+    \emph{revised downward} during the citation pass described below.
   \item \emph{Origination fee, 2--4~\% of project capital cost, on financial
-    close.} Derivation: at the estimated median capital cost of \$552.1k for sites
-    above 100~kW this is \$11.0--22.1k per closed project. The percentage band is
-    taken to be conventional for development origination but no authoritative public
-    schedule was located, so it too is an assumption.
+    close.} Derivation: the U.S.\ Treasury's position on renewable-energy developer
+    fees, tested in \emph{California Ridge Wind Energy v.\ United States}, is that
+    such fees should normally fall in the 3--5~\% range of project cost absent
+    unusual circumstances --- the Treasury reduced a claimed 12.3~\% fee to 4.8~\% in
+    that case~\cite{nrf_devfees}. A developer earning that fee carries capital and
+    development risk across the whole project. WOWERS carries neither: it originates
+    and qualifies the site and does nothing else. Pricing at 2--4~\% therefore sits at
+    or below the low end of what a full developer commands, which is the intended
+    relationship. At the estimated median capital cost of \$552.1k for sites above
+    100~kW this is \$11.0--22.1k per closed project.
+  \item \emph{State or agency data layer, \$25--75k per engagement.} GIS exports, a
+    white-label report and state-specific overlays. This tier's derivation remains
+    unsourced: it was scaled to an assumed state energy-office procurement value and no
+    public award record establishing that range was located. Two real award values
+    would settle it.
 \end{itemize}
 
-Energy-as-a-service was considered and rejected for the present stage. Under such a
-contract WOWERS would carry energy-yield risk against a model whose own calibration
-spans a factor of 4.6, from the 409.2~GWh/yr ceiling to the 89.8~GWh/yr that the
-only metered treated-wastewater plant implies, and for which no wastewater-specific
-ground truth exists in the datasets available to this work. Section~4.4.2 reports the machine-learning effort that was
-killed for exactly this reason. Signing a generation guarantee against an
-uncertainty this thesis states it cannot quantify would be underwriting a risk we
+One of these prices did not survive being sourced. The subscription tier was first
+proposed at \$1--2k per month on an assumed \$3k per qualified lead; published
+benchmarks put an industrial lead an order of magnitude lower, which supports
+\$3.6--10.5k/yr of replacement value rather than the \$90k/yr the original derivation
+implied. The price is revised accordingly. The counter-argument is not dismissed: a
+WOWERS lead is an engineered site sheet, not a marketing contact, and may command
+more --- but that cannot be settled from published benchmarks, only from the customer
+conversations named in Section~3.6.
+
+Energy-as-a-service was considered and rejected for now. It would have WOWERS carry
+yield risk against a calibration spanning a factor of 4.6, from the 409.2~GWh/yr
+ceiling to the 89.8~GWh/yr the only metered treated-wastewater plant implies, with no
+wastewater-specific ground truth in the datasets available here --- the same scarcity
+that ended the machine-learning attempt of Section~4.4.2. Guaranteeing generation
+against an uncertainty this thesis states it cannot quantify would underwrite a risk we
 have documented as unquantified. The position taken is fee-based revenue until a
 metered pilot exists, after which a yield-linked contract can be priced on an
 observed capacity factor rather than a substituted one.
@@ -807,18 +828,22 @@ origination fee, gives \$6.3M of one-time fees, plus screening engagements. The
 serviceable addressable market is the cohort where a fee is actually collectable,
 namely the 129 sites above 100~kW carrying \$98.9M of capital cost, which at the same
 3~\% gives \$3.0M. A realistic obtainable share of roughly 10~\% of that
-serviceable market is \$0.3M of origination fees, which combined with screening
-engagements and channel subscriptions puts five-year revenue near
-\$0.5--1.2M.
+serviceable market is \$0.3M of origination fees. Adding screening engagements and
+channel subscriptions at the revised prices of Section~3.5 --- three subscribers at
+the midpoint of \$300--900 per month contribute \$22--32k/yr, not the \$43--86k/yr the
+original price implied --- puts five-year revenue near \$0.4--1.0M.
 
-Two qualifications matter more than the point estimate. The figures above rest on
+Three qualifications matter more than the point estimate. The figures above rest on
 the physics ceiling; at the measured floor with municipal financing and a 50~\%
 subsidy the bankable cohort above 100~kW falls from 129 sites to 59, and the
-serviceable market halves with it. And the conversion assumptions behind the
-obtainable share are unvalidated, for the reason given in Section~3.6. What the
-arithmetic supports is a consulting and data business for a small team, not a
-venture-scale company, and stating that plainly is more useful than a larger number
-that the evidence in Chapter~5 would contradict.
+serviceable market halves with it. The conversion assumptions behind the obtainable
+share are unvalidated, for the reason given in Section~3.6. And the subscription
+component moved downward when its derivation was sourced, which is a reminder that
+the least-evidenced numbers in this chapter are the ones describing revenue to
+WOWERS rather than value to plant owners --- the pipeline outputs are reproducible,
+the prices are not. What the arithmetic supports is a consulting and data business
+for a small team, not a venture-scale company, and stating that plainly is more
+useful than a larger number that the evidence in Chapter~5 would contradict.
 
 \section{Future Vision and Project Timeline}
 
@@ -830,15 +855,14 @@ turbine would replace the substituted capacity factor of Section~4.4.1 with an
 observed one, and would do more for the credibility of every number in this chapter
 than any amount of additional screening. It is sequenced first for that reason.
 
-The funding path for the company is non-dilutive first and probably non-dilutive
-only. The National Science Foundation's Small Business Innovation Research program
-awards up to \$305k at Phase~I~\cite{nsf_sbir}, and a documented calibration band, a
-published negative result and a reproducible test suite are the posture such
-programs reward. On the customer side, elective payment under the Inflation
-Reduction Act allows tax-exempt and governmental owners to receive clean-energy tax
-credits as cash~\cite{irs_elective_pay}, and the clean-electricity investment credit
-was retained in full for hydropower at 100~\% of its value for construction
-beginning through 2033~\cite{nha_obbba}. The threshold that matters for this
+The company's funding path is non-dilutive first and probably non-dilutive only. The
+National Science Foundation's Small Business Innovation Research program awards up to
+\$305k at Phase~I~\cite{nsf_sbir}, and a documented calibration band, a published
+negative result and a reproducible test suite are the posture such programs reward. On
+the customer side, elective payment lets tax-exempt and governmental owners take
+clean-energy credits as cash~\cite{irs_elective_pay}, and the clean-electricity
+investment credit was retained in full for hydropower through
+2033~\cite{nha_obbba}. The threshold that matters for this
 portfolio is 1~MW: facilities below it are exempt from the prevailing-wage and
 apprenticeship conditions while still reaching the full 30~\% credit, and are
 outside the domestic-content phaseout that otherwise reduces elective-pay
@@ -846,12 +870,24 @@ value~\cite{irs_pwa,irs_elective_pay,irs_notice_2024_84}. Of the 1,138 viable si
 1,133 fall below 1~MW. The five that do not include both marquee-scale sites, which
 therefore carry a compliance load the rest of the portfolio does not.
 
+A second restriction does \emph{not} carry the sub-megawatt exemption, and it bears on
+the equipment recommendation of Section~3.4. For construction beginning after
+31~December 2025, the credit is denied if a project received ``material assistance from
+a prohibited foreign entity,'' measured as the share of direct costs \emph{not} traceable
+to such an entity. A project fails below a threshold that rises annually: 40~\% in 2026,
+then 45, 50 and 55~\% through 2029, and 60~\% thereafter~\cite{usc7701}, with interim
+computation safe harbours issued in February 2026~\cite{irs_notice_2026_15}. The 2026
+bar is permissive --- up to 60~\% of direct costs may come from restricted sources --- so
+a European turbine with mixed-origin components is unlikely to fail it today. It
+tightens to 60~\% clean content by 2030, which turns supplier nationality from a
+footnote into a procurement criterion, and it binds the small sites as much as the
+large. This is the one tax question here that scale does not resolve.
+
 Beyond the pilot, the same pipeline extends to other continuously flowing
-infrastructure -- water-utility pressure-reducing valves, industrial cooling
-discharge, irrigation canal drops, mine dewatering -- each requiring only a new
-ingest module. None of that is built, none of it is sized here, and it is
-named only so that the boundary of what has been demonstrated stays visible.
-Chapter~6 states what was designed and tested and what remains open.
+infrastructure -- pressure-reducing valves, industrial cooling discharge, irrigation
+canal drops, mine dewatering -- each needing only a new ingest module. None of it is
+built or sized here, and it is named only to keep the boundary of what has been
+demonstrated visible. Chapter~6 states what was tested and what remains open.
 
 % =====================================================================
 % CHAPTER 4 — DESIGN DETAILS (technical bulk, 9,000-12,000 w)
@@ -2968,6 +3004,39 @@ D.~Novara \emph{et al.},
 ``Hydropower technology for sustainable energy generation in wastewater systems:
 learning from the experience,''
 \emph{Water}, vol.~13, no.~22, art.~3259, 2021.
+
+% --- Chapter 3 pricing and foreign-entity sources (verified 6 August 2026) ---
+
+\bibitem{usc7701}
+\emph{Definitions}, 26 U.S.C.\ \S7701(a)(51)--(52), as amended by Pub.\ L.\ 119-21
+(One Big Beautiful Bill Act), 2025. Threshold percentages for the material assistance
+cost ratio are at \S7701(a)(52)(B).
+
+\bibitem{irs_notice_2026_15}
+Internal Revenue Service,
+``Material assistance from a prohibited foreign entity --- interim guidance for
+\S\S45Y, 48E and 45X,'' Notice 2026-15, 12 February 2026.
+[Online]. Available: \url{https://www.irs.gov/pub/irs-drop/n-26-15.pdf}
+[Accessed 6 August 2026].
+
+\bibitem{nrf_devfees}
+K.~Martin,
+``Developer fees,''
+\emph{Project Finance NewsWire}, Norton Rose Fulbright, August 2019.
+[Online]. Available:
+\url{https://www.projectfinance.law/publications/2019/august/developer-fees/}
+[Accessed 6 August 2026]. Reports the U.S.\ Treasury position that renewable-energy
+developer fees should normally fall in the 3--5~\% range of project cost, and the
+reduction of a claimed 12.3~\% fee to 4.8~\% in \emph{California Ridge Wind Energy v.\
+United States}.
+
+\bibitem{cpl_benchmark}
+Martal Group,
+``Cost per lead by industry: benchmarks and data,'' 2026.
+[Online]. Available: \url{https://martal.ca/cost-per-lead-by-industry-lb/}
+[Accessed 6 August 2026]. Industry survey; manufacturing and industrial cost per lead
+reported at \$120--350, against a blended cross-industry figure near \$198. Cited as a
+commercial benchmark rather than a peer-reviewed source.
 
 % --- Chapter 3 business-model funding sources (WP J1, verified 6 August 2026) ---
 

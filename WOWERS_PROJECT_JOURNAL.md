@@ -6285,3 +6285,63 @@ scopings), `thesis/THESIS_BREAKDOWN.md` (J4 ticked, J5 marked partial, status le
 5. Three Chapter 3 pricing assumptions unsourced; §48E material-assistance thresholds
    unverified; ten customer-validation calls unstarted.
 6. `CF_CALIBRATION_REPORT.md` still stale.
+
+---
+
+### Session: 2026-08-06 (PM #4) — Ch3 pricing sourced, §48E material assistance verified — Tom
+
+**What was done:**
+Closed the two open verification items. Both produced real findings rather than just citations.
+
+**§48E material assistance — verified against the statute.** 26 U.S.C. §7701(a)(52)(B): a qualified
+facility fails if its material-assistance cost ratio — the share of direct costs *not* traceable to a
+prohibited foreign entity — falls below **40 % for construction beginning 2026**, rising 45 / 50 / 55 %
+through 2029 and **60 % from 2030**. Energy storage is stricter. IRS Notice 2026-15 (12 Feb 2026) adds
+interim computation safe harbours. Two things matter: the 2026 bar is permissive, so a European turbine
+with mixed-origin components is unlikely to fail today; but **this rule carries no sub-1 MW exemption**,
+unlike the domestic-content phaseout, so it binds the whole portfolio and tightens over the asset life.
+Written into Ch3.8 with both citations.
+
+**Pricing — two of three sourced, and one price had to move.**
+- *Origination fee 2–4 %:* sourced and strengthened. Treasury's position is 3–5 % for renewable
+  developer fees, and a claimed 12.3 % fee was cut to 4.8 % in *California Ridge Wind Energy v. United
+  States*. A developer earning that carries project risk; WOWERS originates only, so 2–4 % sits below
+  the band by design. Real derivation now, not an assertion.
+- *Cost per qualified lead:* sourced, and **it contradicted our price.** Industrial B2B cost per lead is
+  $120–350, not the $3k the subscription rested on. Thirty routed sites is $3.6–10.5k/yr of value, not
+  $90k/yr — which does not support $12–24k/yr. **Subscription revised $1–2k/month → $300–900/month**,
+  and the five-year revenue picture moved $0.5–1.2M → $0.4–1.0M. The counter-argument stays in the text:
+  our "lead" is an engineered site sheet, not a marketing contact, and may be worth more — but that needs
+  customer calls, not a benchmark.
+- *State/agency engagement, $25–75k:* searched twice, still nothing. State award values for this kind of
+  study are not publicly indexed. It is now the only wholly unsourced price and is labelled as such.
+
+**The pattern across both verification passes is worth recording.** Every number that came from a statute
+or an agency page survived or improved. Every number we had guessed from "what the market probably
+charges" moved against us — the municipal rate was too low, the audit benchmark did not exist, the
+per-lead figure was 10× high. Meanwhile the statutory reading turned up a favourable finding we had not
+claimed (the sub-1 MW elective-pay exemption) and a deadline we had not seen (material assistance
+tightening to 60 % by 2030). The remaining unsourced price should be treated as probably optimistic on
+that evidence.
+
+**Ripple check:** §3.7 revenue arithmetic was the only downstream number affected in the thesis. Grepped
+every other occurrence — nothing in Ch2, Ch4, Ch5, Ch6 or the abstract depends on the changed figures.
+`business.md` §5, §4.2, §6.1.1, §10 (actions 3 and 3c) and §10a all updated to match.
+
+**Recorded deviation:** Ch3.5 and Ch3.8 now run 474 and 464 words against the 150–400 per-subsection
+guide, after two rounds of trimming. Ch3 totals 2,732, inside the 1,200–3,200 envelope. Cutting further
+would have deleted a priced derivation or the statutory thresholds — the substance the spec asks for — so
+it is flagged rather than mangled.
+
+**Verification:** references 35 → **39** (45 merged with Mohamed's 6, inside the 40–50 target); 39 cited
+keys against 39 bibitems, none missing or unused; compiles to **109 pages, 0 errors, 0 undefined
+citations**; 737 tests still pass (no source touched).
+
+**Files modified:** `thesis/thesis_tom.tex` (§3.5, §3.7, §3.8, 4 new bibitems), `thesis/business.md`,
+`thesis/THESIS_JOURNAL.md`, `WOWERS_PROJECT_JOURNAL.md`.
+
+**Open / next steps:**
+1. State/agency engagement price — the last unsourced number in §5.
+2. Mohamed's M1/M2 merge, then J5 closes.
+3. `{{MONTH_YEAR}}`, acknowledgement names, 1–2 more figures for the 20-figure minimum.
+4. Advisor sign-off on the 89.8 GWh/yr band floor; ten customer-validation calls.
