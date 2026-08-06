@@ -6211,3 +6211,77 @@ payback that was a ceiling-tier number attached to a floor-tier argument.
    closed at a desk.
 6. `CF_CALIBRATION_REPORT.md` still stale. Internal artifact, never cited, but it keeps inviting
    the corrected errors back.
+
+---
+
+### Session: 2026-08-06 (PM #3) — J4 drafted, J5 substantially done, literature gap closed — Tom
+
+**What was done:**
+Cleared everything remaining on the thesis that does not depend on Mohamed. He is doing
+the M1/M2 merge himself, so that half of J5 stays open and J5 is marked **◐ partial**
+rather than ticked.
+
+**1. J4 · Ch5.1.7 System Integration Test drafted** (570 w + a comparison table). Every
+claim in it was measured rather than asserted: all eight headline quantities recomputed
+from the exported GeoJSON agree with the parquet exactly; the exporter was re-run and
+both files reproduced identical SHA-256 digests; and the hashed asset inside
+`frontend/dist/` matches the tracked export digit for digit. The section also states what
+the test does not prove — it verifies transport, not correctness, and a head or
+capacity-factor error would pass every check intact.
+
+**2. J5, everything not blocked on the merge.** Abstract (449 w, inside the 350--450 format
+range, written last as required) and acknowledgements (271 w). Names in the
+acknowledgements are left as visible slots; `{{MONTH_YEAR}}` on the title page is likewise
+left unfilled, because a guessed defense date on a title page is worse than an obvious
+placeholder.
+
+**3. The reference gap closed, and it produced a real correction.** Six peer-reviewed
+sources were added, all verified: Chae *et al.* 2015, Power *et al.* 2017, Mérida García
+*et al.* 2021, McNabola *et al.* 2021, Punys *et al.* 2022, Novara *et al.* 2021. Reading
+them changed the thesis rather than just padding its bibliography:
+
+- **An absolute claim turned out to be false.** The abstract I had just written said no
+  measured wastewater-outfall generation exists in the public record. Chae *et al.* monitored
+  a semi-Kaplan unit on an operating Korean plant's effluent for over a year at 68.1 MWh/yr.
+  The claim is now scoped to what is actually true — nothing metered appears in the **U.S.
+  public generation datasets this calibration uses** — and §2.2 now states the real
+  distinction: instrumented case studies exist; a machine-readable national record pairing
+  head, flow and metered energy across enough sites to calibrate against does not. Same
+  overstatement scoped in §3.5.
+- **We had a closer methodological precedent than the thesis admitted.** Mérida García
+  *et al.* screened Spain's wastewater discharges for micro-hydro potential *using discharge
+  licences as the flow source* — the same move WOWERS makes with ICIS-NPDES. §2.4 now concedes
+  this as the nearest published analogue and states precisely what WOWERS adds: U.S. coverage,
+  a per-plant ranked list, and calibration against metered generation from the same asset class.
+
+Reference count 29 → **35** in Tom's file; with Mohamed's 6 that is **41 merged**, inside the
+40--50 target. 35 cited keys against 35 bibitems, none missing, none unused.
+
+**4. Smaller cleanups.** Nine references gained `[Accessed]` dates and `\url{}` wrapping, so
+no reference now carries a URL without one. "P2-SEED" defined at first use in §2.2. Missing
+signposts added at the end of §4.3.1 and §4.3.2. Honesty pass run across all five
+non-negotiables — all present.
+
+**Verification:** `tectonic` → **108 pages, 0 errors, 0 undefined citations**. The only two
+red TODO markers left are Mohamed's merge stubs. Tables 26 merged, comfortably past the
+20 minimum.
+
+**One format requirement is still unmet and cannot be met by me:** figures stand at 16 (Tom)
++ 1 real (Mohamed) = 17, plus his 2 pending screenshots = 19, against a 20 minimum. It closes
+if Mohamed supplies the per-state-portfolio and analytics screenshots that §4 of the breakdown
+already assigns him.
+
+**Files modified:** `thesis/thesis_tom.tex` (5.1.7, abstract, acknowledgements, §2.2 and §2.4
+literature passages, 6 new bibitems, 9 access dates, P2-SEED gloss, 2 signposts, 2 claim
+scopings), `thesis/THESIS_BREAKDOWN.md` (J4 ticked, J5 marked partial, status legend added),
+`thesis/THESIS_JOURNAL.md` (two entries), `WOWERS_PROJECT_JOURNAL.md`.
+
+**Open / next steps:**
+1. **Mohamed's M1/M2 merge** — then global figure/table renumber, final reference merge, and
+   J5 closes.
+2. **`{{MONTH_YEAR}}` and the acknowledgement names** — authors only.
+3. **1–2 more figures** to clear the 20-figure minimum.
+4. **Advisor sign-off on the 89.8 GWh/yr floor.**
+5. Three Chapter 3 pricing assumptions unsourced; §48E material-assistance thresholds
+   unverified; ten customer-validation calls unstarted.
+6. `CF_CALIBRATION_REPORT.md` still stale.

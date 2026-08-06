@@ -294,13 +294,17 @@ understanding only — these are never citable sources; see the RULE on internal
   Mohamed-side (code-splitting, clustering, live backend), one joint (customer pilot);
   position as first step to customer value.
 
-- [ ] **J4 · Ch5 Integration Test** — ~500 w
+- [x] **J4 · Ch5 Integration Test** — ~500 w
   - **Beats:** end-to-end: pipeline parquets → `export_geojson.py` → dashboard, with the
   P2-SEED baseline numbers matching across the boundary (1,138 viable / 409.17 GWh /
   $310.1M / 9.8 yr). Realistic stimulus = the real re-baselined parquets; say why that is
   representative.
 
-- [ ] **J5 · Front matter + References merge + final stitch** — ~1,000 w + assembly
+- [ ] **J5 · Front matter + References merge + final stitch** *(PARTIAL 2026-08-06: abstract,
+  acknowledgements, +6 verified references, access dates, honesty pass, P2-SEED gloss and
+  signposts all done. Remaining: global figure/table renumber and final reference merge, both
+  blocked on Mohamed's M1/M2 merge; plus `{{MONTH_YEAR}}`, acknowledgement names, and 1–2 more
+  figures to clear the 20-figure minimum.)* — ~1,000 w + assembly
   - **Beats:** abstract (5 paragraphs, 350–450 w, per format §3.3); acknowledgements
   (advisor, business faculty, industry contacts); TOC / List of Figures / List of Tables;
   merge both tracks' reference lists into one IEEE-numbered list (target 40–50);
@@ -396,6 +400,8 @@ map item #2); label all business numbers as estimates.
 ## 7. Progress at a glance
 
 
+Legend: ☑ first draft exists · ◐ partially complete, blocked on another package · ☐ not started
+
 | Track | WP  | Section                           | Owner   | Words | Status |
 | ----- | --- | --------------------------------- | ------- | ----- | ------ |
 | T     | T1  | Ch2 Background                    | Tom     | 2,400 | ☑      |
@@ -410,8 +416,8 @@ map item #2); label all business numbers as estimates.
 | J     | J1  | Ch3 Business Model                | Joint   | 2,300 | ☑      |
 | J     | J2  | Ch1 Introduction                  | Joint   | 1,100 | ☑      |
 | J     | J3  | Ch6 Conclusion                    | Joint   | 900   | ☑      |
-| J     | J4  | Ch5 Integration test              | Joint   | 500   | ☐      |
-| J     | J5  | Front matter + refs + stitch      | Joint   | 1,000 | ☐      |
+| J     | J4  | Ch5 Integration test              | Joint   | 500   | ☑      |
+| J     | J5  | Front matter + refs + stitch      | Joint   | 1,000 | ◐      |
 
 
 **Total target:** ~21,900 words body (inside the 18,000–24,000 window; technical:business ≈ 3:1). ✅

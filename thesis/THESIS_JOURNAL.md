@@ -1142,3 +1142,127 @@ rather than assumed (below).
   decision because it quotes only ceiling-tier baseline numbers, and both technical tracks are
   first-drafted so the §6 combine gate is open. J5 stays last by design — the abstract summarises
   finished content.
+
+---
+
+### Session: 2026-08-06 — J4 · Ch5.1.7 System Integration Test — Joint
+
+**Work package:** J4 · Ch5 Integration Test
+
+**What was drafted:**
+- Section 5.1.7, System Integration Test, **570 words** against a ~500 target, plus
+  Table~\ref{tab:integration} (a nine-row parquet-versus-GeoJSON comparison).
+
+**Source artifacts used:**
+- `data/processed/phase4/financial_scorecards.parquet`, `exports/viable_sites.geojson`,
+  `exports/scored_sites.geojson`, `scripts/export_geojson.py`, and the built
+  `frontend/dist/assets/scored_sites-*.geojson`. No external sources; this section reports
+  only this project's own integration behaviour.
+
+**Verification actually performed (not asserted):**
+- Recomputed all eight headline quantities from the exported GeoJSON rather than the
+  parquet. Exact agreement: 3,778 / 1,138 / 409.1695 GWh/yr / $310.1336M / $211.3252M /
+  9.8262 yr / 58.5891 MW / $41.2345M/yr. 59 properties per feature in both files.
+- **Byte-determinism tested, not assumed:** re-ran the exporter over an unchanged
+  scorecard and compared SHA-256 digests. Both files reproduced identically
+  (`ddfc810e…` viable, `b3608816…` scored).
+- **Build fidelity tested:** the hashed GeoJSON asset in `frontend/dist/assets/` carries
+  the same SHA-256 as the tracked export, confirming the Vite `?url` import introduces no
+  copy step where the two could diverge.
+- `meta` block confirmed derived rather than typed: 17,148 analysed / 3,778 scored /
+  P2-SEED label, all from parquet row counts.
+
+**Figures / tables produced or specified:**
+- Table: integration comparison (new). No figure; the section is a numeric equality check
+  and a figure would add nothing.
+
+**Open items / follow-ups:**
+- The section states plainly what the test does *not* prove: it verifies transport
+  fidelity, not correctness. A head-estimation or capacity-factor error would pass every
+  check in the table intact. This is written into the prose rather than left implicit.
+- The dashboard half was exercised by hand, not by an automated browser suite, so it
+  verifies the current build and would not catch a future regression.
+
+**Breakdown updated:**
+- §3 Track J checkbox for **J4 ticked**; §7 status row J4 changed ☐ → ☑.
+
+**Next work package suggested:**
+- J5, in progress in the same session (see next entry).
+
+---
+
+### Session: 2026-08-06 — J5 · Front matter, references, honesty pass (PARTIAL) — Joint
+
+**Work package:** J5 · Front matter + References merge + final stitch
+
+**Status: partially complete — deliberately not ticked.** Every part of J5 that does not
+depend on Mohamed's M1/M2 merge is done. Mohamed is doing that merge himself, and the two
+remaining J5 items (final global figure/table renumbering across merged content, and the
+final reference-list merge) can only be closed after it lands.
+
+**What was drafted:**
+- **Abstract**, five paragraphs, **449 words** (format range 350--450). Written last, as the
+  format requires. Paragraph 4 separates simulated from measured explicitly.
+- **Acknowledgements**, four paragraphs, 271 words. Names are left as visible
+  `\ackname{...}` slots rather than guessed — the advisor, business faculty and industry
+  contacts must be filled by the authors before submission.
+
+**Also completed under J5:**
+- **Six peer-reviewed references added, all verified.** Chae *et al.* 2015 (*Energy
+  Conversion and Management* 101, 681--688), Power *et al.* 2017 (*J. Energy Engineering*
+  143(1)), Mérida García *et al.* 2021 (*Water* 13(5) 691), McNabola *et al.* 2021 (*Water*
+  13(7) 899), Punys *et al.* 2022 (*Energies* 15(14) 5173), Novara *et al.* 2021 (*Water*
+  13(22) 3259). Two new passages were written to use them: one at the end of §2.2 on
+  instrumented WWTP micro-hydro measurement, one opening §2.4 on prior *national* wastewater
+  screens.
+- **A substantive honesty correction came out of that reading.** The abstract as first
+  drafted claimed no measured wastewater-outfall generation exists in the public record.
+  Chae *et al.* falsifies that: a semi-Kaplan unit on an operating Korean plant's effluent
+  was monitored over a year at 68.1 MWh/yr. The claim is now scoped to what is actually
+  true — no metered wastewater-outfall generation appears in the **U.S. public generation
+  datasets this calibration draws on** — and §2.2 states the distinction directly: individual
+  instrumented case studies exist; a machine-readable national record pairing head, flow and
+  metered energy across enough sites to calibrate or train against does not. The same
+  overstatement was scoped in §3.5. Mérida García *et al.* also turns out to be the nearest
+  published analogue to this work's method (national wastewater screen from discharge
+  licences), which §2.4 now concedes explicitly while stating what WOWERS adds.
+- **Nine references gained `[Accessed]` dates** and `\url{}` wrapping (epa_echo, usgs_3dep,
+  hydrosource_eha, rentricity, cink, eia_household, usgs_ned_accuracy, eia_rates, eia923).
+  Zero references now carry a URL without an access date.
+- **"P2-SEED" defined at first use** in §2.2, pointing to §4.3.3.
+- **Two missing signposts added**, closing §4.3.1 and §4.3.2.
+- **Honesty pass run** across the five non-negotiables: screening-not-prediction framing,
+  measured/simulated separation, Phase-5 kill reported, head flagged as the largest
+  methodological assumption, business numbers labelled estimates. All present.
+
+**Counts after this session:**
+- References: **35** in `thesis_tom.tex`, 6 in `thesis_moh.tex` → **41 merged**, inside the
+  40--50 target. 35 cited keys against 35 bibitems; none missing, none unused.
+- Tables: 25 (Tom) + 1 (Mohamed) = **26**, comfortably past the 20 minimum.
+- Figures: **16 (Tom) + 1 real (Mohamed) = 17**, plus his 2 pending screenshots = 19.
+  **This is one short of the 20 minimum** and is the one format requirement not yet met.
+  It closes if Mohamed supplies the per-state-portfolio and analytics screenshots that
+  §4 of the breakdown assigned him.
+- `tectonic` compiles to **108 pages, 0 errors, 0 undefined citations**. The only two red
+  TODO markers left are Mohamed's M1/M2 merge stubs.
+
+**Open items / follow-ups:**
+- **`{{MONTH_YEAR}}` on the title page is still unfilled.** It is the target defense month
+  and only the authors know it; guessing a date on a title page would be worse than leaving
+  the placeholder visible.
+- **Acknowledgement names** unfilled, as above.
+- **Figure count 19 against a 20 minimum** — needs 1--2 more from Mohamed.
+- Advisor sign-off on the 89.8 GWh/yr band floor still outstanding.
+- Three Chapter 3 pricing assumptions remain unsourced and are labelled as such.
+- §48E material-assistance thresholds still unverified against statutory text.
+- Ten customer-validation calls still unstarted.
+- Bibliography is grouped by topic with comment headers rather than reordered; if a strict
+  first-citation ordering is wanted, that is a J5 finishing task after the merge.
+
+**Breakdown updated:**
+- **J5 left unticked** (☐) with a status note, because the merge-dependent half is not done.
+  J4 ticked.
+
+**Next work package suggested:**
+- Mohamed's M1/M2 merge into `thesis_tom.tex`. After it lands: global figure/table
+  renumbering check, final reference merge, and then J5 can be closed.
