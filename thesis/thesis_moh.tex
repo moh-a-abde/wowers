@@ -98,7 +98,7 @@
 \chapter{[Draft only — merges into Ch.\ 4] Frontend Visualization System}
 
 The screening pipeline described in the preceding sections of Chapter 4 ends
-at a single deterministic data contract, the 58-property GeoJSON file
+at a single deterministic data contract, the 59-property GeoJSON file
 exported by \texttt{export\_geojson.py}. That file is inert on its own: it
 is the frontend's responsibility to turn it into a tool a non-technical
 reviewer, an investor, or a municipal utility can actually use to find and
@@ -138,7 +138,7 @@ pages sharing a common data layer and a consistent set of formatting and
 color-coding rules) is naturally expressed as a small component tree, and
 React's ecosystem includes typed, actively maintained bindings for both of
 the remaining two decisions. TypeScript~5.7~\cite{typescript} was used
-throughout rather than plain JavaScript so that the 58-property data
+throughout rather than plain JavaScript so that the 59-property data
 contract could be declared once, in \texttt{lib/types.ts}, and checked at
 build time everywhere it is consumed; a property renamed or dropped in the
 exporter surfaces as a compile error in the frontend rather than a silent
@@ -188,7 +188,7 @@ detail file per plant. That design required a Python step before every
 the join logic already implemented in the export layer described in
 Section~4.5. It was replaced the same day by the design the frontend uses
 today: the single git-tracked \texttt{exports/scored\_sites.geojson}, the
-same 58-property, 3{,}778-feature file described in Section~4.5, is the
+same 59-property, 3{,}778-feature file described in Section~4.5, is the
 frontend's only data source.
 
 \texttt{lib/data.ts} implements this as a module-level cached fetch.
@@ -200,7 +200,7 @@ issues one \texttt{fetch()} and stores the pending promise; every
 subsequent call across every view returns that same cached promise rather
 than re-fetching, so navigating between the seven routes costs one network
 request for the life of the session. A local \texttt{SiteProps} interface
-mirrors the exporter's 58 properties field for field, and four exported
+mirrors the exporter's 59 properties field for field, and four exported
 functions, \texttt{fetchPlants}, \texttt{fetchNational},
 \texttt{fetchPortfolio(state)}, and \texttt{fetchPlant(id)}, derive the four
 view-specific shapes the components consume entirely in the browser. This
@@ -263,7 +263,7 @@ of those functions is served from the single cached fetch of
               font=\small, minimum height=8mm, text width=34mm, inner sep=2pt},
   arr/.style={-{Latex[length=2mm]}, thick}
 ]
-\node[src] (geo) {\texttt{exports/}\\\texttt{scored\_sites.geojson}\\(3{,}778 features, 58 props)};
+\node[src] (geo) {\texttt{exports/}\\\texttt{scored\_sites.geojson}\\(3{,}778 features, 59 props)};
 \node[box, below=of geo] (data) {\texttt{lib/data.ts}\\cached \texttt{fetch()} + client-side\\derivation (band, confidence, payback)};
 \node[box, below=10mm of data, xshift=-70mm] (v1) {NationalMap\\\texttt{/}};
 \node[box, right=of v1] (v2) {StatePortfolio\\\texttt{/state/:code}};

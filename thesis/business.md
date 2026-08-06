@@ -567,7 +567,7 @@ pilot that needs CWSRF or an equivalent subsidy in the conversation from the fir
 |---|---|---|---|---|
 | 1 | ~~Re-run Phase 4 across the full tier ladder and at both discount rates~~ **DONE 2026-08-06.** `scripts/tier_ladder_whatif.py`, 36 scenarios, output in `TIER_LADDER_REPORT.md`; baseline reproduces exactly. §2 and §7 rewritten against it | Tom | done | — |
 | 1b | ~~Settle the band-floor decision (118.9 vs 89.8 GWh/yr)~~ **DECIDED 2026-08-06 (Tom): band moves to 89.8–281 GWh/yr.** Advisor sign-off still outstanding — was the recorded precondition and must land before Ch3 is submitted | Tom + advisor | 1 meeting | Yes — before submission |
-| 1c | **Propagate the 89.8 floor beyond this file.** `thesis_tom.tex` carries 119–281 in ≥ 5 places (Ch2, Ch4.4, Ch5.1.4, Ch6); `config/settings.yaml` floor tier, the geojson 58-property contract, `tests/test_phase4/test_calib_cols.py`, `tests/test_scripts/test_export_geojson.py` and `frontend/src/lib/data.ts` all hard-code the 0.291 floor. Scope as its own session — it revisits T1/T5/T6 | Tom | ~1 session | Yes — J1 must not contradict Ch4 |
+| 1c | ~~Propagate the 89.8 floor beyond this file~~ **DONE 2026-08-06.** Added as a fourth pipeline tier rather than overwriting `floor_p25`: `settings.yaml` gains `measured_point_loma: 0.2195`, `add_calibrated_energy_cols` emits `energy_kwh_calib_measured_point_loma`, Phase 4 re-run (49 → 50 cols, all pre-existing columns byte-identical, baseline unchanged), both geojson files re-exported at **59 properties**, `test_calib_cols.py` + `test_export_geojson.py` + `frontend/src/lib/data.ts` updated, and 119–281 replaced throughout `thesis_tom.tex` (Ch2, Ch4.1, Ch4.4, Ch4.5, Ch5.1.4, Ch6, App. A) and `thesis_moh.tex` (contract count). Fleet floor = **89.81 GWh/yr**. Tests 737 pass; frontend builds | Tom | done | — |
 | 2 | ~~Add discount rate as a documented sensitivity band (6 % / 3.5 % / 0 %)~~ **Data exists** in `TIER_LADDER_REPORT.md`; still needs writing up as a thesis sensitivity table in the install-% band's shape | Tom | small | No |
 | 3 | ~~Verify every **[VERIFY]** item in §5 and §6~~ **7 of 10 verified 2026-08-06** (IRA elective pay + §48E + the 1 MW threshold, CWSRF eligibility, WIFIA thresholds, USDA RD grant share, NSF SBIR ceiling, municipal bond yields, ASHRAE audit pricing). **3 still open:** developer origination-fee band, state energy-office study procurement scale, and the $3k/qualified-lead assumption — none has an authoritative public source yet | Both | ~half session | Yes for the 3 open items |
 | 3b | **Collect citable sources for the 7 verified items.** Each was verified from a primary or near-primary web source this session, but the thesis needs the formal citation (agency page, IRS notice, statute, NSF award record) captured with access date. Per the no-internal-citation rule, Ch3 cannot cite this file | Tom | 1–2 hours | Yes — before Ch3 submission |
@@ -622,8 +622,9 @@ optimistic until sourced.
   the floor. A Ch3 built silently on the ceiling — or on the word "central" — contradicts Ch4 and Ch5 and
   is the single largest internal-consistency risk in the thesis.
 - **The reported band is 89.8–281 GWh/yr** as of 2026-08-06 (Tom's decision; advisor sign-off pending).
-  Ch2/Ch4.4/Ch5.1.4/Ch6 still say 119–281 — see next-action 1c. **J1 must not be submitted while Ch3 and
-  Ch4 disagree on the floor.**
+  Ch2/Ch4.1/Ch4.4/Ch4.5/Ch5.1.4/Ch6/App. A and the frontend chapter now all carry it, and the floor is a
+  real pipeline column (`energy_kwh_calib_measured_point_loma`, fleet sum 89.81 GWh/yr) rather than a
+  prose-only claim. Ch3 and Ch4 agree. What is *not* settled is the advisor sign-off.
 - **Never mix cohorts across a single claim.** A site count, an energy figure, an NPV and a payback quoted
   in one sentence must all come from the same tier, the same discount rate, the same subsidy level, and
   the same viable set. Portfolio NPV in particular has two legitimate readings under a grant ($415.8M

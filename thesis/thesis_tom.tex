@@ -421,7 +421,9 @@ A defensible screen must still separate physics ceilings from calibrated expecta
 Substituting median river-hydro CF for continuous effluent over-haircuts energy; omitting
 debris and downtime overstates it. The WOWERS response, developed in Chapters~4 and~5, is
 to report a physics ceiling (409.2~GWh/yr at the P2-SEED baseline) beside a calibrated band
-of 119--281~GWh/yr anchored to EHA empirics and LucidPipe~\cite{hydrosource_eha,lucidpipe}. Prior national
+of 89.8--281~GWh/yr, floored on the only metered treated-wastewater conduit plant in the
+country and bounded above by the Portland Conduit~3 design
+projection~\cite{hydrosource_eha,lucidpipe}. Prior national
 methods that stop at resource potential, or that calibrate only against river fleets,
 therefore leave a methodological gap that Section~2.4 compares explicitly. Why those prior
 methods remain limited for POTW outfall recovery will now be discussed.
@@ -454,7 +456,7 @@ can be seen in Table~\ref{tab:prior_work}.
       \$/kW fits (e.g.\ BCM ICC)~\cite{ornl2014,osti3002705} \\
     WOWERS (this work) & 17,148 U.S.\ POTW outfalls $\rightarrow$ 1,138 project-viable &
       ICIS DMR FDC + 3DEP head proxy; CF calibrated & Physics ceiling 409.2~GWh/yr;
-      calibrated band 119--281~GWh/yr \\
+      calibrated band 89.8--281~GWh/yr \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -472,9 +474,10 @@ calibration source available without site visits. Restricting to the 0.1--5~MW c
 0.541~\cite{hydrosource_eha}. Those statistics correctly bound a \emph{conservative
 floor} for any small-hydro claim. They incorrectly describe WWTP duty cycles if used as a
 central estimate, because seasonal river drivers listed in Section~2.1 do not apply to
-municipal effluent. The WOWERS calibration therefore keeps the EHA floor (119--194~GWh/yr
-depending on percentile and MW sub-bucket) and adds a WWTP-appropriate optimistic tier at
-CF~0.60 (281~GWh/yr), set below the 0.628--0.806 range implied by the Portland Conduit~3
+municipal effluent. The WOWERS calibration therefore retains the EHA range (119--194~GWh/yr
+depending on percentile and MW sub-bucket) as corroboration rather than as the floor itself,
+places the reported floor on metered treated-wastewater generation at 89.8~GWh/yr, and adds
+an optimistic tier at CF~0.60 (281~GWh/yr), set below the 0.628--0.806 range implied by the Portland Conduit~3
 filed and as-built figures~\cite{ferc_p14498, lucidpipe}. Because those figures are
 projections rather than metered output, the same section benchmarks them against the 115
 EHA Canal/Conduit plants that do report measured generation to
@@ -493,7 +496,7 @@ project economics once a site is chosen but does not rank sites~\cite{ferc_condu
 Plant energy-\emph{consumption} literature (EPRI Table~5-1 observed kWh/MG by flow band;
 WEF Manual of Practice~32 curves retained for sensitivity) closes the offset narrative:
 national wastewater use near 30.2~TWh/yr and validated plant-level intensities give context
-for why a 119--281~GWh/yr recovery band is simultaneously material at portfolio scale and
+for why an 89.8--281~GWh/yr recovery band is simultaneously material at portfolio scale and
 small as a fraction of treatment load~\cite{epri2013,wef_mop32}. ENERGY STAR and EPA
 planning guides corroborate the order of magnitude without replacing the EPRI observed
 grid~\cite{epa2013}.
@@ -543,7 +546,7 @@ The WOWERS platform is a national screening system that turns public regulatory
 and geospatial data into ranked, financially scored micro-hydropower opportunities
 at U.S.\ POTW outfalls. Figure~\ref{fig:1} below depicts the top-level dataflow.
 Four external source families feed a four-phase Python pipeline; the pipeline
-writes parquet intermediates; an export script freezes a 58-property GeoJSON
+writes parquet intermediates; an export script freezes a 59-property GeoJSON
 contract; and a React + MapLibre dashboard reads that single file with no live
 backend.
 
@@ -566,7 +569,7 @@ Equation~\eqref{eq:hydro}. Phase~3 replaces literature head archetypes with a
 Phase~4 applies CapEx/OpEx models, revenue and plant-consumption offsets, and
 NPV/IRR/payback gates that define the project-viable cohort. The P2-SEED re-baseline
 that Chapter~5 reports screens 17,148 POTWs and retains 1,138 project-viable sites
-with a physics ceiling of 409.2~GWh/yr, a calibrated band of 119--281~GWh/yr,
+with a physics ceiling of 409.2~GWh/yr, a calibrated band of 89.8--281~GWh/yr,
 portfolio NPV of \$310.1M, and median payback of 9.8~yr.
 
 The same pipeline is shown as a build process in Figure~\ref{fig:dataflow}, with one
@@ -1010,7 +1013,7 @@ Phase 2}
 These Phase~2 totals are screening intermediates and are deliberately not the
 headline figure of this thesis. They are computed on archetype head rather than
 measured head, before turbine sizing, and before economics; the 409.2~GWh/yr
-ceiling and the calibrated 119--281~GWh/yr band reported in Chapter~5 come from
+ceiling and the calibrated 89.8--281~GWh/yr band reported in Chapter~5 come from
 Phases~3 and~4 applied to the surviving sites. The gap between 699.18~GWh/yr here
 and 409.2~GWh/yr there is a consequence of real head replacing assumed head, of
 the 1~kW physics floor, and of the financial gate, and is decomposed stage by
@@ -1624,10 +1627,25 @@ each plant's measured flow duration curve, where a retrofit into an existing mai
 inherits whatever nameplate the original installer chose, so a purpose-sized machine
 should hold a higher capacity factor than an oversized one. That argument is plausible
 and it is untested. It is not called a central estimate anywhere in this thesis, and
-the figure this work stands behind is the band rather than its upper end. Deciding
-whether to lower the reported band floor from 118.9 to the 89.8~GWh/yr that Point Loma
-alone implies is deferred, because a single plant is exactly the thin basis this
-paragraph criticizes in the other direction.
+the figure this work stands behind is the band rather than its upper end.
+
+The reported band floor is lowered accordingly, from 118.9 to 89.8~GWh/yr, and the
+reasoning deserves stating because it cuts against the argument of the preceding
+paragraph. The objection is obvious: 89.8~GWh/yr rests on one plant, and a single
+observation is exactly the thin basis just criticized in the upward direction. The
+answer is that the two thin bases are not thin in the same way. The 0.60 tier
+extrapolates from a design projection in the direction that flatters the result; the
+89.8 figure is a metered annual generation figure from the only plant in the country
+that is actually a treated-wastewater conduit installation, and it points in the
+direction that does not flatter it. Where the correct plant class contains exactly one
+measurement, reporting that measurement as the floor is more defensible than reporting
+a quartile of a plant class this work has already argued is the wrong one. The floor is
+therefore the measured Point Loma figure, and the reader is given the whole ladder in
+Table~\ref{tab:cfband} rather than a single number: 89.8~GWh/yr from one plant in the
+right class, 114.4~GWh/yr from 115 plants in a related class, and 118.9~GWh/yr from 629
+plants in a class that is not ours. All three sit within 30~GWh/yr of one another, which
+is the substantive point --- the floor is insensitive to which of the three defensible
+choices is made, and the band's width is driven almost entirely by its upper end.
 
 \begin{table}[htbp]
 \centering
@@ -1662,11 +1680,13 @@ rest on metered generation.}
 The band itself is Table~\ref{tab:cfband}, drawn as Figure~\ref{fig:cfband}. Each
 multiplier is the tier's capacity factor divided by 0.8725, applied to the
 409.2~GWh/yr physics figure, and the result is the sentence this work reports: a
-409.2~GWh/yr ceiling, a conservative floor of 118.9--194.4~GWh/yr corroborated
-independently by metered conduit plants at 114.4~GWh/yr, and an optimistic upper
-scenario of 281.4~GWh/yr that rests on a design projection rather than on any
-measurement. The floor is a range because the
-narrower 0.1--1~MW bucket sits above the primary bucket at every percentile,
+409.2~GWh/yr physics ceiling, a measured floor of 89.8~GWh/yr from the only metered
+treated-wastewater conduit plant in the country, corroborated from above by 115 metered
+conduit plants at 114.4~GWh/yr and by the river-hydro first quartile at 118.9~GWh/yr,
+and an optimistic upper scenario of 281.4~GWh/yr that rests on a design projection
+rather than on any measurement. The reported band is therefore
+\textbf{89.8--281~GWh/yr}. Above the floor the river-hydro tier is itself a range,
+because the narrower 0.1--1~MW bucket sits above the primary bucket at every percentile,
 giving 125.5 and 194.4~GWh/yr at its first two quartiles against 118.9 and
 183.0~GWh/yr. Section~5.1.4 reports the band as a result and states what it does
 to the economics of Section~4.3.6.
@@ -1680,19 +1700,29 @@ physics ceiling}
 \end{figure}
 
 \begin{sloppypar}
-Three of those tiers are carried into the pipeline rather than left in a report.
+Four of those tiers are carried into the pipeline rather than left in a report.
 \texttt{add\_calibrated\_energy\_cols} in \texttt{financials.py} appends
 \texttt{energy\_kwh\_calib\_floor\_p25}, \texttt{energy\_kwh\_calib\_floor\_p50},
-and \texttt{energy\_kwh\_calib\_central} to every Phase~4 scorecard row, reading
-the multipliers 0.291, 0.447, and 0.688 from \texttt{config/settings.yaml}. They
+\texttt{energy\_kwh\_calib\_central}, and
+\texttt{energy\_kwh\_calib\_measured\_point\_loma} to every Phase~4 scorecard row,
+reading the multipliers 0.291, 0.447, 0.688, and 0.2195 from
+\texttt{config/settings.yaml}. They
 are global fleet multipliers rather than per-site capacity-factor ratios, which
 is defensible only because the per-site spread is narrow, 0.8556--0.8833 between
-the tenth and ninetieth percentiles. Summed over the viable cohort the three
-columns give 119.07, 182.90, and 281.51~GWh/yr against the 409.17~GWh/yr ceiling,
-and over all 3{,}778 scored plants 149.83, 230.15, and 354.23~GWh/yr against
-514.87~GWh/yr. No ceiling column was added and none was overwritten, so every
-downstream consumer, including the map of Section~4.6, carries the band beside
-the physics number instead of in place of it.
+the tenth and ninetieth percentiles. Summed over the viable cohort the four
+columns give 119.07, 182.90, 281.51, and 89.81~GWh/yr against the 409.17~GWh/yr
+ceiling, and over the first three, 149.83, 230.15, and 354.23~GWh/yr across all
+3{,}778 scored plants against 514.87~GWh/yr. No ceiling column was added and none
+was overwritten, so every downstream consumer, including the map of Section~4.6,
+carries the band beside the physics number instead of in place of it.
+
+The measured floor tier was added as a fourth column rather than written over
+\texttt{energy\_kwh\_calib\_floor\_p25} when the band floor moved, and the reason is a
+naming discipline worth stating: 0.2195 is not a twenty-fifth percentile of anything, so
+storing it in a column named \texttt{floor\_p25} would have made the column name false
+and invited the confusion back later. Both tiers are therefore reported, no previously
+published figure changed value, and the export contract of Section~4.5 grew from 58
+properties to 59.
 \end{sloppypar}
 
 Five limitations are named. First, the floor imports variability that outfalls do
@@ -1831,9 +1861,11 @@ with the Phase~4 scorecard as the spine, left-joining Phase~1 for facility name,
 city, coordinates, and flow statistics, Phase~2 for the P10, P50, and P90 energy
 band and the equivalent-homes conversion, and Phase~3 for gross and net head, both
 elevations, head source and confidence, rated flow, and peak efficiency. The result
-is 58 properties per feature, grouped as in Table~\ref{tab:geojson_props}: the
+is 59 properties per feature, grouped as in Table~\ref{tab:geojson_props}: the
 original 24 that the first map needed, plus 34 added when the four legacy files
-were retired and everything they had computed had to be derivable on the client.
+were retired and everything they had computed had to be derivable on the client,
+plus the measured-floor energy tier added when the reported calibration band was
+re-floored in Section~4.4.1.
 Geometry is a point in longitude-latitude order as RFC~7946 requires~\cite{rfc7946},
 rounded to five decimals, which is about a meter. Numeric properties are rounded by
 class rather than individually: dollars, kilowatt-hours, and counts to whole
@@ -1856,7 +1888,7 @@ contradict.
 Group & Properties & Examples \\
 \midrule
 Identity and siting        & 4  & \texttt{npdes\_id}, \texttt{facility\_name} \\
-Machine and energy         & 7  & \texttt{turbine\_type}, three calibrated tiers \\
+Machine and energy         & 8  & \texttt{turbine\_type}, four calibrated tiers \\
 Economics and categories   & 13 & \texttt{npv\_usd}, \texttt{payback\_years} \\
 Phase 1 flow statistics    & 5  & \texttt{mean\_flow\_mgd}, \texttt{n\_months\_data} \\
 Phase 2 Monte-Carlo band   & 4  & \texttt{energy\_p10\_kwh\_yr} \\
@@ -1864,7 +1896,7 @@ Phase 3 head and turbine   & 8  & \texttt{head\_net\_m}, \texttt{head\_source} \
 Phase 4 cost breakdown     & 8  & \texttt{equipment\_capex\_usd} \\
 Sensitivity and provenance & 9  & \texttt{dominant\_sensitivity}, \texttt{data\_quality} \\
 \midrule
-Total                      & 58 & \\
+Total                      & 59 & \\
 \bottomrule
 \end{tabular}
 
@@ -1879,7 +1911,7 @@ cannot drift apart. The first, \texttt{viable\_sites.geojson}, holds the
 figures are drawn from. The second, \texttt{scored\_sites.geojson}, holds all
 3{,}778 scored plants at 6.13~MB
 and is what the dashboard loads, so plants that failed the viability gate stay on
-the map as evidence rather than disappearing from it. Both carry the same 58
+the map as evidence rather than disappearing from it. Both carry the same 59
 properties on every feature. The write path validates before it returns: the
 collection type, the feature count, the coordinate ranges, and the types inside
 \texttt{meta}. Features whose coordinates are null or unparseable are dropped and
@@ -2159,12 +2191,14 @@ the portfolio's implied capacity factor of 0.8725 sits above the measured
 distribution at every percentile: the river-hydro median is 0.3902 and even its
 seventy-fifth percentile, 0.5409, is below the WOWERS tenth percentile of 0.8556.
 Substituting measured capacity factors gives the band of Table~\ref{tab:cfband}:
-118.9~GWh/yr at the river-hydro first quartile, 183.0 at its median, and
+89.8~GWh/yr at the metered Point Loma capacity factor, 114.4 across 115 metered
+conduit plants, 118.9 at the river-hydro first quartile, 183.0 at its median, and
 281.4~GWh/yr at the Conduit~3-anchored optimistic figure of 0.60, against the
-409.2~GWh/yr ceiling. The metered conduit plants of Section~4.4.1 land at
-114.4~GWh/yr, within 4.5~GWh/yr of the river-hydro floor and from a dataset that
-shares no plants with it, so the floor is the tier this chapter treats as
-evidenced and 281.4~GWh/yr is reported as the optimistic end of the band.
+409.2~GWh/yr ceiling. The reported band is \textbf{89.8--281~GWh/yr}. Its floor is the
+metered treated-wastewater figure; the two tiers immediately above it, drawn from
+datasets that share no plants with each other, land within 4.5~GWh/yr of one another and
+within 30~GWh/yr of the floor, so the low end of the band is robust to which defensible
+choice is made while the upper end rests on a single design projection.
 
 \begin{table}[htbp]
 \centering
@@ -2212,7 +2246,7 @@ is the band and not its upper end, and the defensible planning figure is the
 floor rather than the optimistic tier: the floor is the only part of the band
 that two independent metered datasets agree on, while the upper tier rests on a
 single project's design projection. A reader who needs one number for planning
-should take 118.9--194.4~GWh/yr and treat 281.4~GWh/yr as the ceiling of
+should take 89.8--118.9~GWh/yr and treat 281.4~GWh/yr as the ceiling of
 plausibility rather than the expectation.
 
 \subsection{Machine-Learning Feasibility (Negative Result)} % WP T6 — Tom
@@ -2314,8 +2348,9 @@ rated capacity and 409.17~GWh/yr under the model's own assumptions, against
 \$211.33M of capital cost, \$41.23M/yr of revenue, a portfolio net present value
 of \$310.13M, and a median payback of 9.83~yr. Benchmarked against 629 real
 small-hydro plants over 9{,}798 plant-years, the same portfolio bounds to a
-conservative floor of 118.9--194.4~GWh/yr, independently corroborated at
-114.4~GWh/yr by 115 metered conduit plants, and an optimistic upper scenario of
+measured floor of 89.8~GWh/yr from the only metered treated-wastewater conduit plant in
+the country, corroborated from above at 114.4~GWh/yr by 115 metered conduit plants and at
+118.9~GWh/yr by the river-hydro first quartile, and an optimistic upper scenario of
 281.4~GWh/yr resting on one project's design projection; re-scoring every site
 through the cash-flow model at that upper capacity factor leaves 439 sites viable
 and \$152.64M of net present
@@ -2507,7 +2542,7 @@ pp.~3146--3154, 2017.
 \chapter{Data Dictionary and Exclusion-Funnel Tables}
 
 This appendix is the reference for the export contract of Section~4.5 and for the
-funnel of Section~5.1.2. Table~\ref{tab:datadict} lists all 58 properties carried
+funnel of Section~5.1.2. Table~\ref{tab:datadict} lists all 59 properties carried
 on every feature of \texttt{scored\_sites.geojson} and
 \texttt{viable\_sites.geojson}, in the order the exporter writes them. The
 rounding column names the class each property is rounded to before serialization:
@@ -2527,7 +2562,7 @@ is null at 225 plants whose outfall coordinate could not be resolved --- those
 plants carry an archetype head, as Section~4.3.4 describes.
 
 \begin{longtable}{@{}lllllr@{}}
-\caption{Data dictionary --- the 58 properties of the exported GeoJSON contract}
+\caption{Data dictionary --- the 59 properties of the exported GeoJSON contract}
 \label{tab:datadict} \\
 \toprule
 Property & Type & Units & Rounding & Source & Nulls \\
@@ -2551,6 +2586,7 @@ Property & Type & Units & Rounding & Source & Nulls \\
 \texttt{energy\_kwh\_calib\_floor\_p25} & int & kWh/yr & int & P4 & 0 \\
 \texttt{energy\_kwh\_calib\_floor\_p50} & int & kWh/yr & int & P4 & 0 \\
 \texttt{energy\_kwh\_calib\_central} & int & kWh/yr & int & P4 & 0 \\
+\texttt{energy\_kwh\_calib\_measured\_point\_loma} & int & kWh/yr & int & P4 & 0 \\
 \texttt{capacity\_factor} & float & ratio & 4 dp & P4 & 0 \\
 \texttt{total\_capex\_usd} & int & \$ & int & P4 & 0 \\
 \texttt{npv\_usd} & int & \$ & int & P4 & 0 \\
@@ -2766,9 +2802,10 @@ extrapolating this population down to WOWERS scale.}
 \end{table}
 
 Table~\ref{tab:band_both} gives the calibration band computed from both buckets.
-They agree closely above the first quartile and differ most at the pessimistic end,
-which is why Section~5.1.4 quotes the floor as a range of 118.9--194.4~GWh/yr
-rather than as a single number.
+They agree closely above the first quartile and differ most at the pessimistic end.
+Neither bucket sets the reported floor, which comes from metered treated-wastewater
+generation at 89.8~GWh/yr; both are reported because their first quartiles, 118.9 and
+125.5~GWh/yr, corroborate that floor from above out of a different plant class.
 
 \begin{table}[htbp]
 \centering

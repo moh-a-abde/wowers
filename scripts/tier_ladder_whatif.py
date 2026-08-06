@@ -76,9 +76,13 @@ _DEFAULT_PARQUET = _ROOT / "data" / "processed" / "phase4" / "financial_scorecar
 _PHASE2_IMPLIED_CF: float = 0.872
 
 # Metered capacity factors from the 115 EHA Canal/Conduit plants carrying
-# Form EIA-923 generation (data/raw/ground_truth/ferc_conduit_candidates.parquet).
-# Routed into calibration on 2026-07-25; these two tiers are NOT in settings.yaml
-# because adopting them would change the geojson data contract.
+# Form EIA-923 generation (data/raw/ground_truth/ferc_conduit_candidates.parquet),
+# routed into calibration on 2026-07-25.
+#
+# ``measured_point_loma`` became the reported band floor on 2026-08-06 and now
+# lives in config/settings.yaml as ``phase4.cf_calibration.measured_point_loma``;
+# the value below is the fallback and must agree with it. ``measured_all_conduit``
+# is reported here only — it is not a pipeline column.
 _MEASURED_CFS: dict[str, float] = {
     "measured_all_conduit": 0.2439,   # median CF across all 115 metered conduit plants
     "measured_point_loma":  0.1914,   # Point Loma WWTP, 2017 — only metered treated-
@@ -129,12 +133,17 @@ def tier_ladder() -> list[dict]:
         "cf": _MEASURED_CFS["measured_all_conduit"],
         "source": "EIA-923 metered, 115 EHA canal/conduit plants",
     })
+    # The band floor is a pipeline tier as of P4-MEASURED-FLOOR, so read its
+    # multiplier from config rather than recomputing it here.
+    pl_mult = float(calib.get("measured_point_loma",
+                              _MEASURED_CFS["measured_point_loma"] / _PHASE2_IMPLIED_CF))
     rows.append({
         "key": "measured_point_loma",
-        "label": "Measured Point Loma (only metered WWTP conduit)",
-        "multiplier": _MEASURED_CFS["measured_point_loma"] / _PHASE2_IMPLIED_CF,
-        "cf": _MEASURED_CFS["measured_point_loma"],
-        "source": "EIA-923 metered, Point Loma WWTP 2017",
+        "label": "Band floor — measured Point Loma (only metered WWTP conduit)",
+        "multiplier": pl_mult,
+        "cf": pl_mult * _PHASE2_IMPLIED_CF,
+        "source": "settings.yaml phase4.cf_calibration.measured_point_loma "
+                  "(EIA-923 metered, Point Loma WWTP 2017)",
     })
     return rows
 

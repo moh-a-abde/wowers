@@ -6071,3 +6071,87 @@ statute, notice or award record directly with an access date (next-action 3b).
 6. **§8 tension worth an advisor conversation:** the only two pilot sites that survive the band
    floor unaided (Stickney, Point Loma) are the two that fail the head-confidence criterion, while
    all five mid-market candidates need a 50 % subsidy to stay defensible at the floor.
+
+---
+
+### Session: 2026-08-06 (PM) — P4-MEASURED-FLOOR: 89.8 GWh/yr floor propagated into pipeline, export contract, frontend and thesis — Tom
+
+**What was done:**
+Carried this morning's band-floor decision all the way through the codebase, on the
+reasoning that the code gets submitted with the thesis and must not disagree with it.
+
+**Decision on how, not whether.** Three routes were considered: prose-only in the thesis;
+add a fourth calibrated column; overwrite `floor_p25` with 0.2195. **Chose additive.**
+Overwriting would have put a non-percentile value in a column literally named
+`floor_p25`, making the name false and inviting the same confusion back later — and it
+would have invalidated every previously published 119.1 GWh figure. Additive costs one
+extra column and keeps every prior number true. Matches the original P4-TIER contract
+("additive — zero changes to existing columns").
+
+**Changes:**
+- `config/settings.yaml` — new `phase4.cf_calibration.measured_point_loma: 0.2195`, with
+  provenance comment (Point Loma 1,500 kW / 2,515 MWh 2017, Form EIA-923 → CF 0.1914).
+  Also annotated `central: 0.688` as the *optimistic* tier, since the key name still says
+  "central" and that mismatch is how the error spread last time.
+- `src/phase4/financials.py` — `add_calibrated_energy_cols` now emits a fourth column,
+  `energy_kwh_calib_measured_point_loma`. Docstring records why it was added rather than
+  overwriting.
+- Phase 4 re-run: **49 → 50 columns, one added, none lost, all 49 pre-existing columns
+  byte-identical** (verified by frame comparison against a pre-run copy). Baseline intact:
+  1,138 viable / 409.1695 GWh / $310.1336M / 9.8262 yr. New fleet floor **89.8127 GWh/yr**.
+- `scripts/export_geojson.py` — contract **58 → 59 properties**; both exports regenerated
+  (1,138 and 3,778 features).
+- `tests/test_phase4/test_calib_cols.py` and `tests/test_scripts/test_export_geojson.py`
+  updated; new assertions that the measured tier is the *lowest* rung (meas < p25 < p50 <
+  central < ceiling) and that the band ends land at 89.8 / 281.5.
+- `frontend/src/lib/data.ts` — field added, comments updated. `tsc --noEmit` clean;
+  `npm run build` succeeds in 2.73 s (maplibre 1,053 kB, index 711 kB, up from 707 kB).
+- `thesis/thesis_tom.tex` — 119–281 → 89.8–281 across Ch2 (framing, prior-work table, EHA
+  discussion, consumption context), Ch4.1 summary, Ch4.4.1 (the deferred-decision paragraph
+  became a decision-taken paragraph that argues the n=1 objection head-on), Ch4.5 (property
+  count, group table), Ch5.1.4 (result + planning-figure guidance), Ch6, and Appendix A
+  (data-dictionary row, caption, intro).
+- `thesis/thesis_moh.tex` — 5 contract-count references 58 → 59.
+- `scripts/tier_ladder_whatif.py` — now reads the floor multiplier from config instead of
+  its own constant, so there is one source of truth.
+
+**Honest notes:**
+1. **Two self-inflicted errors this session, both caught and fixed.** Running
+   `export_geojson.py --all` without `--out` overwrote `viable_sites.geojson` with all
+   3,778 features — the default invocation already writes both files. Restored and
+   verified (1,138 / 3,778, 59 props each). Separately, a first pass at the small-site
+   cash-flow claim in `business.md` said "roughly a fifth, under $1.2k/yr net"; the real
+   figures are $1,413 revenue and **$593** net, because constant O&M eats a far larger
+   share of smaller revenue. Corrected before commit.
+2. **A test caught a rounding subtlety worth keeping.** Config stores the multiplier at 4 dp,
+   so recovering the CF gives 0.191404 rather than 0.1914. The config value is authoritative;
+   the assertion now runs at rounding tolerance with the reason documented.
+3. **The frontend build was already broken before this session** — `src/vite-env.d 2.ts`, one
+   of ~30 Finder-created " 2" duplicate files sitting untracked in the repo, breaks `tsc -b`
+   with TS2666/TS2300. Verified my change builds clean by moving that file aside and putting
+   it back. A stale `frontend/dist/data/plants` directory (4,069 entries from the retired
+   per-plant JSON export) also blocked vite's out-dir cleanup; `dist/` is gitignored and was
+   removed. **The duplicate files should be cleaned up** — they shadow real modules
+   (`scripts/cf_calibration 2.py`, `src/phase5/train 2.py`) and every test run needs
+   `--ignore-glob="* 2.py"` to avoid collecting them.
+
+**Verification:** 737 passed, 1 skipped, 0 failed. Frontend builds. Baseline reproduced.
+
+**Files modified:** `config/settings.yaml`, `src/phase4/financials.py`,
+`scripts/export_geojson.py`, `scripts/tier_ladder_whatif.py`,
+`tests/test_phase4/test_calib_cols.py`, `tests/test_scripts/test_export_geojson.py`,
+`tests/test_scripts/test_tier_ladder_whatif.py`, `frontend/src/lib/data.ts`,
+`thesis/thesis_tom.tex`, `thesis/thesis_moh.tex`, `thesis/business.md`,
+`data/processed/phase4/financial_scorecards.parquet`, `exports/*.geojson`,
+`TIER_LADDER_REPORT.md`, `WOWERS_PROJECT_JOURNAL.md`.
+
+**Open / next steps:**
+1. **Advisor sign-off on the 89.8 floor** — the last unresolved thing about this decision.
+2. **Figure 8 (`figures/fig08_calibration_band.png`) is now stale** — it plots the old band
+   and needs regenerating with the measured floor as the lowest bar.
+3. **`CF_CALIBRATION_REPORT.md` remains stale** (Bull Run name, "measured 0.628", 0.60 as
+   central). Internal artifact, never cited, but it keeps inviting the error back.
+4. **Clean up the ~30 " 2"/" 3" duplicate files.** They break the frontend build and force
+   `--ignore-glob` on every test run.
+5. Remaining J1 blockers unchanged: formal citations for the 7 verified items, the §48E
+   material-assistance question, and the ten customer-validation calls.

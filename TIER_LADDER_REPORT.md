@@ -17,7 +17,7 @@ Multiplier = tier capacity factor / 0.872 (Phase 2 implied fleet-median CF). Not
 | Floor p50 (EHA river-hydro median) | 0.3898 | 0.4470 | 182.9 | 96.0 | settings.yaml phase4.cf_calibration.floor_p50 |
 | Floor p25 (EHA river-hydro p25) | 0.2538 | 0.2910 | 119.1 | 30.0 | settings.yaml phase4.cf_calibration.floor_p25 |
 | Measured all-conduit (EIA-923 median) | 0.2439 | 0.2797 | 114.4 | 28.2 | EIA-923 metered, 115 EHA canal/conduit plants |
-| Measured Point Loma (only metered WWTP conduit) | 0.1914 | 0.2195 | 89.8 | 14.9 | EIA-923 metered, Point Loma WWTP 2017 |
+| Band floor — measured Point Loma (only metered WWTP conduit) | 0.1914 | 0.2195 | 89.8 | 14.9 | settings.yaml phase4.cf_calibration.measured_point_loma (EIA-923 metered, Point Loma WWTP 2017) |
 
 ## 2. Scenario matrix
 
@@ -30,7 +30,7 @@ Multiplier = tier capacity factor / 0.872 (Phase 2 implied fleet-median CF). Not
 | Floor p50 (EHA river-hydro median) | 129 | 96.0 | $59.4M | $74.3M | 10.7 yr | 66 |
 | Floor p25 (EHA river-hydro p25) | 27 | 30.0 | $19.0M | $31.1M | 10.6 yr | 26 |
 | Measured all-conduit (EIA-923 median) | 24 | 28.2 | $16.9M | $29.6M | 11.0 yr | 23 |
-| Measured Point Loma (only metered WWTP conduit) | 12 | 14.9 | $7.1M | $19.8M | 11.6 yr | 12 |
+| Band floor — measured Point Loma (only metered WWTP conduit) | 12 | 14.9 | $7.1M | $19.8M | 11.6 yr | 12 |
 
 ### r = 6.0%, grant = 50% — commercial (pipeline default)
 
@@ -41,7 +41,7 @@ Multiplier = tier capacity factor / 0.872 (Phase 2 implied fleet-median CF). Not
 | Floor p50 (EHA river-hydro median) | 616 | 153.2 | $112.1M | $77.9M | 10.0 yr | 124 |
 | Floor p25 (EHA river-hydro p25) | 181 | 69.9 | $45.6M | $43.8M | 10.2 yr | 78 |
 | Measured all-conduit (EIA-923 median) | 157 | 63.3 | $41.6M | $40.3M | 10.1 yr | 71 |
-| Measured Point Loma (only metered WWTP conduit) | 73 | 36.1 | $22.7M | $26.3M | 10.5 yr | 45 |
+| Band floor — measured Point Loma (only metered WWTP conduit) | 73 | 36.1 | $22.7M | $26.3M | 10.5 yr | 45 |
 
 ### r = 4.8%, grant = 0% — market municipal AA water/sewer revenue bond, 2026
 
@@ -52,7 +52,7 @@ Multiplier = tier capacity factor / 0.872 (Phase 2 implied fleet-median CF). Not
 | Floor p50 (EHA river-hydro median) | 177 | 106.1 | $79.6M | $85.6M | 12.0 yr | 76 |
 | Floor p25 (EHA river-hydro p25) | 42 | 37.1 | $27.0M | $38.7M | 12.2 yr | 35 |
 | Measured all-conduit (EIA-923 median) | 35 | 33.1 | $24.1M | $36.0M | 11.9 yr | 32 |
-| Measured Point Loma (only metered WWTP conduit) | 17 | 16.9 | $11.3M | $23.2M | 12.0 yr | 16 |
+| Band floor — measured Point Loma (only metered WWTP conduit) | 17 | 16.9 | $11.3M | $23.2M | 12.0 yr | 16 |
 
 ### r = 4.8%, grant = 50% — market municipal AA water/sewer revenue bond, 2026
 
@@ -63,7 +63,7 @@ Multiplier = tier capacity factor / 0.872 (Phase 2 implied fleet-median CF). Not
 | Floor p50 (EHA river-hydro median) | 822 | 167.8 | $141.0M | $90.8M | 11.2 yr | 127 |
 | Floor p25 (EHA river-hydro p25) | 240 | 77.8 | $59.2M | $51.5M | 11.3 yr | 99 |
 | Measured all-conduit (EIA-923 median) | 216 | 71.3 | $54.2M | $47.9M | 11.3 yr | 88 |
-| Measured Point Loma (only metered WWTP conduit) | 107 | 44.1 | $30.4M | $34.0M | 12.3 yr | 59 |
+| Band floor — measured Point Loma (only metered WWTP conduit) | 107 | 44.1 | $30.4M | $34.0M | 12.3 yr | 59 |
 
 ### r = 3.5%, grant = 0% — below-market municipal / partial SRF subsidy
 
@@ -74,7 +74,7 @@ Multiplier = tier capacity factor / 0.872 (Phase 2 implied fleet-median CF). Not
 | Floor p50 (EHA river-hydro median) | 246 | 119.2 | $107.3M | $102.5M | 13.4 yr | 98 |
 | Floor p25 (EHA river-hydro p25) | 66 | 45.6 | $38.2M | $49.1M | 14.5 yr | 43 |
 | Measured all-conduit (EIA-923 median) | 57 | 41.5 | $34.4M | $45.6M | 14.9 yr | 41 |
-| Measured Point Loma (only metered WWTP conduit) | 25 | 22.3 | $17.3M | $30.1M | 14.6 yr | 24 |
+| Band floor — measured Point Loma (only metered WWTP conduit) | 25 | 22.3 | $17.3M | $30.1M | 14.6 yr | 24 |
 
 ### r = 3.5%, grant = 50% — below-market municipal / partial SRF subsidy
 
@@ -85,7 +85,7 @@ Multiplier = tier capacity factor / 0.872 (Phase 2 implied fleet-median CF). Not
 | Floor p50 (EHA river-hydro median) | 1,050 | 181.5 | $179.3M | $104.5M | 12.6 yr | 129 |
 | Floor p25 (EHA river-hydro p25) | 316 | 83.1 | $77.4M | $58.2M | 13.0 yr | 106 |
 | Measured all-conduit (EIA-923 median) | 280 | 77.5 | $71.2M | $55.0M | 12.9 yr | 104 |
-| Measured Point Loma (only metered WWTP conduit) | 142 | 47.9 | $41.1M | $38.5M | 13.6 yr | 67 |
+| Band floor — measured Point Loma (only metered WWTP conduit) | 142 | 47.9 | $41.1M | $38.5M | 13.6 yr | 67 |
 
 ### r = 0.0%, grant = 0% — CWSRF 0 % loan with principal forgiveness
 
@@ -96,7 +96,7 @@ Multiplier = tier capacity factor / 0.872 (Phase 2 implied fleet-median CF). Not
 | Floor p50 (EHA river-hydro median) | 302 | 125.1 | $242.6M | $111.2M | 14.9 yr | 104 |
 | Floor p25 (EHA river-hydro p25) | 83 | 50.0 | $96.1M | $55.6M | 15.7 yr | 48 |
 | Measured all-conduit (EIA-923 median) | 72 | 45.9 | $87.8M | $52.1M | 15.9 yr | 45 |
-| Measured Point Loma (only metered WWTP conduit) | 28 | 23.5 | $47.7M | $32.1M | 14.9 yr | 27 |
+| Band floor — measured Point Loma (only metered WWTP conduit) | 28 | 23.5 | $47.7M | $32.1M | 14.9 yr | 27 |
 
 ### r = 0.0%, grant = 50% — CWSRF 0 % loan with principal forgiveness
 
@@ -107,7 +107,7 @@ Multiplier = tier capacity factor / 0.872 (Phase 2 implied fleet-median CF). Not
 | Floor p50 (EHA river-hydro median) | 1,206 | 188.8 | $360.1M | $112.3M | 13.5 yr | 131 |
 | Floor p25 (EHA river-hydro p25) | 381 | 88.2 | $164.9M | $64.0M | 13.9 yr | 115 |
 | Measured all-conduit (EIA-923 median) | 342 | 81.8 | $152.7M | $60.7M | 14.1 yr | 109 |
-| Measured Point Loma (only metered WWTP conduit) | 169 | 51.4 | $92.6M | $42.4M | 14.5 yr | 77 |
+| Band floor — measured Point Loma (only metered WWTP conduit) | 169 | 51.4 | $92.6M | $42.4M | 14.5 yr | 77 |
 
 ## 3. Viable-count pivot
 
@@ -118,7 +118,7 @@ Multiplier = tier capacity factor / 0.872 (Phase 2 implied fleet-median CF). Not
 | Floor p50 (EHA river-hydro median) | 129 | 616 | 177 | 822 | 246 | 1,050 | 302 | 1,206 |
 | Floor p25 (EHA river-hydro p25) | 27 | 181 | 42 | 240 | 66 | 316 | 83 | 381 |
 | Measured all-conduit (EIA-923 median) | 24 | 157 | 35 | 216 | 57 | 280 | 72 | 342 |
-| Measured Point Loma (only metered WWTP conduit) | 12 | 73 | 17 | 107 | 25 | 142 | 28 | 169 |
+| Band floor — measured Point Loma (only metered WWTP conduit) | 12 | 73 | 17 | 107 | 25 | 142 | 28 | 169 |
 
 ## 4. Baseline reproduction check
 

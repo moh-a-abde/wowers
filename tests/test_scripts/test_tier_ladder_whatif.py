@@ -69,10 +69,22 @@ def test_cf_and_multiplier_are_not_the_same_number():
 
 
 def test_measured_tiers_derive_from_metered_cfs():
+    """Measured tiers must trace back to their metered capacity factors.
+
+    ``measured_point_loma`` is a pipeline tier as of P4-MEASURED-FLOOR, so its
+    multiplier is read from ``config/settings.yaml``, where it is stored rounded
+    to four decimals (0.2195). Recovering the capacity factor from that rounded
+    multiplier gives 0.191404 rather than the raw 0.1914, so the comparison is
+    made at rounding tolerance. The config value is authoritative — the pipeline
+    columns are computed from it — and the 4e-6 discrepancy is far below the
+    precision any reported figure carries.
+    """
     ladder = {t["key"]: t for t in tier_ladder()}
     for key, cf in _MEASURED_CFS.items():
-        assert ladder[key]["cf"] == pytest.approx(cf)
-        assert ladder[key]["multiplier"] == pytest.approx(cf / _PHASE2_IMPLIED_CF)
+        assert ladder[key]["cf"] == pytest.approx(cf, abs=5e-5)
+        assert ladder[key]["multiplier"] == pytest.approx(
+            cf / _PHASE2_IMPLIED_CF, abs=5e-5
+        )
 
 
 # ── Re-scoring ────────────────────────────────────────────────────────────────

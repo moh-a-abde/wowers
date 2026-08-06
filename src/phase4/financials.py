@@ -310,20 +310,36 @@ _CF_CALIB_DEFAULTS: dict[str, float] = {
     "floor_p25": 0.291,
     "floor_p50": 0.447,
     "central":   0.688,
+    "measured_point_loma": 0.2195,   # P4-MEASURED-FLOOR (2026-08-06)
 }
 
 
 def add_calibrated_energy_cols(df: pl.DataFrame) -> pl.DataFrame:
-    """Append three CF-calibrated energy columns to the Phase 4 scorecard.
+    """Append four CF-calibrated energy columns to the Phase 4 scorecard.
 
     New columns (additive — zero changes to existing columns):
 
     ``energy_kwh_calib_floor_p25``
-        annual_energy_kwh × 0.291 — river-hydro p25 CF floor (pessimistic)
+        annual_energy_kwh × 0.291 — river-hydro p25 CF (river class, not ours)
     ``energy_kwh_calib_floor_p50``
-        annual_energy_kwh × 0.447 — river-hydro p50 CF floor
+        annual_energy_kwh × 0.447 — river-hydro p50 CF
     ``energy_kwh_calib_central``
-        annual_energy_kwh × 0.688 — WWTP-appropriate CF = 0.60, LucidPipe-anchored
+        annual_energy_kwh × 0.688 — CF = 0.60. **Relabelled "optimistic" on
+        2026-07-25**: it rests on the Conduit 3 (FERC P-14498) design
+        projection, not a measurement. The config key keeps its original name
+        so existing consumers do not break.
+    ``energy_kwh_calib_measured_point_loma``
+        annual_energy_kwh × 0.2195 — **the reported band floor** (P4-MEASURED-FLOOR,
+        2026-08-06). Point Loma WWTP is the only metered treated-wastewater
+        conduit plant in the U.S.: 1,500 kW / 2,515 MWh in 2017 per Form
+        EIA-923 → CF 0.1914. Yields 89.8 GWh/yr across the viable fleet and
+        replaces 118.9 as the floor of the reported calibration band.
+
+    A note on why this tier was added rather than overwriting ``floor_p25``:
+    0.2195 is not a 25th percentile of anything, so writing it into a column
+    named ``floor_p25`` would make the column name false and invite the error
+    back. Both tiers are therefore reported, and no previously published number
+    changes value.
 
     The physics ceiling (Phase 2 assumed CF ≈ 0.872) is the pre-existing
     ``annual_energy_kwh`` column; no ceiling column is added.
@@ -338,16 +354,20 @@ def add_calibrated_energy_cols(df: pl.DataFrame) -> pl.DataFrame:
         df: Phase 4 scorecard DataFrame (must contain ``annual_energy_kwh``).
 
     Returns:
-        df with three new Float64 columns appended; all existing columns
+        df with four new Float64 columns appended; all existing columns
         untouched and value-identical.
     """
-    calib     = config.get("phase4.cf_calibration") or {}
-    floor_p25 = float(calib.get("floor_p25", _CF_CALIB_DEFAULTS["floor_p25"]))
-    floor_p50 = float(calib.get("floor_p50", _CF_CALIB_DEFAULTS["floor_p50"]))
-    central   = float(calib.get("central",   _CF_CALIB_DEFAULTS["central"]))
+    calib      = config.get("phase4.cf_calibration") or {}
+    floor_p25  = float(calib.get("floor_p25", _CF_CALIB_DEFAULTS["floor_p25"]))
+    floor_p50  = float(calib.get("floor_p50", _CF_CALIB_DEFAULTS["floor_p50"]))
+    central    = float(calib.get("central",   _CF_CALIB_DEFAULTS["central"]))
+    meas_floor = float(calib.get("measured_point_loma",
+                                 _CF_CALIB_DEFAULTS["measured_point_loma"]))
 
     return df.with_columns([
         (pl.col("annual_energy_kwh") * floor_p25).alias("energy_kwh_calib_floor_p25"),
         (pl.col("annual_energy_kwh") * floor_p50).alias("energy_kwh_calib_floor_p50"),
         (pl.col("annual_energy_kwh") * central  ).alias("energy_kwh_calib_central"),
+        (pl.col("annual_energy_kwh") * meas_floor).alias(
+            "energy_kwh_calib_measured_point_loma"),
     ])

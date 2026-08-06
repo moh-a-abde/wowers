@@ -313,9 +313,19 @@ phase5:
 # Global fleet multipliers; per-site CF spread is tight (p10–p90: 0.856–0.883).
 phase4:
   cf_calibration:
-    floor_p25: 0.291   # river-hydro p25 CF / 0.872 → pessimistic floor
-    floor_p50: 0.447   # river-hydro p50 CF / 0.872 → central floor
-    central:   0.688   # WWTP-appropriate CF=0.60 / 0.872 (LucidPipe-anchored)
+    floor_p25: 0.291   # river-hydro p25 CF / 0.872 → river-class pessimistic floor
+    floor_p50: 0.447   # river-hydro p50 CF / 0.872 → river-class median
+    central:   0.688   # CF=0.60 / 0.872 — relabelled OPTIMISTIC on 2026-07-25;
+                       # rests on the Conduit 3 (FERC P-14498) DESIGN PROJECTION,
+                       # never a metered figure. Key name kept for compatibility.
+    # P4-MEASURED-FLOOR (2026-08-06): the reported band floor.
+    # Point Loma WWTP, San Diego CA — the only metered treated-wastewater conduit
+    # plant in the United States. 1,500 kW / 2,515 MWh (2017, Form EIA-923) → CF
+    # 0.1914; multiplier = 0.1914 / 0.872. Yields 89.8 GWh/yr across the viable
+    # fleet, replacing 118.9 as the reported floor (Tom, 2026-08-06; advisor
+    # sign-off outstanding). Source dataset:
+    # data/raw/ground_truth/ferc_conduit_candidates.parquet
+    measured_point_loma: 0.2195
 
 # ── Paths (relative to project root) ─────────────────────────────────────────
 paths:
