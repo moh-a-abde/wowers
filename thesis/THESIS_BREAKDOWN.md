@@ -302,9 +302,13 @@ understanding only — these are never citable sources; see the RULE on internal
 
 - [ ] **J5 · Front matter + References merge + final stitch** *(PARTIAL 2026-08-06: abstract,
   acknowledgements, +6 verified references, access dates, honesty pass, P2-SEED gloss and
-  signposts all done. Remaining: global figure/table renumber and final reference merge, both
-  blocked on Mohamed's M1/M2 merge; plus `{{MONTH_YEAR}}`, acknowledgement names, and 1–2 more
-  figures to clear the 20-figure minimum.)* — ~1,000 w + assembly
+  signposts all done. M1/M2 → thesis_tom.tex merge DONE (this session): §4.6 (4 subsections +
+  Figure 12 + 2 \figpending markers) and §5.1.6 (3 bold-lead-in blocks + Table 16) pasted in,
+  headings demoted to match house style, 6 bibitems folded into the single bibliography (no
+  key collisions), figure/table numbers auto-resolved via the existing sequential counters.
+  Compiled clean: 0 errors, 0 undefined refs/citations, pages visually inspected. Remaining:
+  `{{MONTH_YEAR}}`, acknowledgement names, and 1–2 more figures to clear the 20-figure
+  minimum — all three need input from Tom/Mohamed, not further drafting.)* — ~1,000 w + assembly
   - **Beats:** abstract (5 paragraphs, 350–450 w, per format §3.3); acknowledgements
   (advisor, business faculty, industry contacts); TOC / List of Figures / List of Tables;
   merge both tracks' reference lists into one IEEE-numbered list (target 40–50);

@@ -1337,3 +1337,86 @@ citations**.
 
 **Next work package suggested:**
 - Unchanged: Mohamed's M1/M2 merge, then J5 closes.
+
+### Session: 2026-08-06 — M1/M2 → thesis_tom.tex merge (J5 combine step) — Mohamed
+
+**Work package:** Not a numbered WP — the M1/M2 merge that J1's and the prior J5 entry both named
+as the next blocking step. `thesis_moh.tex` content is now folded into `thesis_tom.tex`; that file
+is the sole live copy going forward.
+
+**What was done:**
+- **M1 → `\section{Frontend Visualization System}` (end of Chapter 4).** Replaced the `\wptodo{M1
+  · 4.6 ...}` stub with the full drafted section: intro paragraph, then four `\subsection`s (Stack
+  Selection; Data Layer and View Architecture; Interaction, Filtering, and Export; Limitations),
+  the TikZ application-flow figure, and both `\figpending` markers (National Opportunity Map,
+  Plant Detail). Mohamed's file used top-level `\section{}` for these four parts since the
+  standalone file had no enclosing section; demoted to `\subsection` on paste since "Frontend
+  Visualization System" is already the enclosing `\section` in `thesis_tom.tex` — they land as
+  §4.6.1–4.6.4 automatically via the existing counters.
+- **M2 → `\subsection{Frontend Performance}` (§5.1.6).** Replaced the `\wptodo{M2 · 5.1.6 ...}`
+  stub with the drafted content: intro paragraph, then three blocks (build performance, quality
+  assurance, the discrepancy paragraph) plus the bundle-size table. Mohamed's file used
+  `\subsection*{}` (starred, unnumbered) for these three; checked `thesis_tom.tex` first and found
+  Tom never uses `\subsection`/`\paragraph` anywhere to subdivide a single Ch5 subsection, only
+  bold run-in lead-ins inside continuous prose (e.g. "5.1.5 Machine-Learning Feasibility"'s
+  internal structure) — converted the three starred subsections to `\textbf{Build performance.}`,
+  `\textbf{Quality assurance.}`, `\textbf{Discrepancy: bundle size and deferred code-splitting.}`
+  to match, rather than introducing a heading level Tom's document doesn't otherwise use.
+- **Bibliography.** Appended Mohamed's six `\bibitem`s (`react19`, `typescript`, `vite7`,
+  `maplibregl`, `reactmapgl`, `recharts3`) into `thesis_tom.tex`'s single `\begin{thebibliography}`
+  block, replacing the `% Additional Track M / Joint citations merge here at WP J5.` placeholder
+  comment that was already sitting at the right spot. Checked both key lists first (`grep
+  -oP '(?<=\\bibitem\{)[^}]+'` on each file) — zero collisions against Tom's 39 keys. Matched his
+  citation formatting exactly (`\url{}}`-wrapped links, "Accessed DD Month YYYY" date form),
+  since Mohamed's original entries used bare URLs without `\url{}`.
+- **No preamble changes needed.** Checked first: `thesis_tom.tex` already loads `tikz` (with
+  `usetikzlibrary{arrows.meta,positioning,fit,calc}`, a superset of what the M1 figure needs) and
+  `graphicx` (for `\resizebox`), even though Tom's own figures moved to drawio assets and no
+  longer invoke `tikz` directly. The `\figpending` macro definitions are byte-identical between
+  the two files, so the two placeholder figures needed no adjustment.
+- **Figure/table numbering:** fully automatic. `thesis_tom.tex` already has
+  `\counterwithout{figure}{chapter}` / `{table}{chapter}` active, so no manual renumbering was
+  needed — the pasted figure resolved to **Figure 12**, the two `\figpending` boxes to **Figures
+  13–14**, and the bundle-size table to **Table 16**, all correct on the first compile once the
+  content was in the right physical location.
+
+**Source artifacts used:**
+- `thesis_moh.tex` (both chapters + bibliography, read in full before pasting)
+- `thesis_tom.tex` (read the exact stub context at both insertion points, the bibliography
+  boundary, the full list of `\subsection` headings in Chapter 5 to confirm "Frontend
+  Performance" really is 5.1.6, and Tom's citation-formatting convention, before editing)
+
+**Verification:**
+- `tectonic -X compile thesis_tom.tex` (two passes, `--keep-intermediates` so the `.aux` persisted
+  between runs) → **0 errors**. Checked explicitly for `undefined`/`error`/`multiply` in the
+  second pass's output — zero matches, i.e. 0 undefined references, 0 undefined citations, 0
+  duplicate labels.
+- 121 pages total (was 109 before the merge).
+- Pages rendered and visually inspected, not just compiled without error: the full §4.6 run
+  (Figure 12's diagram fits inside the margins correctly, both `\figpending` boxes render as
+  clearly-labeled placeholders — not broken, not silently blank — and §4.6.3/§4.6.4 auto-number
+  correctly), and the full §5.1.6 run (bold lead-ins read naturally against §5.1.5's prose style,
+  Table 16 renders with proper `booktabs` rules, and §5.1.7 System Integration Test picks up
+  immediately after with no gap). M1's closing forward-reference ("reported next, in Section
+  5.1.6") and M2's backward-references ("described in Section~4.6.2", "the limitation named in
+  Section~4.6.4") were checked against the actual resulting section numbers and are all correct.
+- Cleaned up LaTeX build intermediates (`.aux`/`.toc`/`.out`/`.lof`/`.lot`/`.pdf`/`.log`) after
+  verification, matching the existing convention that only source `.tex` is committed.
+
+**Open items / follow-ups:**
+- `thesis_moh.tex` is now historical (drafting record only) — marked as such in its own header
+  comment. `thesis_tom.tex` is the sole live copy of the M1/M2 content going forward.
+- Everything else from the prior J5 entries stands, and this was the last blocking item for them:
+  `{{MONTH_YEAR}}`, acknowledgement names, 1–2 more figures for the 20-figure minimum (the merge
+  brings the fleet to 14: Tom's 11 + M1's diagram + M1's 2 pending screenshots, still short of
+  20), and the two `\figpending` screenshots themselves still need real image files.
+- Reference count is now **45** (39 Tom + 6 Mohamed), inside the format's 40–50 target — no
+  further reference work needed for J5's word-count goal.
+
+**Breakdown updated:**
+- J5's status note in §3 updated to record the merge as done; checkbox remains unticked (still
+  `◐`) pending the three small fill-in items above.
+
+**Next work package suggested:**
+- J5's three remaining items need input from Tom/Mohamed directly (month/year, names, 1–2 more
+  figures) rather than further drafting — once those land, J5 closes and the thesis is complete.
