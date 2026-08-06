@@ -513,26 +513,251 @@ screen will now be discussed.
 % CHAPTER 3 — BUSINESS MODEL                            (WP J1 — Joint)
 % =====================================================================
 \chapter{Business Model}
-\wptodo{J1 · Ch3 (~2,300 w)}{Eight subsections, 150--400 w each. Feeds:
-WOWERS\_Project\_Report.pdf, DIRECTOR\_BRIEF\_2026-06-24.md,
-WOWERS\_Capital\_and\_Funding\_Research.md, Fowler feedback. Address the four judge gaps.}
+
+Every figure in this chapter is an estimate produced by this work rather than an
+observed commercial result, and the energy-derived figures carry the tier they rest
+on. Where a number depends on the capacity-factor assumption of Section~4.4.1, both
+ends are given: the physics ceiling that the model computes and the measured floor
+that the evidence supports. No customer has yet paid for any of the services
+described here, and Section~3.8 says what would have to happen before the revenue
+arithmetic of Section~3.7 could be called a forecast rather than a plan.
 
 \section{The Problem}
-\wptodo{J1 · 3.1}{Global/national \$ figure + unit-level figure + three named complications.}
+
+Municipal wastewater treatment consumes roughly 30.2~TWh/yr of electricity in the
+United States, and energy is among the largest controllable lines in a treatment
+plant's operating budget~\cite{epri2013,epa2013}. A fraction of that is
+recoverable at the point where treated effluent is discharged: outfalls run
+continuously, at flows their operators already meter for permit compliance, and
+frequently over a usable elevation drop. This work screens 17,148 active publicly
+owned treatment works and finds 1,138 where recovery clears a viability gate, of
+which the 129 sites above 100~kW carry 81.3~\% of the portfolio net present value.
+
+The value is real and it is almost impossible to find. Three complications explain
+why it has stayed unexploited, and each is a specific obstacle rather than general
+difficulty. First, \textbf{the hit rate is 0.75~\%}: 129 sites out of 17,148. Until
+bulk regulatory data and cheap computation existed, the cost of searching exceeded
+the value of what was found, because screening one plant by consultant costs
+thousands of dollars and screening all of them now costs almost nothing. Second,
+\textbf{head is not measured anywhere at national scale}. This work estimates it
+from a digital elevation model with a plausibility gate, and 290 of the 1,138
+viable sites do not reach the high-confidence tier, so the single most important
+physical input to the energy estimate is also its weakest. Third, \textbf{no metered
+wastewater generation record exists to calibrate against}. A nationwide search of
+Federal Energy Regulatory Commission and Department of Energy records returned
+exactly one treated-wastewater conduit plant with measured output, and it has been
+offline since 2018. The absence of records is itself the finding, and it is why this
+chapter prices services rather than guaranteed energy.
+
+How those three complications shape the service offered will now be discussed.
+
 \section{The Solution}
-\wptodo{J1 · 3.2}{The service in one paragraph; optional partner/ecosystem play.}
+
+We propose the creation of a company, WOWERS, to operate the national screening and
+deal-origination layer that the search cost of Section~3.1 has so far prevented from
+existing. The platform ingests approximately 279 million discharge monitoring
+records covering every active treatment works in the country, estimates per-site
+recoverable energy with a Monte-Carlo physics model, matches commercially available
+turbines, scores each site on net present value, internal rate of return and
+payback, and publishes the ranked result. The product is the answer to one question:
+which of the seventeen thousand plants is worth a site visit.
+
+We do not manufacture turbines, install them, own the assets, or take energy-yield
+risk. Those roles are already occupied by competent firms, discussed in
+Section~3.4, and each of them currently finds its own sites one at a time. The
+deliverable per qualified site is a one-page technical sheet carrying exactly what a
+manufacturer needs in order to quote: rated capacity, net head, design flow, a flow
+duration curve summary, the recommended turbine class, the permitting tier, and the
+discharge-permit contact already published in the Environmental Protection Agency's
+compliance database~\cite{epa_echo}. The screening layer is the asset; the report
+and the introduction are what is sold.
+
+Deliberately excluded is any contract in which WOWERS is paid for delivered
+kilowatt-hours. Section~3.5 explains why the calibration uncertainty documented in
+Section~4.4.1 makes that an unpriceable risk at present.
+
 \section{The Target Market}
-\wptodo{J1 · 3.3}{One REAL named archetype plant: size, output, what makes it hard to serve.}
+
+The archetype customer is a mid-size municipal treatment works with in-house
+engineering capacity, and the concrete example carried through this chapter is
+\textbf{Fall River Wastewater Treatment Plant, Massachusetts}. The model rates it at
+169.0~kW, with an estimated all-in capital cost of \$538k, estimated annual revenue
+of \$179k/yr, and an estimated simple payback of 3.1~yr at the physics ceiling. Fall
+River is not the largest opportunity in the portfolio; it is the best-qualified one,
+because it clears 100~kW, reaches the high-confidence head tier, and sits in a
+Northeast cluster where Lowell Regional Wastewater Utility, rated 124.9~kW, can be
+visited on the same trip.
+
+What makes such a plant hard to serve is not technical. It is that the same site
+looks like a different investment depending on which energy assumption is applied,
+and the honest assumption is the unflattering one. Re-scored at the measured floor
+of Section~4.4.1, Fall River's payback moves from 3.1~yr to 16.8~yr, which no
+municipal capital committee would approve. Applying a 50~\% capital subsidy at the
+same floor returns it to 8.3~yr, which most would. The commercial consequence is
+that a funding path is not a closing detail but part of the opening conversation.
+Three federal programs make that path nameable rather than hypothetical: the Clean
+Water State Revolving Fund, whose energy-conservation category explicitly includes
+onsite renewable energy at treatment works and which lends below market with
+principal forgiveness available in many states~\cite{epa_cwsrf_energy}; the
+Department of Agriculture's Water and Waste Disposal program for communities of
+10,000 or fewer, where needs-based grants reach 75~\%~\cite{usda_rd_wwd}; and
+elective payment of the clean-electricity investment credit, treated in
+Section~3.8. Notably, the Water Infrastructure Finance and Innovation Act is
+\emph{not} on that list: its minimum project size is \$20M, or \$5M for communities
+of 25,000 or fewer~\cite{epa_wifia}, and the largest single site in this portfolio
+carries \$3.7M of capital cost, so no individual project can reach it.
+
 \section{Competition}
-\wptodo{J1 · 3.4}{Real competitors (LucidEnergy, Rentricity, CINK); concede strengths; the gap.}
+
+The firms most often named as competitors are better understood as distribution
+channels. Lucid Energy built the in-conduit installation on a Portland water main
+that anchors the optimistic tier of Section~4.4.1~\cite{ferc_p14498,lucidpipe};
+Rentricity has an installed base in water and wastewater pressure
+recovery~\cite{rentricity}; CINK Hydro-Energy supplies crossflow machines including
+wastewater applications~\cite{cink}. Their strengths should be conceded plainly:
+each has hardware in the ground, operating references, and engineering depth in
+turbine design that this work does not have and does not attempt. What none of them
+publishes is a national screen. Each identifies sites through its own sales effort,
+one plant at a time, which is the search cost of Section~3.1 borne privately and
+repeatedly. A ranked national list is therefore complementary to their business
+rather than competitive with it, and Section~3.6 routes qualified sites to them by
+recommended turbine class.
+
+The real competition is of two kinds. The first is the energy service company
+performing an in-house audit: firms of this type already sell efficiency work into
+these plants, already hold the customer relationship, and could add outfall
+recovery to their existing scope. They are the most credible threat to this
+business, and the defense is narrow -- publishing the methodology early and signing
+channel agreements before the capability is internalised. The second and larger
+competitor is \textbf{doing nothing}. A plant that has never been screened has no
+reason to act, and 73.3~\% of the paper-viable population falls below 25~kW, where
+the economics genuinely do not work. Anyone who examined the aggregate would have
+seen thousands of uneconomic micro-projects and walked away rationally. The value
+appears only after the whole population is ranked, which is the specific thing this
+work did.
+
 \section{Pricing Model}
-\wptodo{J1 · 3.5}{Three price tiers (bulleted, \$ figures) + one derivation sentence.}
+
+Three tiers are proposed, and each carries the derivation it rests on rather than a
+chosen number.
+
+\begin{itemize}
+  \item \textbf{Screening report, \$8--15k per utility.} A custom run for one
+    owner, with per-site detail, sensitivity bands and a methodology appendix.
+    Derivation: approximately 1~\% of the estimated median net present value of a
+    100--250~kW site, which the model puts near \$1.1M.
+  \item \textbf{Data subscription, \$1--2k per month.} Filtered access to the
+    national database for manufacturers, energy service companies and consultants.
+    Derivation: a value ceiling of roughly 30 qualified leads per year at an assumed
+    \$3k per qualified lead, priced well beneath that ceiling so the purchase
+    decision is trivial. The per-lead figure is an assumption and not a sourced
+    market rate.
+  \item \textbf{Origination fee, 2--4~\% of project capital cost, on financial
+    close.} Derivation: at the estimated median capital cost of \$552.1k for sites
+    above 100~kW this is \$11.0--22.1k per closed project. The percentage band is
+    taken to be conventional for development origination but no authoritative public
+    schedule was located, so it too is an assumption.
+\end{itemize}
+
+Energy-as-a-service was considered and rejected for the present stage. Under such a
+contract WOWERS would carry energy-yield risk against a model whose own calibration
+spans a factor of 4.6, from the 409.2~GWh/yr ceiling to the 89.8~GWh/yr that the
+only metered treated-wastewater plant implies, and which has no wastewater-specific
+ground truth at all. Section~4.4.2 reports the machine-learning effort that was
+killed for exactly this reason. Signing a generation guarantee against an
+uncertainty this thesis states it cannot quantify would be underwriting a risk we
+have documented as unquantified. The position taken is fee-based revenue until a
+metered pilot exists, after which a yield-linked contract can be priced on an
+observed capacity factor rather than a substituted one.
+
 \section{Marketing and Distribution}
-\wptodo{J1 · 3.6}{Three named stages, in order, goal of each.}
+
+Three stages are proposed in sequence, each with a single goal.
+
+\textbf{Stage one, publish and harvest inbound, months 0--6.} The screened dataset
+and the methodology are released publicly and the dashboard of Section~4.6 is kept
+live. The goal is credibility and inbound contact at near-zero cost: open data
+generates citations, agency enquiries and manufacturer interest without a sales
+function. The analysis service is gated; the data is not.
+
+\textbf{Stage two, channel agreements, months 3--12.} Qualified sites are routed to
+the manufacturer whose product line matches the recommended machine, using the
+turbine class the pipeline already assigns -- crossflow, Kaplan or Francis. The goal
+is three signed channel partners, because a partner carries the eighteen-to-thirty-six
+month municipal procurement cycle that a two-person company cannot.
+
+\textbf{Stage three, direct paid engagements, months 6--24.} Screening reports and
+origination fees are sold against the cohort above 100~kW, either directly or jointly
+with a channel partner. The goal is the first revenue that is not grant-funded.
+
+The stages are ordered by cost, not by attractiveness. Stage three is where revenue
+per engagement becomes meaningful, and it is placed last because it depends on
+references that stages one and two produce. The sequence also has an unstarted
+precondition: ten customer-validation conversations, with utility operations
+directors, energy service company development leads, turbine manufacturers and state
+energy offices. Until those occur, this section describes an intention rather than a
+tested channel, and it is labelled as such.
+
 \section{Market Potential}
-\wptodo{J1 · 3.7}{TAM$\rightarrow$SAM$\rightarrow$SOM arithmetic shown; ~10\% realistic share.}
+
+The arithmetic is shown so that the size of this opportunity is not overstated, and
+the first point is a distinction that is easy to blur. The \$310.1M portfolio net
+present value reported in Chapter~5 accrues to \emph{plant owners}. It is not
+revenue available to WOWERS, and treating it as a market would misstate the business
+by two orders of magnitude.
+
+The addressable market for a screening and origination service is the fee pool.
+Taking the total addressable market as origination against the full viable
+portfolio: 1,138 sites carrying \$211.3M of estimated capital cost, at a 3~\%
+origination fee, gives \$6.3M of one-time fees, plus screening engagements. The
+serviceable addressable market is the cohort where a fee is actually collectable,
+namely the 129 sites above 100~kW carrying \$98.9M of capital cost, which at the same
+3~\% gives \$3.0M. A realistic obtainable share of roughly 10~\% of that
+serviceable market is \$0.3M of origination fees, which combined with screening
+engagements and channel subscriptions puts five-year revenue near
+\textbf{\$0.5--1.2M}.
+
+Two qualifications matter more than the point estimate. The figures above rest on
+the physics ceiling; at the measured floor with municipal financing and a 50~\%
+subsidy the bankable cohort above 100~kW falls from 129 sites to 59, and the
+serviceable market halves with it. And the conversion assumptions behind the
+obtainable share are unvalidated, for the reason given in Section~3.6. What the
+arithmetic supports is a consulting and data business for a small team, not a
+venture-scale company, and stating that plainly is more useful than a larger number
+that the evidence in Chapter~5 would contradict.
+
 \section{Future Vision and Project Timeline}
-\wptodo{J1 · 3.8}{Named upcoming project; milestone sequence; which milestone is built first.}
+
+The first milestone to be built is not a product feature. It is \textbf{an
+instrumented pilot at Fall River Wastewater Treatment Plant}, carrying revenue-grade
+metering from commissioning. Its purpose is to convert the weakest link in this
+entire thesis into data: one year of measured generation from a wastewater outfall
+turbine would replace the substituted capacity factor of Section~4.4.1 with an
+observed one, and would do more for the credibility of every number in this chapter
+than any amount of additional screening. It is sequenced first for that reason.
+
+The funding path for the company is non-dilutive first and probably non-dilutive
+only. The National Science Foundation's Small Business Innovation Research program
+awards up to \$305k at Phase~I~\cite{nsf_sbir}, and a documented calibration band, a
+published negative result and a reproducible test suite are the posture such
+programs reward. On the customer side, elective payment under the Inflation
+Reduction Act allows tax-exempt and governmental owners to receive clean-energy tax
+credits as cash~\cite{irs_elective_pay}, and the clean-electricity investment credit
+was retained in full for hydropower at 100~\% of its value for construction
+beginning through 2033~\cite{nha_obbba}. The threshold that matters for this
+portfolio is 1~MW: facilities below it are exempt from the prevailing-wage and
+apprenticeship conditions while still reaching the full 30~\% credit, and are
+outside the domestic-content phaseout that otherwise reduces elective-pay
+value~\cite{irs_pwa,irs_elective_pay,irs_notice_2024_84}. Of the 1,138 viable sites,
+1,133 fall below 1~MW. The five that do not include both marquee-scale sites, which
+therefore carry a compliance load the rest of the portfolio does not.
+
+Beyond the pilot, the same pipeline extends to other continuously flowing
+infrastructure -- water-utility pressure-reducing valves, industrial cooling
+discharge, irrigation canal drops, mine dewatering -- each requiring only a new
+ingest module. \textbf{None of that is built}, none of it is sized here, and it is
+named only so that the boundary of what has been demonstrated stays visible.
+Chapter~6 states what was designed and tested and what remains open.
 
 % =====================================================================
 % CHAPTER 4 — DESIGN DETAILS (technical bulk, 9,000-12,000 w)
@@ -2531,6 +2756,69 @@ G.~Ke, Q.~Meng, T.~Finley, T.~Wang, W.~Chen, W.~Ma, Q.~Ye and T.-Y.~Liu,
 ``LightGBM: a highly efficient gradient boosting decision tree,''
 in \emph{Advances in Neural Information Processing Systems 30 (NIPS 2017)},
 pp.~3146--3154, 2017.
+
+% --- Chapter 3 business-model funding sources (WP J1, verified 6 August 2026) ---
+
+\bibitem{epa_cwsrf_energy}
+U.S.\ Environmental Protection Agency,
+``Clean Water State Revolving Fund (CWSRF): Energy Conservation,''
+[Online]. Available:
+\url{https://www.epa.gov/cwsrf/clean-water-state-revolving-fund-cwsrf-energy-conservation}
+[Accessed 6 August 2026]. Eligible project list includes onsite renewable energy;
+hydropower is not separately enumerated.
+
+\bibitem{epa_wifia}
+U.S.\ Environmental Protection Agency,
+``What is WIFIA?,'' Water Infrastructure Finance and Innovation Act program.
+[Online]. Available: \url{https://www.epa.gov/wifia/what-wifia}
+[Accessed 6 August 2026]. Minimum project size \$20M, or \$5M for communities of
+25,000 or fewer; WIFIA share limited to 49~\% of eligible costs.
+
+\bibitem{usda_rd_wwd}
+U.S.\ Department of Agriculture, Rural Development,
+``Water \& Waste Disposal Loan \& Grant Program,''
+[Online]. Available:
+\url{https://www.rd.usda.gov/programs-services/water-environmental-programs/water-waste-disposal-loan-grant-program}
+[Accessed 6 August 2026]. Communities of 10,000 or fewer; grant share determined by
+median household income and project financial analysis, reaching 75~\%.
+
+\bibitem{irs_elective_pay}
+Internal Revenue Service,
+``Elective pay and transferability,''
+Internal Revenue Code \S6417.
+[Online]. Available:
+\url{https://www.irs.gov/credits-deductions/elective-pay-and-transferability}
+[Accessed 6 August 2026]. Phaseouts apply unless the facility satisfies the domestic
+content requirement or has maximum net output of less than 1~MW.
+
+\bibitem{irs_notice_2024_84}
+Internal Revenue Service,
+``Notice 2024-84: Extension of Transition Process for Claiming the Statutory
+Exceptions to the Elective Payment Phaseouts,'' 2024.
+
+\bibitem{irs_pwa}
+Internal Revenue Service,
+``Inflation Reduction Act Prevailing Wage \& Registered Apprenticeship Overview,''
+Publication 5855.
+[Online]. Available: \url{https://www.irs.gov/pub/irs-pdf/p5855.pdf}
+[Accessed 6 August 2026]. Facilities with maximum net output below 1~MW alternating
+current are excepted from the prevailing-wage and apprenticeship requirements while
+qualifying for the 30~\% credit percentage.
+
+\bibitem{nha_obbba}
+National Hydropower Association,
+``Hydro fares well in the One Big Beautiful Bill Act,''
+2025. [Online]. Available: \url{https://hydro.org/powerhouse/}
+[Accessed 6 August 2026]. Sections~45Y and~48E retained in full for hydropower at
+100~\% of credit value for construction beginning through 2033, phasing down
+thereafter.
+
+\bibitem{nsf_sbir}
+National Science Foundation,
+``America's Seed Fund powered by NSF (SBIR/STTR) --- Phase~I awards,''
+[Online]. Available: \url{https://seedfund.nsf.gov/awardees/phase-1/}
+[Accessed 6 August 2026]. Phase~I award ceiling \$305,000.
+
 % Additional Track M / Joint citations merge here at WP J5.
 
 \end{thebibliography}

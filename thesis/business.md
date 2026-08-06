@@ -574,7 +574,7 @@ pilot that needs CWSRF or an equivalent subsidy in the conversation from the fir
 | 3c | **Verify the §48E "material assistance" / prohibited-foreign-entity thresholds** for hydro construction starting 2026+ against statutory text. This is the one IRA question that the sub-1 MW exemptions do *not* answer, and it bears directly on recommending European OEMs | Tom | ~2 hours | Yes for any supplier-specific claim |
 | 4 | Ten customer-validation calls per §4.3 | Both | 2 weeks | Yes for any claim that a buyer exists |
 | 5 | One-page lead sheet template + per-OEM routing from `turbine_type` | Tom | 1–2 days | No |
-| 6 | Draft J1 · Ch3 against this document, 8 subsections, 150–400 words each, ~2,300 words | Both | 1 session | — |
+| 6 | ~~Draft J1 · Ch3 against this document~~ **DONE 2026-08-06.** All 8 sections written into `thesis_tom.tex`, **2,283 words**, every section inside 150–400. 8 new bibliography entries for the funding claims; 29 cited keys / 29 bibitems, none missing or unused, no internal `.md` cited. Compiles: 0 errors, 0 undefined citations, 100 pages | Both | done | — |
 
 ---
 

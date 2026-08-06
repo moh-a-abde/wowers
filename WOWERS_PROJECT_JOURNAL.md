@@ -6155,3 +6155,59 @@ extra column and keeps every prior number true. Matches the original P4-TIER con
    `--ignore-glob` on every test run.
 5. Remaining J1 blockers unchanged: formal citations for the 7 verified items, the §48E
    material-assistance question, and the ten customer-validation calls.
+
+---
+
+### Session: 2026-08-06 (PM #2) — Duplicate-file cleanup, Figure 8 regenerated, J1 · Ch3 drafted — Tom
+
+**What was done:**
+Three cleanup items plus the business-model chapter.
+
+**1. Deleted 32 stale duplicate files.** The repo had accumulated Finder-style `" 2"`/`" 3"`
+copies. Every one was proven recoverable before deletion: 24 were byte-identical to their
+current base file, and the other 8 were byte-identical to a *committed historical revision*
+of their base (verified by hashing every `git show <rev>:<path>` blob), so nothing unique was
+lost. Consequences: `pytest` now collects cleanly with **no `--ignore-glob`** (737 passed,
+1 skipped), and `npm run build` succeeds with **no workaround** — the frontend build had been
+broken by `frontend/src/vite-env.d 2.ts` triggering TS2666/TS2300 under `tsc -b`.
+
+**2. Regenerated Figure 8** (`thesis/figures/make_fig08_calibration_band.py`). It plotted the
+old 5-tier band and labelled CF 0.60 "central", both stale. Now 7 bars with the two metered
+conduit tiers drawn in a separate colour (they are the only measured rows), CF 0.60 relabelled
+optimistic, and dotted markers on the reported band at 89.8 and 281.4 GWh/yr. Regenerated from
+real source data — the EHA workbook on SANDISK plus
+`data/raw/ground_truth/ferc_conduit_candidates.parquet` — not from hardcoded values, and Point
+Loma's CF is recomputed from its metered row (2,515 MWh / 1,500 kW / 8,760 h = 0.1914) with a
+guard that raises if that row is not unique. Two render bugs found by looking at the output:
+the legend collided with the ceiling bar, and LaTeX `--` leaked into matplotlib as literal
+double hyphens. Both fixed.
+
+**3. Drafted J1 · Ch3 Business Model** — the last substantive unwritten work package outside
+the stitch. 2,283 words across all 8 sections, each inside the 150–400 band. Detail is in the
+thesis journal entry; the repo-side facts are that 8 new bibliography entries were added for
+the funding claims (reference count 21 → 29), the chapter cites **no internal `.md` file**, and
+`tectonic` compiles to **100 pages with 0 errors and 0 undefined citations**.
+
+The morning's corrections earned their keep here: had Ch3 been drafted a day earlier it would
+have carried 131 sites (a geojson rounding artifact — the real figure is 129) and a 7.5 yr
+payback that was a ceiling-tier number attached to a floor-tier argument.
+
+**Files modified:** 32 duplicate files deleted; `thesis/figures/make_fig08_calibration_band.py`,
+`thesis/figures/fig08_calibration_band.png`, `thesis/thesis_tom.tex` (Ch3 + bibliography),
+`thesis/THESIS_BREAKDOWN.md` (J1 ticked in §3 and §7), `thesis/THESIS_JOURNAL.md` (session entry
++ band-floor line in the Section 0 baseline block), `thesis/business.md` (next-action 6 closed),
+`WOWERS_PROJECT_JOURNAL.md`.
+
+**Open / next steps:**
+1. **Advisor sign-off on the 89.8 floor.** Ch2 through Ch6 are now internally consistent on it,
+   so a reversal would touch all of them plus `settings.yaml`.
+2. **J4 · Ch5 Integration Test** (~500 w) is the suggested next package: unblocked, and
+   independent of the band-floor decision because it quotes only ceiling-tier baseline numbers.
+3. **Three pricing assumptions remain unsourced** (origination-fee band, $3k/qualified-lead,
+   state-agency engagement scale) and are labelled as assumptions in Ch3.5.
+4. **§48E material-assistance thresholds** still unverified against statutory text (Ch3 does not
+   depend on them; a supplier recommendation would).
+5. **Ten customer-validation calls** — unchanged, and still the only blocker that cannot be
+   closed at a desk.
+6. `CF_CALIBRATION_REPORT.md` still stale. Internal artifact, never cited, but it keeps inviting
+   the corrected errors back.

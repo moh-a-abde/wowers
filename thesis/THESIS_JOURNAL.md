@@ -65,7 +65,11 @@ below all previous entries.
 Any draft that cites these must match exactly (P2-SEED re-baseline):
 
 - POTWs screened: **17,148** → project-viable: **1,138**
-- Physics ceiling: **409.2 GWh/yr** (409.17 GWh) · calibrated band: **119–281 GWh/yr**
+- Physics ceiling: **409.2 GWh/yr** (409.17 GWh) · calibrated band: **89.8–281 GWh/yr**
+  *(floor lowered from 119 on 2026-08-06, P4-MEASURED-FLOOR: the floor is now the metered Point
+  Loma capacity factor and is a real pipeline column, `energy_kwh_calib_measured_point_loma`.
+  Advisor sign-off still outstanding. This reference block was edited rather than a past session
+  entry, so RULE 4 is intact.)*
 - Portfolio NPV: **$310.1M** · CapEx: **$211.3M** · savings: **$41.2M/yr** · median payback:
   **9.8 yr**
 - Exclusion funnel: 17,148 → 5,464 flow-valid → 4,860 head-valid → 3,778 scored → 1,138 viable
@@ -1057,3 +1061,84 @@ rather than assumed (below).
 
 **Next work package suggested:**
 - Unchanged: J1 · Ch3 Business Model, needs both authors. J4 and J5 stay gated on M1 and M2.
+
+---
+
+### Session: 2026-08-06 — J1 · Ch3 Business Model — Joint
+
+**Work package:** J1 · Ch3 Business Model
+
+**What was drafted:**
+- All eight sections of Chapter 3, replacing every `\wptodo` placeholder. **2,283 words** against
+  a 2,300 target, each section inside the 150–400 band: 3.1 The Problem (275 w), 3.2 The Solution
+  (233 w), 3.3 The Target Market (319 w), 3.4 Competition (286 w), 3.5 Pricing Model (270 w),
+  3.6 Marketing and Distribution (219 w), 3.7 Market Potential (268 w), 3.8 Future Vision and
+  Project Timeline (318 w).
+- A short chapter preamble stating that every figure is an estimate, that energy-derived figures
+  carry their tier, and that no customer has yet paid for anything described.
+- **Eight new bibliography entries** for the funding and pricing claims: `epa_cwsrf_energy`,
+  `epa_wifia`, `usda_rd_wwd`, `irs_elective_pay`, `irs_notice_2024_84`, `irs_pwa`, `nha_obbba`,
+  `nsf_sbir`. Reference count 21 → 29 against the 40–50 target.
+
+**Source artifacts used:**
+- `thesis/business.md` (working document, read for structure and numbers — **not cited**, per the
+  internal-`.md` rule).
+- `data/processed/phase4/financial_scorecards.parquet` and `TIER_LADDER_REPORT.md` for every
+  quantitative claim; the tier-ladder scenarios came from `scripts/tier_ladder_whatif.py`.
+- External sources verified this session and cited directly: EPA CWSRF energy-conservation
+  eligibility, EPA WIFIA project-size minimums, USDA RD Water & Waste Disposal terms, IRS
+  elective pay (§6417) and Notice 2024-84, IRS Pub. 5855 on the sub-1 MW prevailing-wage
+  exception, National Hydropower Association on §48E retention under OBBBA, NSF America's Seed
+  Fund Phase I award records. Existing refs reused: `epri2013`, `epa2013`, `epa_echo`,
+  `ferc_p14498`, `lucidpipe`, `rentricity`, `cink`.
+
+**Figures / tables produced or specified:**
+- None. Chapter 3 is prose and a single itemised price list; the format does not require a figure
+  here and no placeholder was inserted. All supporting figures live in Ch4/Ch5 and are
+  cross-referenced rather than duplicated.
+- Separately this session, **Figure 8 was regenerated** (`make_fig08_calibration_band.py`) to add
+  the two metered conduit tiers and mark the reported band. It now has 7 bars, the measured rows
+  in a distinct colour, and dotted band markers at 89.8 and 281.4 GWh/yr. Figure count still 15.
+
+**Verification:**
+- `tectonic -X compile` → **0 errors, 0 undefined references, 0 undefined citations, 100 pages**
+  (was 91; +9 from Ch3 and the new bibliography entries).
+- Citation audit: 29 cited keys, 29 `\bibitem` definitions, **no missing, no unused**, and no
+  internal `.md` file cited anywhere.
+- Every number in Ch3 traced to the parquet or the tier-ladder report: 17,148 · 1,138 · **129**
+  sites ≥ 100 kW · 81.3 % of NPV · 0.75 % hit rate · 290 not high-confidence · 73.3 % under
+  25 kW · Fall River 169.0 kW / $538k / $179k/yr / 3.1 yr ceiling / 16.8 yr floor / 8.3 yr
+  floor-with-subsidy · median ≥ 100 kW CapEx $552.1k · $211.3M and $98.9M cohort CapEx ·
+  1,133 of 1,138 below 1 MW.
+- **Two corrections carried in from the morning session**, both of which would have put wrong
+  numbers in this chapter had it been drafted a day earlier: the ≥ 100 kW cohort is 129, not the
+  131 that the rounded geojson implied, and the "7.5 yr payback under municipal financing" figure
+  was a ceiling-tier number attached to a floor-tier argument. Neither appears in Ch3.
+
+**Open items / follow-ups:**
+- **Three pricing assumptions remain unsourced** and are labelled as assumptions in the prose:
+  the 2–4 % origination band, the $3k-per-qualified-lead value, and state-agency engagement
+  scale. The ASHRAE audit benchmark that previously justified the screening-report price was
+  withdrawn after verification ($1.8–10k, not $15–50k), so that price now rests on the NPV-share
+  derivation alone.
+- **§48E "material assistance" / prohibited-foreign-entity thresholds** for hydro construction
+  starting 2026 are not yet verified against statutory text. Ch3.8 does not rely on them, but any
+  supplier-specific recommendation would.
+- **Ten customer-validation conversations are still unstarted.** Section 3.6 says so explicitly
+  and labels itself an intention rather than a tested channel. Until they happen, §3.7's
+  conversion assumptions are unvalidated.
+- **Advisor sign-off on the 89.8 GWh/yr band floor** is outstanding. Ch2/Ch3/Ch4/Ch5/Ch6 are now
+  internally consistent on it, so a reversal would touch all of them plus `settings.yaml`.
+- Deferred items still standing from prior entries: bibliography reordering, `[Accessed]` dates
+  on the older web references, reference count 29 against 40–50, "P2-SEED" undefined at first use
+  in 4.1, missing signposts in 4.3.1/4.3.2, 2.1 limitation citations, `{{MONTH_YEAR}}`, and the
+  figure count depending on Mohamed's contributions.
+
+**Breakdown updated:**
+- §3 Track J checkbox for **J1 ticked**; §7 status row for J1 changed ☐ → ☑.
+
+**Next work package suggested:**
+- **J4 · Ch5 Integration Test** (~500 w). It is unblocked, independent of the band-floor
+  decision because it quotes only ceiling-tier baseline numbers, and both technical tracks are
+  first-drafted so the §6 combine gate is open. J5 stays last by design — the abstract summarises
+  finished content.

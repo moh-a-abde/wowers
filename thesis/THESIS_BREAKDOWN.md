@@ -270,7 +270,7 @@ understanding only — these are never citable sources; see the RULE on internal
 
 ### Track J — Joint (business + framing + stitch)
 
-- [ ] **J1 · Ch3 Business Model** — ~2,300 w *(this is "the business report part" you two discuss together)*
+- [x] **J1 · Ch3 Business Model** — ~2,300 w *(this is "the business report part" you two discuss together)*
   - **Feeds:** `WOWERS_Project_Report.pdf`, `DIRECTOR_BRIEF_2026-06-24.md`,
   `WOWERS_Capital_and_Funding_Research.md`, Fowler feedback summary (journal), turbine
   manufacturer research (journal).
@@ -407,7 +407,7 @@ map item #2); label all business numbers as estimates.
 | T     | T7  | Appendices A–C                    | Tom     | 800   | ☑      |
 | M     | M1  | Ch4.6 Frontend system             | Mohamed | 2,000 | ☑      |
 | M     | M2  | Ch5 Frontend results              | Mohamed | 700   | ☑      |
-| J     | J1  | Ch3 Business Model                | Joint   | 2,300 | ☐      |
+| J     | J1  | Ch3 Business Model                | Joint   | 2,300 | ☑      |
 | J     | J2  | Ch1 Introduction                  | Joint   | 1,100 | ☑      |
 | J     | J3  | Ch6 Conclusion                    | Joint   | 900   | ☑      |
 | J     | J4  | Ch5 Integration test              | Joint   | 500   | ☐      |
