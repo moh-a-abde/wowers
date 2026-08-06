@@ -5970,3 +5970,104 @@ $152.64M, $136.65M, 9.83 yr, 58.59 MW, the 1,138 / 439 / 129 / 27 tier counts. V
 4. **Worth asking the advisor** whether one instrumented pilot outfall (already Ch6 future
    work) should be reframed as the thing that resolves the central tier specifically, since
    that is now the single weakest link in the headline.
+
+---
+
+### Session: 2026-08-06 — P4-TIER-LADDER: Phase-4 tier×rate re-run, band floor moved to 89.8, business.md §2/§7 rebuilt, 7 of 10 [VERIFY] items closed — Tom
+
+**What was done:**
+Cleared three of the five blockers standing in front of work package J1 (Ch3 Business Model).
+Started as "re-run Phase 4 across the tier ladder" and turned up four number errors in
+`thesis/business.md`, one of them structural.
+
+**1. New read-only harness: `scripts/tier_ladder_whatif.py`.**
+Re-scores all 3,778 turbine-viable sites through `src.phase4.financials.compute_scorecard` —
+the same function Phase 4 calls — across 6 energy tiers × 4 discount rates × 2 subsidy
+levels (48 scenarios, ~10 s total). Follows the `install_cost_whatif.py` precedent: no
+parquet write, no checkpoint, no settings mutation. 12 new tests in
+`tests/test_scripts/test_tier_ladder_whatif.py`. Full suite now **736 passed, 1 skipped**.
+Output: `TIER_LADDER_REPORT.md`.
+
+Baseline gate: ceiling / 6 % / no-grant reproduces **1,138 viable · 409.17 GWh/yr ·
+$310.13M · 9.83 yr** exactly, so the harness is trustworthy before any new number is read
+off it.
+
+Env note: base conda moved 3.13 → 3.14 and orphaned the old `pytest` shebang
+(`bad interpreter: /opt/miniconda3/bin/python3.13`). Installed `pytest` + `pytest-asyncio`
+for 3.14. No source files touched. The one "failure" seen pre-install was the missing
+asyncio plugin, not a code fault.
+
+**2. Four errors found in `business.md`, all now fixed.**
+- **Structural: the old §2.4 reconstruction capped its universe at the 1,138 sites already
+  viable at 6 %**, so no scenario could exceed 1,138. Every public-finance row was silently
+  truncated. Real optimistic-tier + 3.5 % + 50 % grant is **2,272 sites / $374.2M / 10.6 yr**,
+  not 1,138 / $357.6M / 7.5 yr. The correction makes public finance look *more* important, not
+  less.
+- **The 7.5 yr payback in the pitch was a ceiling-tier number** attached to a floor-tier
+  argument — precisely what §7.4 forbids. Its real provenance is ceiling + 6 % + 50 % grant.
+- **131 → 129 for the ≥ 100 kW cohort.** `exports/viable_sites.geojson` rounds
+  `rated_power_kw` to integer kW; two sites at 99.5–99.9 kW round up. The same rounding shifted
+  every §2.3 size band (real: 415 / 419 / 175 / 87 / 37 / 5). Both old and new bands sum to
+  1,138, which is why a total check never caught it. Concentration claim survives: 129 sites =
+  $252.1M = **81.3 %** of portfolio NPV.
+- **Multipliers were being reported as capacity factors.** `phase4.cf_calibration` stores
+  tier_CF ÷ 0.872. 0.447 is a multiplier; its CF is 0.390. Every tier now carries both numbers,
+  and a test asserts they differ.
+
+**3. Band-floor decision taken: 89.8–281 GWh/yr (Tom).**
+Previously 118.9–281, resting on the EHA river-hydro p25 — a plant class that is not ours.
+Point Loma (CF 0.1914) is the only metered treated-wastewater conduit plant in the country and
+becomes the floor. The double-sourcing argument survives: river-p25 at 119.1 and metered
+all-conduit at 114.4 still agree to 4.7 GWh/yr, both now above the floor.
+**Advisor sign-off remains outstanding** — it was the recorded precondition on 2026-07-25 and is
+logged as required before Ch3 submission, not merely before drafting.
+
+Deliberately **not** propagated further this session: `thesis_tom.tex` carries 119–281 in ≥ 5
+places (Ch2, Ch4.4, Ch5.1.4, Ch6), and `settings.yaml` / the 58-property geojson contract /
+`test_calib_cols.py` / `test_export_geojson.py` / `frontend/src/lib/data.ts` all hard-code the
+0.291 floor. That is a T1/T5/T6 revisit and needs its own session (next-action 1c).
+
+**4. Verification pass: 7 of 10 `[VERIFY]` items closed.**
+Biggest finding by far — **the 1 MW threshold**. The elective-pay phaseout applies unless a
+facility satisfies domestic content **or** has max net output under 1 MW; sub-1 MW facilities are
+also exempt from prevailing-wage/apprenticeship while still reaching the full 30 % §48E rate.
+**1,133 of our 1,138 viable sites are under 1 MW.** So the 2026 domestic-content problem that
+looked fatal does not touch the portfolio, and the European supply chain is a schedule risk only
+below 1 MW. The 5 sites above 1 MW — including both marquee pitch sites, Stickney and Point
+Loma — carry the full compliance load. Also confirmed §48E was retained in full for hydropower
+under OBBBA (100 % if construction begins by end-2033).
+
+Two corrections against us: the municipal rate is **not** 3.5 % (AAA 30-yr muni 4.25 % in Apr
+2026, AA water/sewer +40–60 bp → ~4.6–4.9 %), so the ladder gained a 4.75 % market-municipal
+rate and 3.5 % was relabelled as subsidised; and the ESCO audit benchmark behind the
+screening-report price is wrong (ASHRAE Level 2 is ~$1.8–10k, not $15–50k) — benchmark withdrawn,
+price now rests on the NPV-share derivation alone. NSF SBIR Phase I corrected $275k → **$305k**.
+Three items remain unsourced: developer origination-fee band, state energy-office procurement
+scale, $3k/qualified-lead. All are now labelled assumptions.
+
+Working notes in `business.md` §10a. These are **not** citations — Ch3 must cite the agency page,
+statute, notice or award record directly with an access date (next-action 3b).
+
+**Files modified:**
+- `scripts/tier_ladder_whatif.py` — new (read-only harness).
+- `tests/test_scripts/test_tier_ladder_whatif.py` — new (12 tests).
+- `TIER_LADDER_REPORT.md` — new (48-scenario grid + baseline reproduction check).
+- `thesis/business.md` — §2 and §7 rebuilt on pipeline output; §5 pricing derivations corrected;
+  §6.1 funding table verified + new §6.1.1 on the 1 MW threshold; §8 pilot table gains
+  floor-tier paybacks; §4.2 funnel restated from 129; new §10a verification log; §10 and §11
+  updated.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Open / next steps:**
+1. **Advisor sign-off on the 89.8 floor** — required before Ch3 submission.
+2. **Propagate 89.8 into `thesis_tom.tex` + settings/export/tests/frontend** (next-action 1c).
+   Own session; revisits T1/T5/T6.
+3. **Capture formal citations** for the 7 verified items with access dates (3b).
+4. **Verify §48E "material assistance" / prohibited-foreign-entity thresholds** for hydro starting
+   2026+ (3c) — the one IRA question the sub-1 MW exemptions do not answer, and it bears on
+   recommending European OEMs.
+5. **Ten customer-validation calls** — still the only blocker that cannot be closed at a desk, and
+   still the thing that decides whether §3 and §4 describe a market or a hypothesis.
+6. **§8 tension worth an advisor conversation:** the only two pilot sites that survive the band
+   floor unaided (Stickney, Point Loma) are the two that fail the head-confidence criterion, while
+   all five mid-market candidates need a 50 % subsidy to stay defensible at the floor.
