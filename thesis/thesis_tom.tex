@@ -2465,30 +2465,30 @@ of those functions is served from the single cached fetch of
 \begin{figure}[htbp]\centering
 \resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[
-  node distance=8mm and 10mm,
+  node distance=10mm and 6mm,
   box/.style={draw=black, fill=gray!12, rounded corners=1pt, align=center,
-              font=\small, minimum height=8mm, text width=31mm, inner sep=2pt},
+              font=\small, minimum height=8mm, text width=27mm, inner sep=2pt},
   src/.style={draw=black, fill=white, rounded corners=1pt, align=center,
-              font=\small, minimum height=8mm, text width=34mm, inner sep=2pt},
+              font=\small, minimum height=8mm, text width=34mm, inner sep=3pt},
   arr/.style={-{Latex[length=2mm]}, thick}
 ]
 \node[src] (geo) {\texttt{exports/}\\\texttt{scored\_sites.geojson}\\(3{,}778 features, 59 props)};
 \node[box, below=of geo] (data) {\texttt{lib/data.ts}\\cached \texttt{fetch()} + client-side\\derivation (band, confidence, payback)};
-\node[box, below=10mm of data, xshift=-70mm] (v1) {NationalMap\\\texttt{/}};
+\node[box, below=14mm of data, xshift=-99mm] (v1) {NationalMap\\\texttt{/}};
 \node[box, right=of v1] (v2) {StatePortfolio\\\texttt{/state/:code}};
 \node[box, right=of v2] (v3) {PlantDetail\\\texttt{/plant/:id}};
 \node[box, right=of v3] (v4) {Opportunities\\\texttt{/opportunities}};
-\node[box, below=10mm of v1, xshift=52.5mm] (v5) {Plants\\\texttt{/plants}};
+\node[box, right=of v4] (v5) {Plants\\\texttt{/plants}};
 \node[box, right=of v5] (v6) {Analytics\\\texttt{/analytics}};
 \node[box, right=of v6] (v7) {Reports\\\texttt{/reports}};
 \draw[arr] (geo) -- (data);
-\draw[arr] (data.south) -- ++(0,-3mm) -| (v1.north);
-\draw[arr] (data.south) -- ++(0,-3mm) -| (v2.north);
-\draw[arr] (data.south) -- ++(0,-3mm) -| (v3.north);
-\draw[arr] (data.south) -- ++(0,-3mm) -| (v4.north);
-\draw[arr] (data.south) -- ++(0,-3mm) -| (v5.north);
-\draw[arr] (data.south) -- ++(0,-3mm) -| (v6.north);
-\draw[arr] (data.south) -- ++(0,-3mm) -| (v7.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v1.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v2.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v3.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v4.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v5.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v6.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v7.north);
 \end{tikzpicture}%
 }
 \caption{Frontend application flow: seven React Router views all resolve
@@ -2497,21 +2497,25 @@ fetch of the single tracked GeoJSON file}
 \label{fig:m1-flow}
 \end{figure}
 
-\figpending{m1-nationalmap}{a live screenshot of the National Opportunity
-Map view (route \texttt{/}) --- run \texttt{npm run dev} in
-\texttt{frontend/} and screenshot the browser at
-\texttt{http://localhost:5173/}. Verified live this session: the map
-renders 3{,}778 sites colored by band, header KPIs read 3{,}778 sites shown
-/ 1{,}138 viable / \$310.1M NPV / 9.8~yr median payback at the default
-(unfiltered) state, matching the P2-SEED baseline exactly.}{National
-Opportunity Map view}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig_m1_nationalmap.png}
+  \caption{National Opportunity Map view, all 3{,}778 scored sites colored
+  by viability band at the default (unfiltered) state; header KPIs read
+  3{,}778 sites shown, 1{,}138 viable, \$310.1M NPV, 9.8~yr median payback,
+  matching the P2-SEED baseline exactly}
+  \label{fig:m1-nationalmap}
+\end{figure}
 
-\figpending{m1-plantdetail}{a live screenshot of a Plant Detail view
-(route \texttt{/plant/:id}) --- run \texttt{npm run dev} in
-\texttt{frontend/} and screenshot, e.g., \texttt{http://localhost:5173/}
-\texttt{plant/OH0024732}. Verified live this session: flow, elevation,
-gauge, turbine, financial scorecard, and sensitivity tornado all populate
-correctly from the geojson.}{Plant Detail view}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig_m1_plantdetail.png}
+  \caption{Plant Detail view for Jackson Pike Water Resource Recovery
+  Facility (NPDES OH0024732, Columbus, Ohio): flow, elevation, the
+  capacity-factor gauge, recommended turbine, financial scorecard, and
+  sensitivity tornado all populated from the exported GeoJSON}
+  \label{fig:m1-plantdetail}
+\end{figure}
 
 \subsection{Interaction, Filtering, and Export}
 

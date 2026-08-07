@@ -1420,3 +1420,85 @@ is the sole live copy going forward.
 **Next work package suggested:**
 - J5's three remaining items need input from Tom/Mohamed directly (month/year, names, 1–2 more
   figures) rather than further drafting — once those land, J5 closes and the thesis is complete.
+
+### Session: 2026-08-06 — Fix Figure 12 crossing lines; capture real screenshots for 13–14 — Mohamed
+
+**Work package:** Not a numbered WP — a real bug fix and a real-data follow-up on the M1/M2 merge,
+flagged directly by the user reviewing the merged PDF.
+
+**What was found and fixed:**
+- **Figure 12 (application-flow diagram) had a genuine routing bug**, not a rendering fluke.
+  The diagram staggered the seven view boxes across two rows (NationalMap/StatePortfolio/
+  PlantDetail/Opportunities on row 1, Plants/Analytics/Reports on row 2), and the row-2 boxes'
+  connecting lines were drawn as an L-shaped path bending directly beneath the `lib/data.ts`
+  node. Computed the actual node x-coordinates from the TikZ `xshift`/`node distance` values
+  used: row-2 box centers at −17.5, 23.5, 64.5~mm landed **inside** the horizontal spans of
+  row-1 boxes StatePortfolio, PlantDetail, and Opportunities respectively (e.g. StatePortfolio
+  spans [−44.5, −13.5], and −17.5 falls inside it), so each connecting line was drawn straight
+  through the row-1 box body on its way to row 2 — visible in the merged PDF as arrows cutting
+  through box text.
+  - **Fix:** redesigned as a single row of all seven boxes (was two staggered rows). With every
+    target `.north` at the same height and nothing between the bend point and any of them, no
+    line can cross a box regardless of x-position. Reduced box width 31→27~mm and horizontal
+    node distance 10→6~mm to keep the total width reasonable before `\resizebox` scaling;
+    increased the source-node `inner sep` 2→3~pt as a small margin safety fix.
+  - Applied identically to both `thesis_tom.tex` and `thesis_moh.tex` (the historical record).
+- **Figures 13–14 were never real images** — they were still the honest `\figpending` markers
+  from the original M1 draft, correctly rendering as labeled placeholder boxes per the images
+  rule, but with no actual screenshot content. Replaced both with real captured images:
+  - Installed Playwright + Chromium in the repo's `.venv` (`pip install playwright && playwright
+    install chromium`), started the Vite dev server (`npm run dev` in `frontend/`), and wrote
+    `thesis/figures/make_fig_m1_screenshots.py` — a regenerator script matching the house
+    `make_figNN_*.py` convention, headless-captures both views at 1600×950 @2x device scale
+    (3200×1900 actual pixels) after waiting for `networkidle` plus a fixed delay for MapLibre's
+    raster tiles to finish painting (mirrors the earlier finding this session that the map
+    canvas needs a beat after network-idle to actually render).
+  - Output: `thesis/figures/fig_m1_nationalmap.png` (National Opportunity Map, default filters,
+    all 3,778 sites plotted) and `thesis/figures/fig_m1_plantdetail.png` (Plant Detail for
+    Jackson Pike WRRF, OH0024732 — same plant used for QA earlier in the session). Both
+    inspected directly before embedding: map tiles fully loaded, KPIs read 3,778 / 1,138 /
+    \$310.1M / 9.8~yr matching the P2-SEED baseline, plant detail page fully populated
+    (gauge, satellite mini-map, financial scorecard, sensitivity tornado, efficiency curve).
+  - Replaced both `\figpending` blocks with real `\includegraphics[width=\linewidth]{...}`
+    figures, matching the exact figure-embedding pattern used elsewhere in `thesis_tom.tex`
+    (e.g. Figure 1's `\includegraphics[width=\linewidth]{figures/fig01_system_block.pdf}`).
+
+**Correction to the prior session's figure count.** That entry said the merge "brings the fleet
+to 14... still short of 20." That was wrong — a proper count from the compiled `.lof` this
+session shows **18 figures already** (the true count includes appendix figures the prior count
+missed) and **26 tables** (already well past the 20-table minimum). The real remaining gap for
+J5's figure-count item is **2 more figures**, not 6, which matches the "1–2 more figures" language
+already in `THESIS_BREAKDOWN.md`'s J5 note — that note was right; the prior journal entry's own
+arithmetic was the thing that was off.
+
+**Source artifacts used:**
+- Live command output: `pip install playwright`, `playwright install chromium`, `npm run dev`
+  (this session's fresh capture, not reused from any prior screenshot)
+- Computed TikZ node geometry by hand from the `node distance`/`xshift` values in the diagram
+  source, to confirm the crossing-line root cause before changing anything
+
+**Verification:**
+- `tectonic -X compile thesis_tom.tex` (two passes) → **0 errors**, explicitly checked for
+  `undefined`/`error`/`multiply` — zero matches. 121 pages (unchanged from before this session's
+  fixes, since fixing existing figures doesn't add pages).
+- Figure 12 rendered and visually inspected: all seven boxes in one clean row, no line crosses
+  any box, all labels legible.
+- Figures 13–14 rendered and visually inspected: both are now the real captured screenshots at
+  full resolution, correctly captioned and numbered, immediately following Figure 12 on the same
+  and next page as before.
+- Cleaned up LaTeX build intermediates and the one-off screenshot-orchestration script from the
+  scratchpad after verification; the reusable regenerator
+  (`thesis/figures/make_fig_m1_screenshots.py`) was kept, matching house convention.
+
+**Open items / follow-ups:**
+- Figure count is 18 of the 20 minimum — 2 more figures still needed, not yet identified.
+- Everything else from the prior J5 entries stands unchanged: `{{MONTH_YEAR}}`, acknowledgement
+  names, advisor sign-off on the band floor, ten customer-validation calls.
+
+**Breakdown updated:**
+- No checkbox change (J5 was already `◐`); this closes out the "screenshots still needed" note
+  left in the prior M1 and merge sessions.
+
+**Next work package suggested:**
+- Identify 2 more figures to clear the format's 20-figure minimum, then J5's remaining items are
+  all fill-ins (month/year, names) rather than content work.
