@@ -1561,13 +1561,26 @@ into Tom's branch. No new prose drafted; three cross-artifact inconsistencies cl
   opportunities, $310.1M combined NPV, 409,170 MWh/yr combined energy; Analytics shows $310.1M
   portfolio NPV, $211.3M CapEx, $41.2M/yr savings, 409,170 MWh/yr recoverable energy, 9.8 yr
   median payback, 848 high-confidence sites. Zero browser console errors on both.
-- LaTeX was not recompiled this session — no TeX distribution is installed on this machine. The
-  §5.1.6 edit is prose only: no new macro, environment, label, reference, citation, or figure was
-  introduced, so the compile state should be unchanged from `0c726ef`. This must still be
-  confirmed on a machine with `tectonic` before the draft is circulated.
+- Recompiled and verified (added after the first push of this entry, which claimed no TeX
+  distribution was available — that was wrong, `tectonic` 0.16.9 was already on PATH at
+  `/opt/homebrew/bin/tectonic` and the first check looked only for pdflatex/xelatex/lualatex/
+  latexmk). `tectonic -X compile thesis_tom.tex`, two passes: 0 errors, 0 undefined references,
+  0 undefined citations, 0 multiply-defined labels. 122 pages, up from 121, the one page the
+  §5.1.6 rewrite adds.
+- Typesetting regression checked rather than assumed: compiled `0c726ef` and the current tree
+  side by side and diffed the engine warnings. Both give 33 overfull and 69 underfull boxes, and
+  the multiset of overfull magnitudes is identical, so the rewrite introduced no new layout
+  defect. The two overfull boxes adjacent to the edit are pre-existing, shifted in line number
+  only.
+- Pages 87–89 rendered and read, not just compiled: the rewritten QA paragraph sets correctly,
+  the `\texttt{}` spans and the `0.008~\%` all render as intended, and it flows into the
+  discrepancy paragraph with no break. Table 16 and the §4.6 run were re-checked in the same
+  pass and are unchanged.
+- Tooling note for whoever picks this up next: `poppler` was installed via Homebrew this session
+  so PDF pages can be rendered and read back (`pdftotext`/`pdftoppm`). `tectonic` needed no
+  install.
 
 **Open items / follow-ups:**
-- Recompile `thesis_tom.tex` to confirm the §5.1.6 rewrite is clean and to re-check pagination.
 - Unchanged from prior entries: 2 more figures for the 20-figure minimum, `{{MONTH_YEAR}}`,
   acknowledgement names, advisor sign-off on the band floor.
 
