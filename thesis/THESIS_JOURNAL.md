@@ -1502,3 +1502,78 @@ arithmetic was the thing that was off.
 **Next work package suggested:**
 - Identify 2 more figures to clear the format's 20-figure minimum, then J5's remaining items are
   all fill-ins (month/year, names) rather than content work.
+
+### Session: 2026-08-10 — Post-merge consistency pass (moh → tom) — Joint
+
+**Work package:** Not a numbered WP — the consistency pass run immediately after fast-forwarding
+Mohamed's two thesis commits (`09359a3` M1/M2 merge, `0c726ef` Figure 12 fix + real screenshots)
+into Tom's branch. No new prose drafted; three cross-artifact inconsistencies closed.
+
+**What was done:**
+- **Merge.** `git merge --ff-only origin/moh`. The merge base was already Tom's HEAD (`46f7f29`),
+  so the branches had not diverged and the merge was a fast-forward with no conflicts and no
+  content of either track's dropped. Only `thesis/` files were touched; no `src/`, `frontend/`,
+  `config/`, or `exports/` changes came across. Pre-merge lint of the merged `thesis_tom.tex`
+  found 0 duplicate labels, 0 duplicate `\bibitem` keys, 0 undefined `\ref`, 0 undefined
+  `\cite`, and all 17 `\includegraphics` targets present on disk.
+- **The 409,202 vs 409,170 MWh/yr split, traced and fixed.** §5.1.6's QA paragraph reported the
+  Opportunities view's combined energy as 409,202 MWh/yr in the same sentence that called it the
+  "same" total as Analytics' 409,170 MWh/yr, for the identical 1,138-site cohort. The cause is
+  aggregation order, not a pipeline disagreement: `fetchNational` summed the unrounded
+  `annual_energy_kwh` and rounded once (`data.ts:270`), while `Opportunities.tsx:27` summed the
+  per-site `energy_mwh` values that `fetchPlants` had already rounded to whole MWh for table
+  display, letting 1,138 rounding residuals accumulate to +32 MWh/yr (0.008 %). Reproduced
+  directly from `exports/scored_sites.geojson`: the viable cohort totals 409.1695 GWh/yr exactly,
+  which is 409,170 MWh/yr sum-then-round and 409,202 MWh/yr round-then-sum under JavaScript's
+  half-up `Math.round`, matching both reported readings to the unit. Fixed rather than annotated,
+  because §6 of the breakdown requires the P2-SEED baseline to read identically everywhere:
+  `energy_kwh` (unrounded) now rides alongside `energy_mwh` on the plant properties, and
+  Opportunities sums in kWh and rounds once. §5.1.6 was rewritten to report the original
+  mismatch, the mechanism, the arithmetic, and the correction, rather than silently swapping the
+  number.
+- **58 → 59 GeoJSON properties in `THESIS_BREAKDOWN.md`.** Five occurrences (§0 skeleton remap
+  rows for 4.5 and Appendix A, the T5 and T7 beats, and the §4 table inventory) still said 58.
+  The live contract is 59, confirmed by counting distinct property keys in both
+  `exports/scored_sites.geojson` and `exports/viable_sites.geojson`, and `thesis_tom.tex` already
+  said 59 in all eleven places it appears. This was a stale figure on Tom's side, not something
+  the merge introduced, but it contradicted the merged text and is now corrected.
+- **Figure-count bookkeeping.** The 2026-08-06 merge entry above put the fleet at "14: Tom's 11 +
+  M1's diagram + M1's 2 pending screenshots". Tom's own count is 15, not 11, so the post-merge
+  total is 18. Per RULE 4 that entry is left as written; the correction is recorded here. The
+  following session entry and the breakdown's "1–2 more figures" note were already right.
+
+**Source artifacts used:**
+- `thesis/thesis_tom.tex` (§5.1.6 QA paragraph), `thesis/THESIS_BREAKDOWN.md`
+- `frontend/src/lib/data.ts`, `frontend/src/lib/types.ts`, `frontend/src/views/Opportunities.tsx`,
+  `frontend/src/views/Analytics.tsx`
+- `exports/scored_sites.geojson`, `exports/viable_sites.geojson` (recomputation of both totals)
+
+**Figures / tables produced or specified:**
+- None. Figure and table counts are unchanged at 18 and 26.
+
+**Verification:**
+- `npm run build` in `frontend/`: `tsc -b` clean (0 type errors), vite 7.3.5 built in 2.80 s.
+  Bundle unchanged within noise — index 711.37 kB, maplibre-gl 1,053.37 kB, css 75.06 kB. Note
+  this machine runs Node 26.4.0 / npm 11.17.0, not the Node 22.11.0 / npm 11.6.1 of the M2
+  measurement session, so Table 16 was deliberately left as Mohamed measured it rather than
+  overwritten with numbers from a different toolchain.
+- Both views re-read live against the dev server after the fix: Opportunities shows 1,138
+  opportunities, $310.1M combined NPV, 409,170 MWh/yr combined energy; Analytics shows $310.1M
+  portfolio NPV, $211.3M CapEx, $41.2M/yr savings, 409,170 MWh/yr recoverable energy, 9.8 yr
+  median payback, 848 high-confidence sites. Zero browser console errors on both.
+- LaTeX was not recompiled this session — no TeX distribution is installed on this machine. The
+  §5.1.6 edit is prose only: no new macro, environment, label, reference, citation, or figure was
+  introduced, so the compile state should be unchanged from `0c726ef`. This must still be
+  confirmed on a machine with `tectonic` before the draft is circulated.
+
+**Open items / follow-ups:**
+- Recompile `thesis_tom.tex` to confirm the §5.1.6 rewrite is clean and to re-check pagination.
+- Unchanged from prior entries: 2 more figures for the 20-figure minimum, `{{MONTH_YEAR}}`,
+  acknowledgement names, advisor sign-off on the band floor.
+
+**Breakdown updated:**
+- No checkbox change. J5 stays `◐` — this pass closed consistency defects, not J5's remaining
+  fill-ins.
+
+**Next work package suggested:**
+- Unchanged: identify the 2 remaining figures, then J5's fill-ins close the thesis.

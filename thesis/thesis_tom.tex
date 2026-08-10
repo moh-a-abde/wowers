@@ -3004,7 +3004,21 @@ National Opportunity Map read 3{,}778 sites shown, 1{,}138 viable,
 state; Analytics read \$310.1M portfolio NPV, \$211.3M CapEx,
 \$41.2M/yr savings, 409{,}170~MWh/yr recoverable energy, and 848
 high-confidence sites; Opportunities read 1{,}138 opportunities and the
-same \$310.1M and 409{,}202~MWh/yr totals. The single-cached-fetch design
+same \$310.1M total. One figure did not match on the first pass, and it is
+reported here rather than quietly reconciled: Opportunities gave its
+combined energy as 409{,}202~MWh/yr against Analytics' 409{,}170~MWh/yr for
+the identical cohort of 1{,}138 sites. The gap is 32~MWh/yr, 0.008~\% of the
+total, and it is an artifact of the dashboard rather than of the pipeline.
+Analytics summed the unrounded per-site \texttt{annual\_energy\_kwh} and
+rounded once at the end; Opportunities summed the per-site values already
+rounded to whole MWh for display, so 1{,}138 individual half-MWh rounding
+residuals accumulated into the total. Summing the exported values directly
+confirms the mechanism: the same cohort gives 409.1695~GWh/yr exactly,
+which rounds to 409{,}170~MWh/yr sum-then-round and to 409{,}202~MWh/yr
+round-then-sum. Since the format requires the P2-SEED baseline to read
+identically wherever it appears, the aggregation in \texttt{Opportunities}
+was corrected to sum in kWh and round once, and both views were re-checked
+live afterwards: both now read 409{,}170~MWh/yr. The single-cached-fetch design
 described in Section~4.6.2 was also confirmed empirically rather than
 only by reading the source: after the initial page load, navigating
 across four views through the in-app sidebar, a client-side transition

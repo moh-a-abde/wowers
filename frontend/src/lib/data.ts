@@ -208,6 +208,7 @@ export async function fetchPlants(): Promise<PlantCollection> {
           p.annual_energy_kwh != null
             ? Math.round(p.annual_energy_kwh / 1e3)
             : null,
+        energy_kwh: p.annual_energy_kwh,
         payback: pb,
         npv: p.npv_usd,
         tier: p.site_tier,

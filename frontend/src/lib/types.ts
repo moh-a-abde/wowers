@@ -9,6 +9,11 @@ export interface MapProps {
   turbine: string | null;
   rated_kw: number | null;
   energy_mwh: number | null;
+  // Unrounded annual energy, carried alongside energy_mwh so multi-site totals
+  // sum in kWh and round once. Summing the per-site rounded energy_mwh instead
+  // accumulates to +32 MWh/yr over the 1,138 viable sites, which disagreed with
+  // the national KPI (409,170 vs 409,202 MWh/yr) for the same cohort.
+  energy_kwh: number | null;
   payback: number | null;
   npv: number | null;
   tier: string | null;

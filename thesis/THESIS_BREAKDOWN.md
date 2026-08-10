@@ -109,10 +109,10 @@ habits) applies **unchanged**.
 | 4.2 Input Acquisition Subsystem (hardware + SDK) | **Data Acquisition:** EPA ECHO/ICIS ingest, ~279M DMR rows, USGS 3DEP, EIA/EHA                                             | Tom           |
 | 4.3 Data Transport Subsystem (protocols)         | **Processing Pipeline:** Phase 1 filter/features/ranking, Phase 2 MC energy, Phase 3 head/turbine, Phase 4 cost/financials | Tom           |
 | 4.4 Core Compute Design (toolchain stages)       | **Calibration & Validation:** CF-calibration band, Phase 5 ML kill (honest negative result)                                | Tom           |
-| 4.5 Custom Hardware Schematic Design             | **Data Export / Serving Layer:** `export_geojson.py`, the 58-property data contract, determinism                           | Tom           |
+| 4.5 Custom Hardware Schematic Design             | **Data Export / Serving Layer:** `export_geojson.py`, the 59-property data contract, determinism                           | Tom           |
 | 4.6 Custom Hardware Physical Design              | **Frontend Visualization System:** React + MapLibre, 7 views, state/URL, build/deploy                                      | Mohamed       |
 | 5.1.x per-subsystem results                      | Same order as Ch4: energy tables, funnel, calibration, negative result, then frontend perf                                 | Tom + Mohamed |
-| Appendix A: Bill of materials                    | **Data dictionary** (58 geojson props) + exclusion-funnel tables                                                           | Tom           |
+| Appendix A: Bill of materials                    | **Data dictionary** (59 geojson props) + exclusion-funnel tables                                                           | Tom           |
 | Appendix B: Raw measurement captures             | Calibration captures (implied-CF vs EHA-CF), sensitivity bands                                                             | Tom           |
 | Appendix C: Simulation output figures            | Monte-Carlo P10/P50/P90 distributions                                                                                      | Tom           |
 
@@ -222,7 +222,7 @@ understanding only — these are never citable sources; see the RULE on internal
   `exports/viable_sites.geojson` + `scored_sites.geojson`.
   - **Beats:** implied-CF vs EHA-CF calibration → the 119–281 GWh band (**strongest single
   element**); the Phase-5 ML **kill as honest negative result** (only 11 conduit labels
-  found, Point Loma offline since 2018 — must be reported, not hidden); the 58-property
+  found, Point Loma offline since 2018 — must be reported, not hidden); the 59-property
   geojson data contract + byte-determinism.
   - **Fig/Tab:** implied-CF vs EHA-CF overlay, calibration-band bar.
 
@@ -238,7 +238,7 @@ understanding only — these are never citable sources; see the RULE on internal
 
 - [x] **T7 · Appendices A–C** — ~800 w + tables
   - **Feeds:** geojson property list, funnel tables, sensitivity/MC captures.
-  - **Beats:** data dictionary (58 props), funnel tables, MC/calibration raw captures.
+  - **Beats:** data dictionary (59 props), funnel tables, MC/calibration raw captures.
 
 
 
@@ -333,7 +333,7 @@ portfolio + analytics screenshots (M) · 16+ appendix figures (T).
 **Tables:** data-source inventory (T) · ranking weights (T) · funnel counts (T) · ideal
 system performance (T) · expected system performance (T) · calibration band (T) · CapEx
 cost breakdown (T) · sensitivity NPV bands (T) · turbine spec matrix (T) · frontend
-view/route map (M) · build/bundle sizes (M) · data dictionary / 58 props (T, appendix) ·
+view/route map (M) · build/bundle sizes (M) · data dictionary / 59 props (T, appendix) ·
 economics-by-tier (T).
 
 > **Format rule:** every figure/table named in prose *before* it appears; tables captioned
