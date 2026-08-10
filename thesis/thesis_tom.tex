@@ -112,17 +112,80 @@ and that any and all revisions required by the final examining committee have be
 % --- Abstract (5 paragraphs, 350-450 words; write LAST) ---------------
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
-\wptodo{J5 · Abstract}{Five paragraphs per format §3.3: (1) opportunity + quantified loss;
-(2) the proposal + "that can be built on later in the development of a minimum viable
-product (MVP)"; (3) dataflow end to end; (4) headline numbers at full precision, measured
-vs.\ simulated separated; (5) what it enables + three improvements. Write after all
-chapters exist.}
+Municipal wastewater treatment in the United States consumes roughly 30.2~TWh of
+electricity each year, and every publicly owned treatment works discharges treated
+effluent through an outfall that runs continuously, at a flow its operator already
+meters for permit compliance, and often over a usable elevation drop. That hydraulic
+energy is discarded. No prior assessment has quantified how much of it is recoverable
+plant by plant, because the cost of searching seventeen thousand plants has exceeded
+the value of the answer: only a small fraction are economic, and which fraction cannot
+be known without examining all of them.
+
+We propose the creation of a company, WOWERS, and present a proof-of-concept
+infrastructure-intelligence platform that can be built on later in the development of a
+minimum viable product (MVP). It screens the national fleet from public regulatory data
+alone, ranks every plant on recoverable energy and project economics, and reports the
+result as a calibrated band rather than a point estimate. It is a screening instrument,
+not a validated predictor.
+
+Four sequential phases do the work. Phase~1 ingests approximately 279 million discharge
+monitoring records from the Environmental Protection Agency's ICIS-NPDES system and
+derives a flow duration curve per plant. Phase~2 converts each curve into an
+annual-energy distribution by Monte-Carlo sampling. Phase~3 estimates net head from the
+U.S.\ Geological Survey 3D Elevation Program under a plausibility gate and matches a
+turbine from a vendor catalogue. Phase~4 builds a thirty-year financial scorecard and
+calibrates the energy against measured capacity factors. A byte-deterministic
+59-property GeoJSON export feeds a static React and MapLibre dashboard.
+
+The results separate simulated from measured. Simulated: 17{,}148 plants screened yield
+1{,}138 project-viable sites carrying 58.5891~MW and 409.17~GWh/yr at the physics
+ceiling, against \$211.33M of capital cost, \$310.13M of net present value, and a
+9.83~yr median payback. Measured: capacity factors from 629 river-hydropower plants over
+9{,}798 plant-years and 115 metered conduit plants bound that ceiling to a band of
+89.8--281~GWh/yr, floored on the only metered treated-wastewater conduit plant in the
+country at a capacity factor of 0.1914. Individual instrumented installations are
+reported in the international literature, but no metered wastewater-outfall generation
+appears in the U.S.\ public generation datasets this calibration draws on, so every
+energy figure here is modeled; an attempt to learn a correction ended when a national
+label search returned 11 usable sites against a requirement of 50 fixed beforehand.
+
+The platform makes a site visit targetable: 129 sites above 100~kW carry 81.3~\% of
+portfolio value, collapsing a national search into a regional campaign. Three
+improvements would close the gaps left open --- surveyed head in place of the
+elevation-model proxy, an instrumented pilot with revenue-grade metering, and
+delivery-layer work to carry the interface beyond demonstration scale.
 
 % --- Acknowledgements -------------------------------------------------
 \chapter*{Acknowledgements}
 \addcontentsline{toc}{chapter}{Acknowledgements}
-\wptodo{J5 · Acknowledgements}{Four short paragraphs: advisor; business-side faculty;
-named industry practitioners; one-line catch-all.}
+% NAMES TO FILL BEFORE SUBMISSION — the \ackname slots below are the only
+% placeholders left in the front matter. They are deliberately left blank rather
+% than guessed; see THESIS_JOURNAL.md, J5 entry.
+\newcommand{\ackname}[1]{\textit{[#1]}}
+
+We thank our faculty advisor, \ackname{advisor name}, for supervising this work, and in
+particular for pressing on the question of what the energy estimates actually rested on.
+The capacity-factor calibration of Section~4.4.1, and the decision to report a band
+floored on measured generation rather than a single modeled figure, came directly out of
+that pressure. It is the part of this thesis we would least want to have skipped.
+
+We thank \ackname{business faculty name} for reviewing the business model of Chapter~3,
+and the judges of the Fowler competition for four questions that the earlier version of
+that chapter could not answer: why the opportunity had not already been taken, how the
+equipment would actually be delivered, which plant would host a pilot, and where the
+money would come from. Sections~3.1, 3.3 and 3.8 exist in their present form because
+those questions were asked.
+
+We thank \ackname{industry contacts} for discussing turbine selection and installed cost
+with us, and the staff of the Environmental Protection Agency, the U.S.\ Geological
+Survey, the Energy Information Administration and Oak Ridge National Laboratory whose
+published datasets made a national screen possible for two students with no field
+instrumentation. This work is built almost entirely on public data, and it would not
+exist otherwise.
+
+Finally, we thank the classmates, family and friends who tolerated a year of
+conversation about wastewater outfalls, and who asked the naive questions that turned
+out to be the important ones.
 
 % tocloft does not force a page break before each list, so the \clearpage calls
 % below are required — without them Contents runs on from Acknowledgements.
@@ -387,8 +450,25 @@ not change the pattern: hardware and site engineering exist; a reproducible nati
 prioritization of POTW outfalls does not~\cite{doe_vision}. Current practice therefore
 catches local hydraulic feasibility and, in the LucidPipe case, continuous-conduit CF. It
 misses national ranking under shared assumptions, systematic treatment of DMR data quality,
-and calibrated portfolio energy bands. A public-data screening primer that makes those
-gaps precise will now be discussed.
+and calibrated portfolio energy bands.
+
+The peer-reviewed literature supplies what the vendor record does not: instrumented
+measurement. Chae \emph{et al.} installed a flow-variable semi-Kaplan micro-hydropower
+unit on the effluent of an operating municipal treatment plant in South Korea and monitored
+it for more than a year, reporting 68.1~MWh of annual generation under severe flow
+fluctuation~\cite{chae2015}. Power \emph{et al.} examined turbine selection and design
+optimisation across four Irish treatment plants, and found that flow variability from storm
+events and demand change materially shifts the optimum machine~\cite{power2017}. Two
+consequences follow for this work. First, the claim this thesis makes about missing ground
+truth must be stated precisely: measured wastewater-outfall generation does exist in the
+literature, as individual instrumented case studies, and what is absent is a machine-readable
+national record pairing head, flow, and metered annual energy across enough sites to
+calibrate or train against --- the specific gap that ends the attempt of Section~4.4.2.
+Second, the flow-variability finding independently supports the part-load emphasis of the
+turbine-selection rules in Section~4.3.5: a machine chosen at peak flow is the wrong machine
+for a duty curve as flat as a municipal outfall's.
+
+A public-data screening primer that makes those gaps precise will now be discussed.
 
 \section{Public-Data Screening of Hydropower Potential (Primer)}
 
@@ -420,8 +500,12 @@ hydropower assets~\cite{hydrosource_eha}.
 A defensible screen must still separate physics ceilings from calibrated expectations.
 Substituting median river-hydro CF for continuous effluent over-haircuts energy; omitting
 debris and downtime overstates it. The WOWERS response, developed in Chapters~4 and~5, is
-to report a physics ceiling (409.2~GWh/yr at the P2-SEED baseline) beside a calibrated band
-of 119--281~GWh/yr anchored to EHA empirics and LucidPipe~\cite{hydrosource_eha,lucidpipe}. Prior national
+to report a physics ceiling (409.2~GWh/yr at the P2-SEED baseline --- the site-keyed
+Monte-Carlo re-baseline of Section~4.3.3, whose numbering every figure in this thesis
+uses) beside a calibrated band
+of 89.8--281~GWh/yr, floored on the only metered treated-wastewater conduit plant in the
+country and bounded above by the Portland Conduit~3 design
+projection~\cite{hydrosource_eha,lucidpipe}. Prior national
 methods that stop at resource potential, or that calibrate only against river fleets,
 therefore leave a methodological gap that Section~2.4 compares explicitly. Why those prior
 methods remain limited for POTW outfall recovery will now be discussed.
@@ -429,9 +513,21 @@ methods remain limited for POTW outfall recovery will now be discussed.
 \section{Prior National Assessments and Calibration Approaches}
 
 National hydropower assessment literature is rich for rivers and canals and thin for
-WWTP outfalls. The comparison that follows uses a single common metric---reported or
-implied annual energy (or capacity factor) at national or multi-state scale---across at
-least three named prior lines of work and the WOWERS screen. The scale and method contrast
+WWTP outfalls --- thin, but not empty, and the closest prior work is European rather than
+American. M\'erida Garc\'ia \emph{et al.} screened Spain's municipal and industrial
+wastewater discharges for micro-hydropower potential using discharge licences as the flow
+source~\cite{merida2021}, which is the same methodological move this work makes with
+ICIS-NPDES discharge monitoring reports and is the nearest published analogue to the WOWERS
+approach. The same group extended the method across several European Union member states,
+covering drinking, pressurised irrigation, and wastewater networks~\cite{mcnabola2021}, and
+a comparable national assessment has been reported for Lithuania~\cite{punys2022}. A related
+review draws operational lessons from installed wastewater-system
+hydropower~\cite{novara2021}. None of these covers the United States, none reports a
+per-plant ranked list of the kind Chapter~5 produces, and --- most relevant to Chapter~4 ---
+none calibrates its energy estimate against metered generation from the same asset class,
+which is the specific contribution Section~4.4.1 claims. The comparison that follows uses a
+single common metric---reported or implied annual energy (or capacity factor) at national or
+multi-state scale---across at least three named prior lines of work and the WOWERS screen. The scale and method contrast
 can be seen in Table~\ref{tab:prior_work}.
 
 \begin{table}[htbp]
@@ -454,7 +550,7 @@ can be seen in Table~\ref{tab:prior_work}.
       \$/kW fits (e.g.\ BCM ICC)~\cite{ornl2014,osti3002705} \\
     WOWERS (this work) & 17,148 U.S.\ POTW outfalls $\rightarrow$ 1,138 project-viable &
       ICIS DMR FDC + 3DEP head proxy; CF calibrated & Physics ceiling 409.2~GWh/yr;
-      calibrated band 119--281~GWh/yr \\
+      calibrated band 89.8--281~GWh/yr \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -472,9 +568,10 @@ calibration source available without site visits. Restricting to the 0.1--5~MW c
 0.541~\cite{hydrosource_eha}. Those statistics correctly bound a \emph{conservative
 floor} for any small-hydro claim. They incorrectly describe WWTP duty cycles if used as a
 central estimate, because seasonal river drivers listed in Section~2.1 do not apply to
-municipal effluent. The WOWERS calibration therefore keeps the EHA floor (119--194~GWh/yr
-depending on percentile and MW sub-bucket) and adds a WWTP-appropriate optimistic tier at
-CF~0.60 (281~GWh/yr), set below the 0.628--0.806 range implied by the Portland Conduit~3
+municipal effluent. The WOWERS calibration therefore retains the EHA range (119--194~GWh/yr
+depending on percentile and MW sub-bucket) as corroboration rather than as the floor itself,
+places the reported floor on metered treated-wastewater generation at 89.8~GWh/yr, and adds
+an optimistic tier at CF~0.60 (281~GWh/yr), set below the 0.628--0.806 range implied by the Portland Conduit~3
 filed and as-built figures~\cite{ferc_p14498, lucidpipe}. Because those figures are
 projections rather than metered output, the same section benchmarks them against the 115
 EHA Canal/Conduit plants that do report measured generation to
@@ -493,7 +590,7 @@ project economics once a site is chosen but does not rank sites~\cite{ferc_condu
 Plant energy-\emph{consumption} literature (EPRI Table~5-1 observed kWh/MG by flow band;
 WEF Manual of Practice~32 curves retained for sensitivity) closes the offset narrative:
 national wastewater use near 30.2~TWh/yr and validated plant-level intensities give context
-for why a 119--281~GWh/yr recovery band is simultaneously material at portfolio scale and
+for why an 89.8--281~GWh/yr recovery band is simultaneously material at portfolio scale and
 small as a fraction of treatment load~\cite{epri2013,wef_mop32}. ENERGY STAR and EPA
 planning guides corroborate the order of magnitude without replacing the EPRI observed
 grid~\cite{epa2013}.
@@ -510,26 +607,287 @@ screen will now be discussed.
 % CHAPTER 3 — BUSINESS MODEL                            (WP J1 — Joint)
 % =====================================================================
 \chapter{Business Model}
-\wptodo{J1 · Ch3 (~2,300 w)}{Eight subsections, 150--400 w each. Feeds:
-WOWERS\_Project\_Report.pdf, DIRECTOR\_BRIEF\_2026-06-24.md,
-WOWERS\_Capital\_and\_Funding\_Research.md, Fowler feedback. Address the four judge gaps.}
+
+Every figure in this chapter is an estimate produced by this work rather than an
+observed commercial result, and the energy-derived figures carry the tier they rest
+on. Where a number depends on the capacity-factor assumption of Section~4.4.1, both
+ends are given: the physics ceiling that the model computes and the measured floor
+that the evidence supports. No customer has yet paid for any of the services
+described here, and Section~3.8 says what would have to happen before the revenue
+arithmetic of Section~3.7 could be called a forecast rather than a plan.
 
 \section{The Problem}
-\wptodo{J1 · 3.1}{Global/national \$ figure + unit-level figure + three named complications.}
+
+Municipal wastewater treatment consumes roughly 30.2~TWh/yr of electricity in the
+United States, and energy is among the largest controllable lines in a treatment
+plant's operating budget~\cite{epri2013,epa2013}. A fraction of that is
+recoverable at the point where treated effluent is discharged: outfalls run
+continuously, at flows their operators already meter for permit compliance, and
+frequently over a usable elevation drop. This work screens 17,148 active publicly
+owned treatment works and finds 1,138 where recovery clears a viability gate, of
+which the 129 sites above 100~kW carry 81.3~\% of the portfolio net present value.
+
+The value is real and it is almost impossible to find. Three complications explain
+why it has stayed unexploited, and each is a specific obstacle rather than general
+difficulty. First, the hit rate is 0.75~\%: 129 sites out of 17,148. Until
+bulk regulatory data and cheap computation existed, the cost of searching exceeded
+the value of what was found, because screening one plant by consultant costs
+thousands of dollars and screening all of them now costs almost nothing. Second,
+head is not measured anywhere at national scale. This work estimates it
+from a digital elevation model with a plausibility gate, and 290 of the 1,138
+viable sites do not reach the high-confidence tier, so the single most important
+physical input to the energy estimate is also its weakest. Third, no metered
+wastewater generation record exists to calibrate against. A nationwide search of
+Federal Energy Regulatory Commission and Department of Energy records returned
+exactly one treated-wastewater conduit plant with measured output, and it has been
+offline since 2018. The absence of records is itself the finding, and it is why this
+chapter prices services rather than guaranteed energy.
+
+How those three complications shape the service offered will now be discussed.
+
 \section{The Solution}
-\wptodo{J1 · 3.2}{The service in one paragraph; optional partner/ecosystem play.}
+
+We propose the creation of a company, WOWERS, to operate the national screening and
+deal-origination layer that the search cost of Section~3.1 has so far prevented from
+existing. The platform ingests approximately 279 million discharge monitoring
+records covering every active treatment works in the country, estimates per-site
+recoverable energy with a Monte-Carlo physics model, matches commercially available
+turbines, scores each site on net present value, internal rate of return and
+payback, and publishes the ranked result. The product is the answer to one question:
+which of the seventeen thousand plants is worth a site visit.
+
+We do not manufacture turbines, install them, own the assets, or take energy-yield
+risk. Those roles are already occupied by competent firms, discussed in
+Section~3.4, and each of them currently finds its own sites one at a time. The
+deliverable per qualified site is a one-page technical sheet carrying exactly what a
+manufacturer needs in order to quote: rated capacity, net head, design flow, a flow
+duration curve summary, the recommended turbine class, the permitting tier, and the
+discharge-permit contact already published in the Environmental Protection Agency's
+compliance database~\cite{epa_echo}. The screening layer is the asset; the report
+and the introduction are what is sold.
+
+Deliberately excluded is any contract in which WOWERS is paid for delivered
+kilowatt-hours. Section~3.5 explains why the calibration uncertainty documented in
+Section~4.4.1 makes that an unpriceable risk at present.
+
 \section{The Target Market}
-\wptodo{J1 · 3.3}{One REAL named archetype plant: size, output, what makes it hard to serve.}
+
+The archetype customer is a mid-size municipal treatment works with in-house
+engineering capacity, and the concrete example carried through this chapter is
+Fall River Wastewater Treatment Plant, Massachusetts. The model rates it at
+169.0~kW, with an estimated all-in capital cost of \$538k, estimated annual revenue
+of \$179k/yr, and an estimated simple payback of 3.1~yr at the physics ceiling. Fall
+River is not the largest opportunity in the portfolio; it is the best-qualified one,
+because it clears 100~kW, reaches the high-confidence head tier, and sits in a
+Northeast cluster where Lowell Regional Wastewater Utility, rated 124.9~kW, can be
+visited on the same trip.
+
+What makes such a plant hard to serve is not technical. It is that the same site
+looks like a different investment depending on which energy assumption is applied,
+and the honest assumption is the unflattering one. Re-scored at the measured floor
+of Section~4.4.1, Fall River's payback moves from 3.1~yr to 16.8~yr, which no
+municipal capital committee would approve. Applying a 50~\% capital subsidy at the
+same floor returns it to 8.3~yr, which most would. The commercial consequence is
+that a funding path is not a closing detail but part of the opening conversation.
+Three federal programs make that path nameable rather than hypothetical: the Clean
+Water State Revolving Fund, whose energy-conservation category explicitly includes
+onsite renewable energy at treatment works and which lends below market with
+principal forgiveness available in many states~\cite{epa_cwsrf_energy}; the
+Department of Agriculture's Water and Waste Disposal program for communities of
+10,000 or fewer, where needs-based grants reach 75~\%~\cite{usda_rd_wwd}; and
+elective payment of the clean-electricity investment credit, treated in
+Section~3.8. Notably, the Water Infrastructure Finance and Innovation Act is
+\emph{not} on that list: its minimum project size is \$20M, or \$5M for communities
+of 25,000 or fewer~\cite{epa_wifia}, and the largest single site in this portfolio
+carries \$3.7M of capital cost, so no individual project can reach it.
+
 \section{Competition}
-\wptodo{J1 · 3.4}{Real competitors (LucidEnergy, Rentricity, CINK); concede strengths; the gap.}
+
+The firms most often named as competitors are better understood as distribution
+channels. Lucid Energy built the in-conduit installation on a Portland water main
+that anchors the optimistic tier of Section~4.4.1~\cite{ferc_p14498,lucidpipe};
+Rentricity has an installed base in water and wastewater pressure
+recovery~\cite{rentricity}; CINK Hydro-Energy supplies crossflow machines including
+wastewater applications~\cite{cink}. Their strengths should be conceded plainly:
+each has hardware in the ground, operating references, and engineering depth in
+turbine design that this work does not have and does not attempt. What none of them
+publishes is a national screen. Each identifies sites through its own sales effort,
+one plant at a time, which is the search cost of Section~3.1 borne privately and
+repeatedly. A ranked national list is therefore complementary to their business
+rather than competitive with it, and Section~3.6 routes qualified sites to them by
+recommended turbine class.
+
+The real competition is of two kinds. The first is the energy service company
+performing an in-house audit: firms of this type already sell efficiency work into
+these plants, already hold the customer relationship, and could add outfall
+recovery to their existing scope. They are the most credible threat to this
+business, and the defense is narrow -- publishing the methodology early and signing
+channel agreements before the capability is internalised. The second competitor, and
+by a wide margin the larger, is inaction. A plant that has never been screened has no
+reason to act, and 73.3~\% of the paper-viable population falls below 25~kW, where
+the economics genuinely do not work. Anyone who examined the aggregate would have
+seen thousands of uneconomic micro-projects and walked away rationally. The value
+appears only after the whole population is ranked, which is the specific thing this
+work did.
+
 \section{Pricing Model}
-\wptodo{J1 · 3.5}{Three price tiers (bulleted, \$ figures) + one derivation sentence.}
+
+Three tiers are proposed, and each carries the derivation it rests on rather than a
+chosen number.
+
+\begin{itemize}
+  \item \emph{Screening report, \$8--15k per utility.} A custom run for one
+    owner, with per-site detail, sensitivity bands and a methodology appendix.
+    Derivation: approximately 1~\% of the estimated median net present value of a
+    100--250~kW site, which the model puts near \$1.1M.
+  \item \emph{Data subscription, \$300--900 per month.} Filtered access to the
+    national database for manufacturers, energy service companies and consultants.
+    Derivation: published cost-per-lead benchmarks for the manufacturing and
+    industrial sector run roughly \$120--350 per lead, against a blended
+    cross-industry figure near \$198~\cite{cpl_benchmark}. Thirty routed sites per
+    year therefore carry \$3.6--10.5k/yr of lead-replacement value, and the
+    subscription is priced beneath the middle of that range. This tier was
+    \emph{revised downward} during the citation pass described below.
+  \item \emph{Origination fee, 2--4~\% of project capital cost, on financial
+    close.} Derivation: the U.S.\ Treasury's position on renewable-energy developer
+    fees, tested in \emph{California Ridge Wind Energy v.\ United States}, is that
+    such fees should normally fall in the 3--5~\% range of project cost absent
+    unusual circumstances --- the Treasury reduced a claimed 12.3~\% fee to 4.8~\% in
+    that case~\cite{nrf_devfees}. A developer earning that fee carries capital and
+    development risk across the whole project. WOWERS carries neither: it originates
+    and qualifies the site and does nothing else. Pricing at 2--4~\% therefore sits at
+    or below the low end of what a full developer commands, which is the intended
+    relationship. At the estimated median capital cost of \$552.1k for sites above
+    100~kW this is \$11.0--22.1k per closed project.
+  \item \emph{State or agency data layer, \$25--75k per engagement.} GIS exports, a
+    white-label report and state-specific overlays. This tier's derivation remains
+    unsourced: it was scaled to an assumed state energy-office procurement value and no
+    public award record establishing that range was located. Two real award values
+    would settle it.
+\end{itemize}
+
+One of these prices did not survive being sourced. The subscription tier was first
+proposed at \$1--2k per month on an assumed \$3k per qualified lead; published
+benchmarks put an industrial lead an order of magnitude lower, which supports
+\$3.6--10.5k/yr of replacement value rather than the \$90k/yr the original derivation
+implied. The price is revised accordingly. The counter-argument is not dismissed: a
+WOWERS lead is an engineered site sheet, not a marketing contact, and may command
+more --- but that cannot be settled from published benchmarks, only from the customer
+conversations named in Section~3.6.
+
+Energy-as-a-service was considered and rejected for now. It would have WOWERS carry
+yield risk against a calibration spanning a factor of 4.6, from the 409.2~GWh/yr
+ceiling to the 89.8~GWh/yr the only metered treated-wastewater plant implies, with no
+wastewater-specific ground truth in the datasets available here --- the same scarcity
+that ended the machine-learning attempt of Section~4.4.2. Guaranteeing generation
+against an uncertainty this thesis states it cannot quantify would underwrite a risk we
+have documented as unquantified. The position taken is fee-based revenue until a
+metered pilot exists, after which a yield-linked contract can be priced on an
+observed capacity factor rather than a substituted one.
+
 \section{Marketing and Distribution}
-\wptodo{J1 · 3.6}{Three named stages, in order, goal of each.}
+
+Three stages are proposed in sequence, each with a single goal.
+
+\emph{Stage one, publish and harvest inbound, months 0--6.} The screened dataset
+and the methodology are released publicly and the dashboard of Section~4.6 is kept
+live. The goal is credibility and inbound contact at near-zero cost: open data
+generates citations, agency enquiries and manufacturer interest without a sales
+function. The analysis service is gated; the data is not.
+
+\emph{Stage two, channel agreements, months 3--12.} Qualified sites are routed to
+the manufacturer whose product line matches the recommended machine, using the
+turbine class the pipeline already assigns -- crossflow, Kaplan or Francis. The goal
+is three signed channel partners, because a partner carries the eighteen-to-thirty-six
+month municipal procurement cycle that a two-person company cannot.
+
+\emph{Stage three, direct paid engagements, months 6--24.} Screening reports and
+origination fees are sold against the cohort above 100~kW, either directly or jointly
+with a channel partner. The goal is the first revenue that is not grant-funded.
+
+The stages are ordered by cost, not by attractiveness. Stage three is where revenue
+per engagement becomes meaningful, and it is placed last because it depends on
+references that stages one and two produce. The sequence also has an unstarted
+precondition: ten customer-validation conversations, with utility operations
+directors, energy service company development leads, turbine manufacturers and state
+energy offices. Until those occur, this section describes an intention rather than a
+tested channel, and it is labelled as such.
+
 \section{Market Potential}
-\wptodo{J1 · 3.7}{TAM$\rightarrow$SAM$\rightarrow$SOM arithmetic shown; ~10\% realistic share.}
+
+The arithmetic is shown so that the size of this opportunity is not overstated, and
+the first point is a distinction that is easy to blur. The \$310.1M portfolio net
+present value reported in Chapter~5 accrues to \emph{plant owners}. It is not
+revenue available to WOWERS, and treating it as a market would misstate the business
+by two orders of magnitude.
+
+The addressable market for a screening and origination service is the fee pool.
+Taking the total addressable market as origination against the full viable
+portfolio: 1,138 sites carrying \$211.3M of estimated capital cost, at a 3~\%
+origination fee, gives \$6.3M of one-time fees, plus screening engagements. The
+serviceable addressable market is the cohort where a fee is actually collectable,
+namely the 129 sites above 100~kW carrying \$98.9M of capital cost, which at the same
+3~\% gives \$3.0M. A realistic obtainable share of roughly 10~\% of that
+serviceable market is \$0.3M of origination fees. Adding screening engagements and
+channel subscriptions at the revised prices of Section~3.5 --- three subscribers at
+the midpoint of \$300--900 per month contribute \$22--32k/yr, not the \$43--86k/yr the
+original price implied --- puts five-year revenue near \$0.4--1.0M.
+
+Three qualifications matter more than the point estimate. The figures above rest on
+the physics ceiling; at the measured floor with municipal financing and a 50~\%
+subsidy the bankable cohort above 100~kW falls from 129 sites to 59, and the
+serviceable market halves with it. The conversion assumptions behind the obtainable
+share are unvalidated, for the reason given in Section~3.6. And the subscription
+component moved downward when its derivation was sourced, which is a reminder that
+the least-evidenced numbers in this chapter are the ones describing revenue to
+WOWERS rather than value to plant owners --- the pipeline outputs are reproducible,
+the prices are not. What the arithmetic supports is a consulting and data business
+for a small team, not a venture-scale company, and stating that plainly is more
+useful than a larger number that the evidence in Chapter~5 would contradict.
+
 \section{Future Vision and Project Timeline}
-\wptodo{J1 · 3.8}{Named upcoming project; milestone sequence; which milestone is built first.}
+
+The first milestone to be built is not a product feature. It is an
+instrumented pilot at Fall River Wastewater Treatment Plant, carrying revenue-grade
+metering from commissioning. Its purpose is to convert the weakest link in this
+entire thesis into data: one year of measured generation from a wastewater outfall
+turbine would replace the substituted capacity factor of Section~4.4.1 with an
+observed one, and would do more for the credibility of every number in this chapter
+than any amount of additional screening. It is sequenced first for that reason.
+
+The company's funding path is non-dilutive first and probably non-dilutive only. The
+National Science Foundation's Small Business Innovation Research program awards up to
+\$305k at Phase~I~\cite{nsf_sbir}, and a documented calibration band, a published
+negative result and a reproducible test suite are the posture such programs reward. On
+the customer side, elective payment lets tax-exempt and governmental owners take
+clean-energy credits as cash~\cite{irs_elective_pay}, and the clean-electricity
+investment credit was retained in full for hydropower through
+2033~\cite{nha_obbba}. The threshold that matters for this
+portfolio is 1~MW: facilities below it are exempt from the prevailing-wage and
+apprenticeship conditions while still reaching the full 30~\% credit, and are
+outside the domestic-content phaseout that otherwise reduces elective-pay
+value~\cite{irs_pwa,irs_elective_pay,irs_notice_2024_84}. Of the 1,138 viable sites,
+1,133 fall below 1~MW. The five that do not include both marquee-scale sites, which
+therefore carry a compliance load the rest of the portfolio does not.
+
+A second restriction does \emph{not} carry the sub-megawatt exemption, and it bears on
+the equipment recommendation of Section~3.4. For construction beginning after
+31~December 2025, the credit is denied if a project received ``material assistance from
+a prohibited foreign entity,'' measured as the share of direct costs \emph{not} traceable
+to such an entity. A project fails below a threshold that rises annually: 40~\% in 2026,
+then 45, 50 and 55~\% through 2029, and 60~\% thereafter~\cite{usc7701}, with interim
+computation safe harbours issued in February 2026~\cite{irs_notice_2026_15}. The 2026
+bar is permissive --- up to 60~\% of direct costs may come from restricted sources --- so
+a European turbine with mixed-origin components is unlikely to fail it today. It
+tightens to 60~\% clean content by 2030, which turns supplier nationality from a
+footnote into a procurement criterion, and it binds the small sites as much as the
+large. This is the one tax question here that scale does not resolve.
+
+Beyond the pilot, the same pipeline extends to other continuously flowing
+infrastructure -- pressure-reducing valves, industrial cooling discharge, irrigation
+canal drops, mine dewatering -- each needing only a new ingest module. None of it is
+built or sized here, and it is named only to keep the boundary of what has been
+demonstrated visible. Chapter~6 states what was tested and what remains open.
 
 % =====================================================================
 % CHAPTER 4 — DESIGN DETAILS (technical bulk, 9,000-12,000 w)
@@ -543,7 +901,7 @@ The WOWERS platform is a national screening system that turns public regulatory
 and geospatial data into ranked, financially scored micro-hydropower opportunities
 at U.S.\ POTW outfalls. Figure~\ref{fig:1} below depicts the top-level dataflow.
 Four external source families feed a four-phase Python pipeline; the pipeline
-writes parquet intermediates; an export script freezes a 58-property GeoJSON
+writes parquet intermediates; an export script freezes a 59-property GeoJSON
 contract; and a React + MapLibre dashboard reads that single file with no live
 backend.
 
@@ -566,7 +924,7 @@ Equation~\eqref{eq:hydro}. Phase~3 replaces literature head archetypes with a
 Phase~4 applies CapEx/OpEx models, revenue and plant-consumption offsets, and
 NPV/IRR/payback gates that define the project-viable cohort. The P2-SEED re-baseline
 that Chapter~5 reports screens 17,148 POTWs and retains 1,138 project-viable sites
-with a physics ceiling of 409.2~GWh/yr, a calibrated band of 119--281~GWh/yr,
+with a physics ceiling of 409.2~GWh/yr, a calibrated band of 89.8--281~GWh/yr,
 portfolio NPV of \$310.1M, and median payback of 9.8~yr.
 
 The same pipeline is shown as a build process in Figure~\ref{fig:dataflow}, with one
@@ -851,6 +1209,8 @@ a measurement; those 2{,}207 plants carry it into every downstream number and ar
 flagged by data-quality tier so they can be excluded from any later analysis that
 requires measured flow.
 
+How those flow features are combined into a single review order will now be discussed.
+
 \subsection{Composite Ranking}
 
 Ranking is responsible for ordering the 17{,}148 screened plants before any
@@ -909,6 +1269,9 @@ within one pipeline run. Neither limitation propagates into the energy or
 financial results, because ranking is not a gate: all 17{,}148 plants pass to
 Phase~2 regardless of rank, so a mis-weighted score costs review order, not
 exclusion.
+
+The conversion of those flow features into an annual-energy estimate with an explicit
+uncertainty band is described next.
 
 \subsection{Monte-Carlo Energy Estimation}
 
@@ -1010,7 +1373,7 @@ Phase 2}
 These Phase~2 totals are screening intermediates and are deliberately not the
 headline figure of this thesis. They are computed on archetype head rather than
 measured head, before turbine sizing, and before economics; the 409.2~GWh/yr
-ceiling and the calibrated 119--281~GWh/yr band reported in Chapter~5 come from
+ceiling and the calibrated 89.8--281~GWh/yr band reported in Chapter~5 come from
 Phases~3 and~4 applied to the surviving sites. The gap between 699.18~GWh/yr here
 and 409.2~GWh/yr there is a consequence of real head replacing assumed head, of
 the 1~kW physics floor, and of the financial gate, and is decomposed stage by
@@ -1624,10 +1987,25 @@ each plant's measured flow duration curve, where a retrofit into an existing mai
 inherits whatever nameplate the original installer chose, so a purpose-sized machine
 should hold a higher capacity factor than an oversized one. That argument is plausible
 and it is untested. It is not called a central estimate anywhere in this thesis, and
-the figure this work stands behind is the band rather than its upper end. Deciding
-whether to lower the reported band floor from 118.9 to the 89.8~GWh/yr that Point Loma
-alone implies is deferred, because a single plant is exactly the thin basis this
-paragraph criticizes in the other direction.
+the figure this work stands behind is the band rather than its upper end.
+
+The reported band floor is lowered accordingly, from 118.9 to 89.8~GWh/yr, and the
+reasoning deserves stating because it cuts against the argument of the preceding
+paragraph. The objection is obvious: 89.8~GWh/yr rests on one plant, and a single
+observation is exactly the thin basis just criticized in the upward direction. The
+answer is that the two thin bases are not thin in the same way. The 0.60 tier
+extrapolates from a design projection in the direction that flatters the result; the
+89.8 figure is a metered annual generation figure from the only plant in the country
+that is actually a treated-wastewater conduit installation, and it points in the
+direction that does not flatter it. Where the correct plant class contains exactly one
+measurement, reporting that measurement as the floor is more defensible than reporting
+a quartile of a plant class this work has already argued is the wrong one. The floor is
+therefore the measured Point Loma figure, and the reader is given the whole ladder in
+Table~\ref{tab:cfband} rather than a single number: 89.8~GWh/yr from one plant in the
+right class, 114.4~GWh/yr from 115 plants in a related class, and 118.9~GWh/yr from 629
+plants in a class that is not ours. All three sit within 30~GWh/yr of one another, which
+is the substantive point --- the floor is insensitive to which of the three defensible
+choices is made, and the band's width is driven almost entirely by its upper end.
 
 \begin{table}[htbp]
 \centering
@@ -1662,11 +2040,13 @@ rest on metered generation.}
 The band itself is Table~\ref{tab:cfband}, drawn as Figure~\ref{fig:cfband}. Each
 multiplier is the tier's capacity factor divided by 0.8725, applied to the
 409.2~GWh/yr physics figure, and the result is the sentence this work reports: a
-409.2~GWh/yr ceiling, a conservative floor of 118.9--194.4~GWh/yr corroborated
-independently by metered conduit plants at 114.4~GWh/yr, and an optimistic upper
-scenario of 281.4~GWh/yr that rests on a design projection rather than on any
-measurement. The floor is a range because the
-narrower 0.1--1~MW bucket sits above the primary bucket at every percentile,
+409.2~GWh/yr physics ceiling, a measured floor of 89.8~GWh/yr from the only metered
+treated-wastewater conduit plant in the country, corroborated from above by 115 metered
+conduit plants at 114.4~GWh/yr and by the river-hydro first quartile at 118.9~GWh/yr,
+and an optimistic upper scenario of 281.4~GWh/yr that rests on a design projection
+rather than on any measurement. The reported band is therefore
+89.8--281~GWh/yr. Above the floor the river-hydro tier is itself a range,
+because the narrower 0.1--1~MW bucket sits above the primary bucket at every percentile,
 giving 125.5 and 194.4~GWh/yr at its first two quartiles against 118.9 and
 183.0~GWh/yr. Section~5.1.4 reports the band as a result and states what it does
 to the economics of Section~4.3.6.
@@ -1680,19 +2060,29 @@ physics ceiling}
 \end{figure}
 
 \begin{sloppypar}
-Three of those tiers are carried into the pipeline rather than left in a report.
+Four of those tiers are carried into the pipeline rather than left in a report.
 \texttt{add\_calibrated\_energy\_cols} in \texttt{financials.py} appends
 \texttt{energy\_kwh\_calib\_floor\_p25}, \texttt{energy\_kwh\_calib\_floor\_p50},
-and \texttt{energy\_kwh\_calib\_central} to every Phase~4 scorecard row, reading
-the multipliers 0.291, 0.447, and 0.688 from \texttt{config/settings.yaml}. They
+\texttt{energy\_kwh\_calib\_central}, and
+\texttt{energy\_kwh\_calib\_measured\_point\_loma} to every Phase~4 scorecard row,
+reading the multipliers 0.291, 0.447, 0.688, and 0.2195 from
+\texttt{config/settings.yaml}. They
 are global fleet multipliers rather than per-site capacity-factor ratios, which
 is defensible only because the per-site spread is narrow, 0.8556--0.8833 between
-the tenth and ninetieth percentiles. Summed over the viable cohort the three
-columns give 119.07, 182.90, and 281.51~GWh/yr against the 409.17~GWh/yr ceiling,
-and over all 3{,}778 scored plants 149.83, 230.15, and 354.23~GWh/yr against
-514.87~GWh/yr. No ceiling column was added and none was overwritten, so every
-downstream consumer, including the map of Section~4.6, carries the band beside
-the physics number instead of in place of it.
+the tenth and ninetieth percentiles. Summed over the viable cohort the four
+columns give 119.07, 182.90, 281.51, and 89.81~GWh/yr against the 409.17~GWh/yr
+ceiling, and over the first three, 149.83, 230.15, and 354.23~GWh/yr across all
+3{,}778 scored plants against 514.87~GWh/yr. No ceiling column was added and none
+was overwritten, so every downstream consumer, including the map of Section~4.6,
+carries the band beside the physics number instead of in place of it.
+
+The measured floor tier was added as a fourth column rather than written over
+\texttt{energy\_kwh\_calib\_floor\_p25} when the band floor moved, and the reason is a
+naming discipline worth stating: 0.2195 is not a twenty-fifth percentile of anything, so
+storing it in a column named \texttt{floor\_p25} would have made the column name false
+and invited the confusion back later. Both tiers are therefore reported, no previously
+published figure changed value, and the export contract of Section~4.5 grew from 58
+properties to 59.
 \end{sloppypar}
 
 Five limitations are named. First, the floor imports variability that outfalls do
@@ -1831,9 +2221,11 @@ with the Phase~4 scorecard as the spine, left-joining Phase~1 for facility name,
 city, coordinates, and flow statistics, Phase~2 for the P10, P50, and P90 energy
 band and the equivalent-homes conversion, and Phase~3 for gross and net head, both
 elevations, head source and confidence, rated flow, and peak efficiency. The result
-is 58 properties per feature, grouped as in Table~\ref{tab:geojson_props}: the
+is 59 properties per feature, grouped as in Table~\ref{tab:geojson_props}: the
 original 24 that the first map needed, plus 34 added when the four legacy files
-were retired and everything they had computed had to be derivable on the client.
+were retired and everything they had computed had to be derivable on the client,
+plus the measured-floor energy tier added when the reported calibration band was
+re-floored in Section~4.4.1.
 Geometry is a point in longitude-latitude order as RFC~7946 requires~\cite{rfc7946},
 rounded to five decimals, which is about a meter. Numeric properties are rounded by
 class rather than individually: dollars, kilowatt-hours, and counts to whole
@@ -1856,7 +2248,7 @@ contradict.
 Group & Properties & Examples \\
 \midrule
 Identity and siting        & 4  & \texttt{npdes\_id}, \texttt{facility\_name} \\
-Machine and energy         & 7  & \texttt{turbine\_type}, three calibrated tiers \\
+Machine and energy         & 8  & \texttt{turbine\_type}, four calibrated tiers \\
 Economics and categories   & 13 & \texttt{npv\_usd}, \texttt{payback\_years} \\
 Phase 1 flow statistics    & 5  & \texttt{mean\_flow\_mgd}, \texttt{n\_months\_data} \\
 Phase 2 Monte-Carlo band   & 4  & \texttt{energy\_p10\_kwh\_yr} \\
@@ -1864,7 +2256,7 @@ Phase 3 head and turbine   & 8  & \texttt{head\_net\_m}, \texttt{head\_source} \
 Phase 4 cost breakdown     & 8  & \texttt{equipment\_capex\_usd} \\
 Sensitivity and provenance & 9  & \texttt{dominant\_sensitivity}, \texttt{data\_quality} \\
 \midrule
-Total                      & 58 & \\
+Total                      & 59 & \\
 \bottomrule
 \end{tabular}
 
@@ -1879,7 +2271,7 @@ cannot drift apart. The first, \texttt{viable\_sites.geojson}, holds the
 figures are drawn from. The second, \texttt{scored\_sites.geojson}, holds all
 3{,}778 scored plants at 6.13~MB
 and is what the dashboard loads, so plants that failed the viability gate stay on
-the map as evidence rather than disappearing from it. Both carry the same 58
+the map as evidence rather than disappearing from it. Both carry the same 59
 properties on every feature. The write path validates before it returns: the
 collection type, the feature count, the coordinate ranges, and the types inside
 \texttt{meta}. Features whose coordinates are null or unparseable are dropped and
@@ -1912,12 +2304,284 @@ place on head, so the exported file is a reporting artifact and any reanalysis
 should start from the parquets instead. The visualization system that consumes
 this contract will now be discussed.
 
-\section{Frontend Visualization System}                  % WP M1 — Mohamed [MERGE]
-\wptodo{M1 · 4.6 — MERGE FROM MOHAMED (~2,000 w)}{Mohamed drafts in his file; paste here at
-combine time. Feeds: frontend/src/ (App routing, 7 views, MapView, charts, Gauge, SiteTable,
-lib/data.ts). Stack options; single-file geojson contract; the 7 views; URL filters; CSV;
-map interaction.}
-% \figplaceholder{2}{Frontend application flow / routing diagram.}{Frontend application flow}
+\section{Frontend Visualization System}                  % WP M1 — Mohamed
+
+The screening pipeline described in the preceding sections of Chapter 4 ends
+at a single deterministic data contract, the 59-property GeoJSON file
+exported by \texttt{export\_geojson.py}. That file is inert on its own: it
+is the frontend's responsibility to turn it into a tool a non-technical
+reviewer, an investor, or a municipal utility can actually use to find and
+evaluate a candidate site. Concretely, the frontend renders every scored
+plant on an interactive national map, lets a user narrow that set by state,
+turbine type, payback period, and data-quality tier, and drills from any
+site down to a full financial and physical scorecard. It runs entirely as a
+static single-page application (SPA): there is no server process, no
+database, and no API behind it, a constraint that follows directly from the
+export layer's own design and is not an independent decision. How that
+constraint shaped the stack, the data layer, and the view architecture will
+now be discussed.
+
+\subsection{Stack Selection}
+
+Three architectures were considered for turning the exported GeoJSON into a
+usable tool. The first was a server-rendered dashboard, a small Python
+backend (Flask or FastAPI) that queries the parquets or the GeoJSON file on
+every request and renders HTML server-side. The second was a
+notebook-style analytics app, Streamlit or Dash, which trades custom UI
+control for fast iteration on data-heavy views. The third was a static
+single-page application that fetches one pre-exported file once and does
+all filtering, sorting, and view derivation in the browser. The static SPA
+was chosen because the pipeline's output is already a batch artifact,
+regenerated on demand rather than on every request, so a server that
+re-queries it for each page load adds operational surface (a process to
+keep running, a host to pay for) without adding any capability the static
+file cannot already provide. This also matches how the export layer itself
+was designed, byte-deterministic and git-tracked so that the exact file a
+browser fetches is the exact file reviewed and committed, with no server-side
+state that could drift from it.
+
+Within that choice, three further decisions had to be made. For the
+application framework, React 19.2~\cite{react19} was chosen over a
+framework-free approach or Vue, because the view set (seven distinct routed
+pages sharing a common data layer and a consistent set of formatting and
+color-coding rules) is naturally expressed as a small component tree, and
+React's ecosystem includes typed, actively maintained bindings for both of
+the remaining two decisions. TypeScript~5.7~\cite{typescript} was used
+throughout rather than plain JavaScript so that the 59-property data
+contract could be declared once, in \texttt{lib/types.ts}, and checked at
+build time everywhere it is consumed; a property renamed or dropped in the
+exporter surfaces as a compile error in the frontend rather than a silent
+\texttt{undefined} on a live dashboard. The build tool is
+Vite~7.1~\cite{vite7}, chosen over Create React App or webpack directly for
+its native ES module dev server and its \texttt{?url} asset-import syntax,
+which is what lets the GeoJSON file be imported as a versioned, hashed
+static asset (see Section~4.6.2) instead of being fetched from a hand-built
+path.
+
+For the map layer, three libraries were considered: Leaflet with raster
+tile layers, Mapbox GL~JS, and MapLibre GL~JS. Leaflet was set aside because
+its DOM/SVG-based marker rendering does not scale cleanly to the full
+3{,}778-site scored set at national zoom. Mapbox GL was set aside because it
+requires a paid API token for both tiles and the GL runtime itself, an
+ongoing operating cost and an external dependency this project's
+non-technical stakeholders should not have to manage. MapLibre
+GL~JS~5.1~\cite{maplibregl}, an open-source, token-free fork of Mapbox GL~JS
+v1, was chosen instead: it renders point data as a single WebGL circle layer
+regardless of point count, and it is wrapped through
+\texttt{react-map-gl}~8.0~\cite{reactmapgl} so the map is expressed
+declaratively as \texttt{<Map>}, \texttt{<Source>}, and \texttt{<Layer>}
+components rather than through imperative MapLibre calls scattered across
+component lifecycle hooks.
+
+For charting, hand-rolled SVG (or a lower-level library such as D3 directly)
+and Chart.js were considered against Recharts~3.0~\cite{recharts3}.
+Recharts was chosen because its composable, React-native component API
+(\texttt{<BarChart>}, \texttt{<ScatterChart>}, \texttt{<AreaChart>}) matches
+the rest of the codebase's component style and needed no imperative canvas
+management. One chart does not use Recharts: the capacity-factor gauge on
+the plant detail page is custom inline SVG, built in \texttt{Gauge.tsx},
+because Recharts has no radial-needle gauge primitive, and the display this
+project needed, a needle fixed to capacity factor on a 0--100\% scale with
+P10/P50/P90 energy figures labeled beneath it, was simpler to draw directly
+as an SVG arc than to bend a general-purpose charting library toward it.
+
+\subsection{Data Layer and View Architecture}
+
+The frontend went through two data-layer designs before reaching its
+current form. The first, built alongside the initial three-view dashboard,
+used a 308-line Python exporter that read the four production parquets and
+wrote four separate artifacts under \texttt{frontend/public/data/}: a slim
+map GeoJSON, a national KPI summary, one portfolio file per state, and one
+detail file per plant. That design required a Python step before every
+\texttt{npm run dev}, and it duplicated, in a second file format, exactly
+the join logic already implemented in the export layer described in
+Section~4.5. It was replaced the same day by the design the frontend uses
+today: the single git-tracked \texttt{exports/scored\_sites.geojson}, the
+same 59-property, 3{,}778-feature file described in Section~4.5, is the
+frontend's only data source.
+
+\texttt{lib/data.ts} implements this as a module-level cached fetch.
+\texttt{sitesUrl} is a Vite \texttt{?url} import of the GeoJSON file one
+directory above the frontend package, so the exact file a build embeds is
+the exact file tracked in the repository, with no copy step and no
+possibility of the two drifting. The first call to \texttt{loadSites()}
+issues one \texttt{fetch()} and stores the pending promise; every
+subsequent call across every view returns that same cached promise rather
+than re-fetching, so navigating between the seven routes costs one network
+request for the life of the session. A local \texttt{SiteProps} interface
+mirrors the exporter's 59 properties field for field, and four exported
+functions, \texttt{fetchPlants}, \texttt{fetchNational},
+\texttt{fetchPortfolio(state)}, and \texttt{fetchPlant(id)}, derive the four
+view-specific shapes the components consume entirely in the browser. This
+client-side derivation reproduces classification rules that previously
+lived in the Python exporter: \texttt{payback()} treats any value at or
+above $10^5$ as the pipeline's ``never pays back'' sentinel and rounds the
+remainder to two decimal places \emph{before} banding, because the export
+layer's own rounding happens before its banding and a boundary value such
+as 4.9996~yr bands as ``high'' (\textless 5~yr) on the raw figure but
+``moderate'' on the rounded one; \texttt{viabilityBand()} then bins that
+rounded payback into the four legend categories shown on every map and
+table (high \textless 5~yr, moderate 5--15~yr, marginal 15--20~yr,
+non-viable otherwise); and \texttt{siteConfidence()} maps the exporter's
+\texttt{data\_quality} and \texttt{project\_viable\_high\_confidence}
+fields onto a three-level High/Medium/Lower badge shown throughout the
+interface.
+
+Seven routes are declared in \texttt{App.tsx} using React Router~7. The
+root route, \texttt{NationalMap}, is the landing view: a MapLibre map of
+every scored site colored by viability band, a left filter panel (state,
+turbine type including an explicit ``Unassigned'' bucket, a 1--20~yr payback
+slider where the maximum setting removes the payback filter entirely rather
+than clamping at 20, and a high-confidence-only toggle), header KPI tiles
+recomputed live from the currently filtered feature set rather than from a
+static national total, and a right-hand panel listing the top five
+opportunities by NPV plus a bar chart of viable sites by state.
+\texttt{/state/:code} (\texttt{StatePortfolio}) shows every scored site in
+one state as a sortable, paginated, CSV-exportable table alongside an
+energy bar chart of the top ten sites and a payback-versus-NPV risk/return
+scatter. \texttt{/plant/:id} (\texttt{PlantDetail}) is the single-site
+view: a three-column layout presenting flow data, elevation data, and a
+satellite mini-map on the left; the energy-recovery gauge and a recommended
+turbine card with a synthesized efficiency curve in the center; and a
+financial scorecard, a sensitivity tornado chart, and outbound
+next-step links (a per-turbine-type manufacturer page, the DOE Water Power
+Technologies Office funding page, and a link to similar sites filtered by
+the same state and turbine type) on the right. \texttt{/opportunities} and
+\texttt{/plants} both reuse a single shared \texttt{SiteTable} component,
+pre-filtered to \texttt{project\_viable} sites in the first case and
+unfiltered across all 3{,}778 scored sites in the second, each with its own
+URL-parameter filters so either can serve as a deep-link target from
+another view. \texttt{/analytics} aggregates the whole portfolio into a
+payback-distribution histogram, a per-state bar, a turbine-mix bar, and a
+combined viability-band and confidence-tier breakdown. \texttt{/reports}
+presents the national summary as a plain key-value grid alongside one-click
+CSV downloads (all sites, viable sites only, and a state summary) and a
+short data-sources note. A wildcard route redirects any unmatched path back
+to the root. Figure~\ref{fig:m1-flow} shows this structure: every routed
+view calls into the same four \texttt{lib/data.ts} functions, and every one
+of those functions is served from the single cached fetch of
+\texttt{scored\_sites.geojson}.
+
+\begin{figure}[htbp]\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  node distance=10mm and 6mm,
+  box/.style={draw=black, fill=gray!12, rounded corners=1pt, align=center,
+              font=\small, minimum height=8mm, text width=27mm, inner sep=2pt},
+  src/.style={draw=black, fill=white, rounded corners=1pt, align=center,
+              font=\small, minimum height=8mm, text width=34mm, inner sep=3pt},
+  arr/.style={-{Latex[length=2mm]}, thick}
+]
+\node[src] (geo) {\texttt{exports/}\\\texttt{scored\_sites.geojson}\\(3{,}778 features, 59 props)};
+\node[box, below=of geo] (data) {\texttt{lib/data.ts}\\cached \texttt{fetch()} + client-side\\derivation (band, confidence, payback)};
+\node[box, below=14mm of data, xshift=-99mm] (v1) {NationalMap\\\texttt{/}};
+\node[box, right=of v1] (v2) {StatePortfolio\\\texttt{/state/:code}};
+\node[box, right=of v2] (v3) {PlantDetail\\\texttt{/plant/:id}};
+\node[box, right=of v3] (v4) {Opportunities\\\texttt{/opportunities}};
+\node[box, right=of v4] (v5) {Plants\\\texttt{/plants}};
+\node[box, right=of v5] (v6) {Analytics\\\texttt{/analytics}};
+\node[box, right=of v6] (v7) {Reports\\\texttt{/reports}};
+\draw[arr] (geo) -- (data);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v1.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v2.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v3.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v4.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v5.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v6.north);
+\draw[arr] (data.south) -- ++(0,-5mm) -| (v7.north);
+\end{tikzpicture}%
+}
+\caption{Frontend application flow: seven React Router views all resolve
+through the same four \texttt{lib/data.ts} functions, backed by one cached
+fetch of the single tracked GeoJSON file}
+\label{fig:m1-flow}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig_m1_nationalmap.png}
+  \caption{National Opportunity Map view, all 3{,}778 scored sites colored
+  by viability band at the default (unfiltered) state; header KPIs read
+  3{,}778 sites shown, 1{,}138 viable, \$310.1M NPV, 9.8~yr median payback,
+  matching the P2-SEED baseline exactly}
+  \label{fig:m1-nationalmap}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig_m1_plantdetail.png}
+  \caption{Plant Detail view for Jackson Pike Water Resource Recovery
+  Facility (NPDES OH0024732, Columbus, Ohio): flow, elevation, the
+  capacity-factor gauge, recommended turbine, financial scorecard, and
+  sensitivity tornado all populated from the exported GeoJSON}
+  \label{fig:m1-plantdetail}
+\end{figure}
+
+\subsection{Interaction, Filtering, and Export}
+
+Two shared conventions run across every filterable view. First, filter
+state lives in the URL query string via React Router's
+\texttt{useSearchParams}, not in component state: \texttt{NationalMap}
+encodes state, turbine-type list, maximum payback, and the high-confidence
+toggle as \texttt{?state=\&turb=\&pb=\&hc=}, and \texttt{Plants} does the
+same for its own filter set. A filtered view is therefore a shareable,
+bookmarkable, refresh-safe link rather than transient client state, and it
+is also how one view deep-links into another, for example the ``View
+Similar Sites'' action on the plant detail page, which links to
+\texttt{/plants} pre-filtered to the same state and turbine type. Second,
+every table (\texttt{SiteTable}, used by both \texttt{Opportunities} and
+\texttt{Plants}, and the portfolio table in \texttt{StatePortfolio}) is
+independently sortable by column, searchable by name, city, state, or
+NPDES~ID, paginated at 50 rows per page, and exportable to CSV through a
+shared \texttt{downloadCsv} helper that builds the file as a
+\texttt{Blob} in the browser and triggers a download with no server round
+trip.
+
+On the map itself, clicking any point navigates to that site's detail
+page; hovering shows a popup with name, location, energy, payback, and
+NPV. Selecting a state from the filter panel calls MapLibre's
+\texttt{fitBounds} against the minimum and maximum longitude and latitude
+of that state's features, easing the view to it; this call is gated on the
+map's \texttt{onLoad} event, because an earlier version fired
+\texttt{fitBounds} before the underlying map instance existed whenever a
+state was present in the URL on first page load, a race that silently
+failed to zoom on a fresh deep link. A basemap toggle switches between two
+token-free raster sources, CARTO Positron for a light reference map and
+Esri World Imagery for satellite, drawn as a two-button control over the
+map canvas; the same satellite style is reused, at a fixed close zoom, for
+the small locator map on the plant detail page.
+
+\subsection{Limitations}
+
+Five limitations are named. First, the initial page load fetches the
+entire 6.13~MB scored-sites file regardless of which view is opened, the
+same whole-file cost noted from the export side in Section~4.5; this is
+acceptable at 3{,}778 sites but would need a change, most likely a
+tiled or paginated data endpoint, if the screened fleet grew by an order of
+magnitude. Second, the production JavaScript bundle is not code-split by
+route, so the MapLibre GL runtime is downloaded even when a user opens
+\texttt{/reports} and never touches the map; route-level lazy loading
+(React's \texttt{lazy()}) would defer that cost to the views that need it
+and is the named fix, not yet built. Third, the national map draws every
+point individually with no clustering, so dense regions such as the
+Northeast corridor overplot at the default national zoom; the per-state
+zoom-to-bounds interaction mitigates this once a state is selected but does
+not address the initial national view, and marker clustering at low zoom is
+the deferred fix. Fourth, every filter, sort, search, and pagination
+operation runs client-side over the full in-memory feature array; this
+costs nothing perceptible at 3{,}778 features but is a ceiling that would
+require server-side query support to lift. Fifth, the efficiency curve
+drawn on the plant detail page is a synthesized unimodal approximation
+centered on each turbine's rated flow and peak efficiency, not a measured
+or vendor-published per-unit curve; it exists to make the recommended
+turbine's operating envelope legible at a glance and should not be read as
+an engineering specification. A sixth item is procedural rather than
+architectural and is worth recording here: the manufacturer links surfaced
+on the plant detail page (one vendor per recommended turbine type) are
+representative suppliers chosen for the demonstration, not endorsements or
+confirmed live quotes, and should be re-verified before any external use of
+the dashboard. The frontend's measured build and quality-assurance results
+are reported next, in Section~5.1.6.
 
 % =====================================================================
 % CHAPTER 5 — EXPERIMENTS AND RESULTS (3,500-4,500 w)
@@ -2159,12 +2823,14 @@ the portfolio's implied capacity factor of 0.8725 sits above the measured
 distribution at every percentile: the river-hydro median is 0.3902 and even its
 seventy-fifth percentile, 0.5409, is below the WOWERS tenth percentile of 0.8556.
 Substituting measured capacity factors gives the band of Table~\ref{tab:cfband}:
-118.9~GWh/yr at the river-hydro first quartile, 183.0 at its median, and
+89.8~GWh/yr at the metered Point Loma capacity factor, 114.4 across 115 metered
+conduit plants, 118.9 at the river-hydro first quartile, 183.0 at its median, and
 281.4~GWh/yr at the Conduit~3-anchored optimistic figure of 0.60, against the
-409.2~GWh/yr ceiling. The metered conduit plants of Section~4.4.1 land at
-114.4~GWh/yr, within 4.5~GWh/yr of the river-hydro floor and from a dataset that
-shares no plants with it, so the floor is the tier this chapter treats as
-evidenced and 281.4~GWh/yr is reported as the optimistic end of the band.
+409.2~GWh/yr ceiling. The reported band is 89.8--281~GWh/yr. Its floor is the
+metered treated-wastewater figure; the two tiers immediately above it, drawn from
+datasets that share no plants with each other, land within 4.5~GWh/yr of one another and
+within 30~GWh/yr of the floor, so the low end of the band is robust to which defensible
+choice is made while the upper end rests on a single design projection.
 
 \begin{table}[htbp]
 \centering
@@ -2212,7 +2878,7 @@ is the band and not its upper end, and the defensible planning figure is the
 floor rather than the optimistic tier: the floor is the only part of the band
 that two independent metered datasets agree on, while the upper tier rests on a
 single project's design projection. A reader who needs one number for planning
-should take 118.9--194.4~GWh/yr and treat 281.4~GWh/yr as the ceiling of
+should take 89.8--118.9~GWh/yr and treat 281.4~GWh/yr as the ceiling of
 plausibility rather than the expectation.
 
 \subsection{Machine-Learning Feasibility (Negative Result)} % WP T6 — Tom
@@ -2278,14 +2944,180 @@ not lack modeling capacity; it lacks measured plants. Until sub-megawatt conduit
 installations report head, flow, and annual energy in a public dataset, a learned
 model of this asset class cannot be trained, evaluated, or falsified.
 
-\subsection{Frontend Performance}                        % WP M2 — Mohamed [MERGE]
-\wptodo{M2 · 5.1.6 — MERGE FROM MOHAMED (~700 w)}{Build perf (vite 7.3.5, ~2.6 s, bundle
-sizes), headless + Chrome QA. Separate measured from deferred (code-splitting, clustering).}
+\subsection{Frontend Performance}                        % WP M2 — Mohamed
+
+Every number in this section was measured this session, from a clean
+build and a live browsing session against the dev server, rather than
+carried over from an earlier note. This distinction matters here more than
+in most results sections: the frontend is the one part of the platform
+whose behavior can drift with the local toolchain (Node, npm, browser)
+independently of any change to the WOWERS source itself, so a reused
+figure would not actually be verifying anything.
+
+\textbf{Build performance.} A clean build was run with
+\texttt{rm~-rf~dist~\&\&~npm~run~build} under Node~22.11.0 and npm~11.6.1.
+The command runs \texttt{tsc~-b} before \texttt{vite~build}, so a
+successful build is also a clean full-project type-check: it passed with
+zero type errors before bundling began. Vite 7.3.5 then produced the
+bundle in 6.11~s. One environment finding is worth recording plainly: Vite
+7.3.5 reported that it requires Node.js~20.19+ or 22.12+, and 22.11.0
+falls just short of the latter floor; the build still completed without
+error, so this is a compatibility warning rather than a failure, but it
+should be resolved before this frontend is built in any automated or
+shared environment. Table~\ref{tab:m2-bundle} reports every emitted
+asset.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrr}
+\toprule
+Asset & Raw size & Gzip size \\
+\midrule
+\texttt{index-*.js} (application code) & 711.33 kB & 214.71 kB \\
+\texttt{maplibre-gl-*.js} (map runtime) & 1{,}053.37 kB & 284.75 kB \\
+\texttt{index-*.css} & 75.06 kB & 11.61 kB \\
+\texttt{scored\_sites-*.geojson} (data asset) & 6{,}129.14 kB & --- \\
+\texttt{index.html} & 0.50 kB & 0.33 kB \\
+\bottomrule
+\end{tabular}
+\caption{Production bundle sizes, measured this session from a clean \texttt{npm run build}}
+\label{tab:m2-bundle}
+\end{table}
+
+Vite's own build output flags the two largest JavaScript chunks as
+individually over its 500~kB warning threshold; that flag is the subject
+of the discrepancy paragraph below. As a point of comparison, an earlier
+project-journal note recorded a 2.6~s build and a 707~kB application
+chunk from the same command; this session's 6.11~s and 711.33~kB are
+close but not identical, which is expected of a build time and bundle
+size measured on different hardware after further commits, and is not
+treated as a regression.
+
+\textbf{Quality assurance.} All seven routes (\texttt{/},
+\texttt{/opportunities}, \texttt{/plants}, \texttt{/analytics},
+\texttt{/reports}, one \texttt{/state/:code}, and one \texttt{/plant/:id})
+were exercised against the dev server this session. Zero browser console
+errors and zero dev-server errors were observed across all seven. Every
+headline figure checked against the P2-SEED baseline matched exactly: the
+National Opportunity Map read 3{,}778 sites shown, 1{,}138 viable,
+\$310.1M NPV, and a 9.8~yr median payback at its default (unfiltered)
+state; Analytics read \$310.1M portfolio NPV, \$211.3M CapEx,
+\$41.2M/yr savings, 409{,}170~MWh/yr recoverable energy, and 848
+high-confidence sites; Opportunities read 1{,}138 opportunities and the
+same \$310.1M total. One figure did not match on the first pass, and it is
+reported here rather than quietly reconciled: Opportunities gave its
+combined energy as 409{,}202~MWh/yr against Analytics' 409{,}170~MWh/yr for
+the identical cohort of 1{,}138 sites. The gap is 32~MWh/yr, 0.008~\% of the
+total, and it is an artifact of the dashboard rather than of the pipeline.
+Analytics summed the unrounded per-site \texttt{annual\_energy\_kwh} and
+rounded once at the end; Opportunities summed the per-site values already
+rounded to whole MWh for display, so 1{,}138 individual half-MWh rounding
+residuals accumulated into the total. Summing the exported values directly
+confirms the mechanism: the same cohort gives 409.1695~GWh/yr exactly,
+which rounds to 409{,}170~MWh/yr sum-then-round and to 409{,}202~MWh/yr
+round-then-sum. Since the format requires the P2-SEED baseline to read
+identically wherever it appears, the aggregation in \texttt{Opportunities}
+was corrected to sum in kWh and round once, and both views were re-checked
+live afterwards: both now read 409{,}170~MWh/yr. The single-cached-fetch design
+described in Section~4.6.2 was also confirmed empirically rather than
+only by reading the source: after the initial page load, navigating
+across four views through the in-app sidebar, a client-side transition
+with no full page reload, produced zero additional network requests for
+\texttt{scored\_sites.geojson}, matching the module-level cache's
+intended behavior.
+
+\textbf{Discrepancy: bundle size and deferred code-splitting.} The
+measured result departs from the ideal one in a specific, bounded way.
+The gap: two chunks, the 711.33~kB application bundle and the
+1{,}053.37~kB MapLibre runtime, are downloaded on every route, including
+\texttt{/reports}, which never renders a map, for a combined 1{,}764.7~kB
+raw (499.46~kB gzipped) of JavaScript the browser did not need for that
+page. The mechanism: \texttt{App.tsx} imports all seven views statically,
+and \texttt{MapView} is pulled in transitively through
+\texttt{NationalMap} and through \texttt{PlantDetail}'s mini-map, so the
+bundler has no route boundary at which it could separate the MapLibre
+dependency into its own lazily loaded chunk. Whether this is acceptable
+for the current scope: yes. At 499.46~kB gzipped total and a demonstration
+audience of one reviewer at a time rather than concurrent production
+traffic, the cost is a fraction of a second on any real connection, and it
+was accepted as a known cost rather than an oversight in the
+2026-07-07 session that first flagged it. The fix, not yet built, is
+route-level code-splitting with React's \texttt{lazy()} so that the
+MapLibre chunk is requested only when \texttt{NationalMap} or
+\texttt{PlantDetail} is the active route. Map clustering at low zoom (see
+the limitation named in Section~4.6.4) and a live backend to replace the
+static GeoJSON fetch remain separately deferred and are not measured
+here, because neither has been built in any form to measure.
 
 \subsection{System Integration Test}                     % WP J4 — Joint
-\wptodo{J4 · 5.1.7}{End-to-end: parquets $\rightarrow$ export\_geojson.py $\rightarrow$
-dashboard; P2-SEED baseline matches across the boundary (1,138 / 409.17 GWh / \$310.1M /
-9.8 yr). Realistic stimulus = the real re-baselined parquets.}
+
+The preceding subsections test each subsystem against its own inputs. This one tests
+the seam between them: whether the numbers a reader sees in the dashboard of
+Section~4.6 are the numbers Phase~4 actually computed, or something that drifted on
+the way out. The stimulus is not synthetic. It is the real post-P2-SEED parquet set,
+the same 3{,}778 scored rows the results above are drawn from, which is the
+representative case precisely because it is the only case: the export layer has no
+other production input, and a hand-built fixture would test a path the system never
+takes.
+
+The boundary was exercised by running \texttt{export\_geojson.py} against the
+production scorecard and then recomputing every headline figure from the exported
+files rather than from the parquet. Table~\ref{tab:integration} reports both sides.
+Agreement is exact at the precision the pipeline carries, not approximate: the
+viable-site count, energy, net present value, capital cost, median payback, rated
+capacity, and revenue all reproduce digit for digit, and both exported files carry 59
+properties on every feature.
+
+\begin{table}[htbp]
+\centering
+\caption{Integration test --- Phase 4 parquet against the exported GeoJSON contract}
+\label{tab:integration}
+\small
+\begin{tabular}{@{}lrrc@{}}
+\toprule
+Quantity & Phase 4 parquet & Exported GeoJSON & Match \\
+\midrule
+Scored sites            & 3{,}778      & 3{,}778      & yes \\
+Project-viable sites    & 1{,}138      & 1{,}138      & yes \\
+Viable energy (GWh/yr)  & 409.1695     & 409.1695     & yes \\
+Portfolio NPV (\$M)     & 310.1336     & 310.1336     & yes \\
+Portfolio CapEx (\$M)   & 211.3252     & 211.3252     & yes \\
+Median payback (yr)     & 9.8262       & 9.8262       & yes \\
+Rated capacity (MW)     & 58.5891      & 58.5891      & yes \\
+Revenue (\$M/yr)        & 41.2345      & 41.2345      & yes \\
+Properties per feature  & ---          & 59           & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three properties of the seam were checked beyond value equality. First, the exporter
+is byte-deterministic: re-running it over an unchanged scorecard reproduced both files
+with identical SHA-256 digests, so a diff in version control means the data changed
+and never that the writer did. Second, the \texttt{meta} block travels with the file
+and is derived rather than typed --- it reported 17{,}148 plants analyzed, 3{,}778
+scored, and the baseline label, each read from parquet row counts, so the file cannot
+assert a provenance its own contents contradict. Third, the artifact the browser
+loads is the artifact under version control: the hashed GeoJSON asset emitted into the
+production build carries the same SHA-256 digest as the tracked export, confirming
+that the Vite \texttt{?url} import of Section~4.6.2 introduces no copy step at which
+the two could diverge. The live browsing results of Section~5.1.6 close the loop from
+the other end, reading the same 1{,}138 sites and \$310.1M from the rendered
+interface.
+
+No discrepancy paragraph is owed here, because there is no gap to explain --- and it
+is worth being precise about how little that proves. This test establishes that the
+transport is lossless and reproducible. It says nothing about whether the transported
+numbers are correct: an error in head estimation or in the substituted capacity factor
+would propagate through this boundary perfectly intact and pass every check in
+Table~\ref{tab:integration}. The two checks that would test correctness rather than
+fidelity, measured generation from an operating outfall turbine and a surveyed head,
+are the ones Section~5.1.5 reports as unavailable. A second limitation is procedural:
+the dashboard half of this test was exercised by hand rather than by an automated
+browser suite, so it verifies the current build and would not catch a future
+regression on its own.
+
+Chapter~6 draws the conclusions these results support and names the work that would
+close the gaps they leave open.
 
 % =====================================================================
 % CHAPTER 6 — CONCLUSIONS AND FUTURE WORK               (WP J3 — Joint)
@@ -2314,8 +3146,9 @@ rated capacity and 409.17~GWh/yr under the model's own assumptions, against
 \$211.33M of capital cost, \$41.23M/yr of revenue, a portfolio net present value
 of \$310.13M, and a median payback of 9.83~yr. Benchmarked against 629 real
 small-hydro plants over 9{,}798 plant-years, the same portfolio bounds to a
-conservative floor of 118.9--194.4~GWh/yr, independently corroborated at
-114.4~GWh/yr by 115 metered conduit plants, and an optimistic upper scenario of
+measured floor of 89.8~GWh/yr from the only metered treated-wastewater conduit plant in
+the country, corroborated from above at 114.4~GWh/yr by 115 metered conduit plants and at
+118.9~GWh/yr by the river-hydro first quartile, and an optimistic upper scenario of
 281.4~GWh/yr resting on one project's design projection; re-scoring every site
 through the cash-flow model at that upper capacity factor leaves 439 sites viable
 and \$152.64M of net present
@@ -2395,17 +3228,20 @@ Manual of Practice No.~32, WEF Press, Alexandria, VA, 2009.
 \bibitem{epa_echo}
 U.S.\ Environmental Protection Agency,
 ``Enforcement and Compliance History Online (ECHO) / ICIS-NPDES Data Downloads,''
-[Online]. Available: https://echo.epa.gov/
+[Online]. Available: \url{https://echo.epa.gov/}
+[Accessed 6 August 2026].
 
 \bibitem{usgs_3dep}
 U.S.\ Geological Survey,
 ``3D Elevation Program (3DEP),''
-[Online]. Available: https://www.usgs.gov/3d-elevation-program
+[Online]. Available: \url{https://www.usgs.gov/3d-elevation-program}
+[Accessed 6 August 2026].
 
 \bibitem{hydrosource_eha}
 Oak Ridge National Laboratory,
 ``Existing Hydropower Assets (EHA) --- Annual Capacity Factor,''
-DOE HydroSource, [Online]. Available: https://hydrosource.ornl.gov/
+DOE HydroSource, [Online]. Available: \url{https://hydrosource.ornl.gov/}
+[Accessed 6 August 2026].
 
 \bibitem{doe_vision}
 U.S.\ Department of Energy,
@@ -2443,12 +3279,14 @@ D.~Day,
 \bibitem{rentricity}
 Rentricity Inc.,
 ``Featured Projects,''
-[Online]. Available: https://rentricity.com/featured-projects
+[Online]. Available: \url{https://rentricity.com/featured-projects}
+[Accessed 6 August 2026].
 
 \bibitem{cink}
 CINK Hydro-Energy,
 ``References and Wastewater Applications,''
-[Online]. Available: https://cink-hydro-energy.com/references
+[Online]. Available: \url{https://cink-hydro-energy.com/references}
+[Accessed 6 August 2026].
 
 \bibitem{ferc_conduit}
 Federal Energy Regulatory Commission,
@@ -2459,20 +3297,23 @@ Federal Energy Regulatory Commission,
 U.S.\ Energy Information Administration,
 ``How much electricity does an American home use?,'' Frequently Asked Questions,
 2023 residential average (10,500~kWh/yr per customer).
-[Online]. Available: https://www.eia.gov/tools/faqs/faq.php?id=97
+[Online]. Available: \url{https://www.eia.gov/tools/faqs/faq.php?id=97}
+[Accessed 6 August 2026].
 
 \bibitem{usgs_ned_accuracy}
 D.~B.~Gesch, M.~J.~Oimoen and G.~A.~Evans,
 ``Accuracy assessment of the U.S. Geological Survey National Elevation Dataset,
 and comparison with other large-area elevation datasets --- SRTM and ASTER,''
 U.S.\ Geological Survey Open-File Report 2014--1008, 2014.
-[Online]. Available: https://pubs.usgs.gov/of/2014/1008/
+[Online]. Available: \url{https://pubs.usgs.gov/of/2014/1008/}
+[Accessed 6 August 2026].
 
 \bibitem{eia_rates}
 U.S.\ Energy Information Administration,
 ``Average retail price of electricity, industrial,''
 \emph{Electric Power Monthly}, Table 5.6.B, 2023 annual averages.
-[Online]. Available: https://www.eia.gov/electricity/monthly/
+[Online]. Available: \url{https://www.eia.gov/electricity/monthly/}
+[Accessed 6 August 2026].
 
 \bibitem{ogayar2009}
 B.~Ogayar and P.~G.~Vidal,
@@ -2484,7 +3325,8 @@ doi:10.1016/j.renene.2008.03.015
 U.S.\ Energy Information Administration,
 ``Form EIA-923 detailed data --- Power Plant Operations Report,''
 annual and monthly net generation by plant.
-[Online]. Available: https://www.eia.gov/electricity/data/eia923/
+[Online]. Available: \url{https://www.eia.gov/electricity/data/eia923/}
+[Accessed 6 August 2026].
 
 \bibitem{rfc7946}
 H.~Butler, M.~Daly, A.~Doyle, S.~Gillies, S.~Hagen and T.~Schaub,
@@ -2496,7 +3338,177 @@ G.~Ke, Q.~Meng, T.~Finley, T.~Wang, W.~Chen, W.~Ma, Q.~Ye and T.-Y.~Liu,
 ``LightGBM: a highly efficient gradient boosting decision tree,''
 in \emph{Advances in Neural Information Processing Systems 30 (NIPS 2017)},
 pp.~3146--3154, 2017.
-% Additional Track M / Joint citations merge here at WP J5.
+
+% --- Peer-reviewed WWTP / conduit micro-hydropower literature (WP J5) ---
+
+\bibitem{chae2015}
+K.-J.~Chae, I.-S.~Kim, X.~Ren and K.-H.~Cheon,
+``Reliable energy recovery in an existing municipal wastewater treatment plant with a
+flow-variable micro-hydropower system,''
+\emph{Energy Conversion and Management}, vol.~101, pp.~681--688, 2015.
+
+\bibitem{power2017}
+C.~Power, P.~Coughlan and A.~McNabola,
+``Microhydropower energy recovery at wastewater-treatment plants: turbine selection and
+optimization,''
+\emph{Journal of Energy Engineering}, vol.~143, no.~1, art.~04016036, 2017.
+
+\bibitem{merida2021}
+A.~M\'erida Garc\'ia, J.~A.~Rodr\'iguez D\'iaz, J.~Garc\'ia Morillo and A.~McNabola,
+``Energy recovery potential in industrial and municipal wastewater networks using
+micro-hydropower in Spain,''
+\emph{Water}, vol.~13, no.~5, art.~691, 2021.
+
+\bibitem{mcnabola2021}
+A.~McNabola \emph{et al.},
+``Multi-country scale assessment of available energy recovery potential using
+micro-hydropower in drinking, pressurised irrigation and wastewater networks, covering
+part of the EU,''
+\emph{Water}, vol.~13, no.~7, art.~899, 2021.
+
+\bibitem{punys2022}
+P.~Punys \emph{et al.},
+``Assessment of hydropower potential in wastewater systems and application in a lowland
+country, Lithuania,''
+\emph{Energies}, vol.~15, no.~14, art.~5173, 2022.
+
+\bibitem{novara2021}
+D.~Novara \emph{et al.},
+``Hydropower technology for sustainable energy generation in wastewater systems:
+learning from the experience,''
+\emph{Water}, vol.~13, no.~22, art.~3259, 2021.
+
+% --- Chapter 3 pricing and foreign-entity sources (verified 6 August 2026) ---
+
+\bibitem{usc7701}
+\emph{Definitions}, 26 U.S.C.\ \S7701(a)(51)--(52), as amended by Pub.\ L.\ 119-21
+(One Big Beautiful Bill Act), 2025. Threshold percentages for the material assistance
+cost ratio are at \S7701(a)(52)(B).
+
+\bibitem{irs_notice_2026_15}
+Internal Revenue Service,
+``Material assistance from a prohibited foreign entity --- interim guidance for
+\S\S45Y, 48E and 45X,'' Notice 2026-15, 12 February 2026.
+[Online]. Available: \url{https://www.irs.gov/pub/irs-drop/n-26-15.pdf}
+[Accessed 6 August 2026].
+
+\bibitem{nrf_devfees}
+K.~Martin,
+``Developer fees,''
+\emph{Project Finance NewsWire}, Norton Rose Fulbright, August 2019.
+[Online]. Available:
+\url{https://www.projectfinance.law/publications/2019/august/developer-fees/}
+[Accessed 6 August 2026]. Reports the U.S.\ Treasury position that renewable-energy
+developer fees should normally fall in the 3--5~\% range of project cost, and the
+reduction of a claimed 12.3~\% fee to 4.8~\% in \emph{California Ridge Wind Energy v.\
+United States}.
+
+\bibitem{cpl_benchmark}
+Martal Group,
+``Cost per lead by industry: benchmarks and data,'' 2026.
+[Online]. Available: \url{https://martal.ca/cost-per-lead-by-industry-lb/}
+[Accessed 6 August 2026]. Industry survey; manufacturing and industrial cost per lead
+reported at \$120--350, against a blended cross-industry figure near \$198. Cited as a
+commercial benchmark rather than a peer-reviewed source.
+
+% --- Chapter 3 business-model funding sources (WP J1, verified 6 August 2026) ---
+
+\bibitem{epa_cwsrf_energy}
+U.S.\ Environmental Protection Agency,
+``Clean Water State Revolving Fund (CWSRF): Energy Conservation,''
+[Online]. Available:
+\url{https://www.epa.gov/cwsrf/clean-water-state-revolving-fund-cwsrf-energy-conservation}
+[Accessed 6 August 2026]. Eligible project list includes onsite renewable energy;
+hydropower is not separately enumerated.
+
+\bibitem{epa_wifia}
+U.S.\ Environmental Protection Agency,
+``What is WIFIA?,'' Water Infrastructure Finance and Innovation Act program.
+[Online]. Available: \url{https://www.epa.gov/wifia/what-wifia}
+[Accessed 6 August 2026]. Minimum project size \$20M, or \$5M for communities of
+25,000 or fewer; WIFIA share limited to 49~\% of eligible costs.
+
+\bibitem{usda_rd_wwd}
+U.S.\ Department of Agriculture, Rural Development,
+``Water \& Waste Disposal Loan \& Grant Program,''
+[Online]. Available:
+\url{https://www.rd.usda.gov/programs-services/water-environmental-programs/water-waste-disposal-loan-grant-program}
+[Accessed 6 August 2026]. Communities of 10,000 or fewer; grant share determined by
+median household income and project financial analysis, reaching 75~\%.
+
+\bibitem{irs_elective_pay}
+Internal Revenue Service,
+``Elective pay and transferability,''
+Internal Revenue Code \S6417.
+[Online]. Available:
+\url{https://www.irs.gov/credits-deductions/elective-pay-and-transferability}
+[Accessed 6 August 2026]. Phaseouts apply unless the facility satisfies the domestic
+content requirement or has maximum net output of less than 1~MW.
+
+\bibitem{irs_notice_2024_84}
+Internal Revenue Service,
+``Notice 2024-84: Extension of Transition Process for Claiming the Statutory
+Exceptions to the Elective Payment Phaseouts,'' 2024.
+
+\bibitem{irs_pwa}
+Internal Revenue Service,
+``Inflation Reduction Act Prevailing Wage \& Registered Apprenticeship Overview,''
+Publication 5855.
+[Online]. Available: \url{https://www.irs.gov/pub/irs-pdf/p5855.pdf}
+[Accessed 6 August 2026]. Facilities with maximum net output below 1~MW alternating
+current are excepted from the prevailing-wage and apprenticeship requirements while
+qualifying for the 30~\% credit percentage.
+
+\bibitem{nha_obbba}
+National Hydropower Association,
+``Hydro fares well in the One Big Beautiful Bill Act,''
+2025. [Online]. Available: \url{https://hydro.org/powerhouse/}
+[Accessed 6 August 2026]. Sections~45Y and~48E retained in full for hydropower at
+100~\% of credit value for construction beginning through 2033, phasing down
+thereafter.
+
+\bibitem{nsf_sbir}
+National Science Foundation,
+``America's Seed Fund powered by NSF (SBIR/STTR) --- Phase~I awards,''
+[Online]. Available: \url{https://seedfund.nsf.gov/awardees/phase-1/}
+[Accessed 6 August 2026]. Phase~I award ceiling \$305,000.
+
+\bibitem{react19}
+Meta Platforms, Inc. and the React community,
+``React --- The Library for Web and Native User Interfaces,'' version 19.2,
+2025. [Online]. Available: \url{https://react.dev/}
+[Accessed 29 July 2026].
+
+\bibitem{typescript}
+Microsoft Corporation,
+``TypeScript,'' version 5.7, 2025.
+[Online]. Available: \url{https://www.typescriptlang.org/}
+[Accessed 29 July 2026].
+
+\bibitem{vite7}
+E.~You and the Vite community,
+``Vite,'' version 7.1, 2025.
+[Online]. Available: \url{https://vite.dev/}
+[Accessed 29 July 2026].
+
+\bibitem{maplibregl}
+MapLibre contributors,
+``MapLibre GL JS,'' version 5.1, 2025.
+[Online]. Available: \url{https://maplibre.org/maplibre-gl-js/docs/}
+[Accessed 29 July 2026].
+
+\bibitem{reactmapgl}
+visgl,
+``react-map-gl,'' version 8.0, 2025.
+[Online]. Available: \url{https://visgl.github.io/react-map-gl/}
+[Accessed 29 July 2026].
+
+\bibitem{recharts3}
+Recharts Group,
+``Recharts --- A Composable Charting Library Built on React Components,''
+version 3.0, 2025.
+[Online]. Available: \url{https://recharts.org/}
+[Accessed 29 July 2026].
 
 \end{thebibliography}
 
@@ -2507,7 +3519,7 @@ pp.~3146--3154, 2017.
 \chapter{Data Dictionary and Exclusion-Funnel Tables}
 
 This appendix is the reference for the export contract of Section~4.5 and for the
-funnel of Section~5.1.2. Table~\ref{tab:datadict} lists all 58 properties carried
+funnel of Section~5.1.2. Table~\ref{tab:datadict} lists all 59 properties carried
 on every feature of \texttt{scored\_sites.geojson} and
 \texttt{viable\_sites.geojson}, in the order the exporter writes them. The
 rounding column names the class each property is rounded to before serialization:
@@ -2527,7 +3539,7 @@ is null at 225 plants whose outfall coordinate could not be resolved --- those
 plants carry an archetype head, as Section~4.3.4 describes.
 
 \begin{longtable}{@{}lllllr@{}}
-\caption{Data dictionary --- the 58 properties of the exported GeoJSON contract}
+\caption{Data dictionary --- the 59 properties of the exported GeoJSON contract}
 \label{tab:datadict} \\
 \toprule
 Property & Type & Units & Rounding & Source & Nulls \\
@@ -2551,6 +3563,7 @@ Property & Type & Units & Rounding & Source & Nulls \\
 \texttt{energy\_kwh\_calib\_floor\_p25} & int & kWh/yr & int & P4 & 0 \\
 \texttt{energy\_kwh\_calib\_floor\_p50} & int & kWh/yr & int & P4 & 0 \\
 \texttt{energy\_kwh\_calib\_central} & int & kWh/yr & int & P4 & 0 \\
+\texttt{energy\_kwh\_calib\_measured\_point\_loma} & int & kWh/yr & int & P4 & 0 \\
 \texttt{capacity\_factor} & float & ratio & 4 dp & P4 & 0 \\
 \texttt{total\_capex\_usd} & int & \$ & int & P4 & 0 \\
 \texttt{npv\_usd} & int & \$ & int & P4 & 0 \\
@@ -2766,9 +3779,10 @@ extrapolating this population down to WOWERS scale.}
 \end{table}
 
 Table~\ref{tab:band_both} gives the calibration band computed from both buckets.
-They agree closely above the first quartile and differ most at the pessimistic end,
-which is why Section~5.1.4 quotes the floor as a range of 118.9--194.4~GWh/yr
-rather than as a single number.
+They agree closely above the first quartile and differ most at the pessimistic end.
+Neither bucket sets the reported floor, which comes from metered treated-wastewater
+generation at 89.8~GWh/yr; both are reported because their first quartiles, 118.9 and
+125.5~GWh/yr, corroborate that floor from above out of a different plant class.
 
 \begin{table}[htbp]
 \centering

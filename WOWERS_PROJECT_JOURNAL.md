@@ -5970,3 +5970,378 @@ $152.64M, $136.65M, 9.83 yr, 58.59 MW, the 1,138 / 439 / 129 / 27 tier counts. V
 4. **Worth asking the advisor** whether one instrumented pilot outfall (already Ch6 future
    work) should be reframed as the thing that resolves the central tier specifically, since
    that is now the single weakest link in the headline.
+
+---
+
+### Session: 2026-08-06 — P4-TIER-LADDER: Phase-4 tier×rate re-run, band floor moved to 89.8, business.md §2/§7 rebuilt, 7 of 10 [VERIFY] items closed — Tom
+
+**What was done:**
+Cleared three of the five blockers standing in front of work package J1 (Ch3 Business Model).
+Started as "re-run Phase 4 across the tier ladder" and turned up four number errors in
+`thesis/business.md`, one of them structural.
+
+**1. New read-only harness: `scripts/tier_ladder_whatif.py`.**
+Re-scores all 3,778 turbine-viable sites through `src.phase4.financials.compute_scorecard` —
+the same function Phase 4 calls — across 6 energy tiers × 4 discount rates × 2 subsidy
+levels (48 scenarios, ~10 s total). Follows the `install_cost_whatif.py` precedent: no
+parquet write, no checkpoint, no settings mutation. 12 new tests in
+`tests/test_scripts/test_tier_ladder_whatif.py`. Full suite now **736 passed, 1 skipped**.
+Output: `TIER_LADDER_REPORT.md`.
+
+Baseline gate: ceiling / 6 % / no-grant reproduces **1,138 viable · 409.17 GWh/yr ·
+$310.13M · 9.83 yr** exactly, so the harness is trustworthy before any new number is read
+off it.
+
+Env note: base conda moved 3.13 → 3.14 and orphaned the old `pytest` shebang
+(`bad interpreter: /opt/miniconda3/bin/python3.13`). Installed `pytest` + `pytest-asyncio`
+for 3.14. No source files touched. The one "failure" seen pre-install was the missing
+asyncio plugin, not a code fault.
+
+**2. Four errors found in `business.md`, all now fixed.**
+- **Structural: the old §2.4 reconstruction capped its universe at the 1,138 sites already
+  viable at 6 %**, so no scenario could exceed 1,138. Every public-finance row was silently
+  truncated. Real optimistic-tier + 3.5 % + 50 % grant is **2,272 sites / $374.2M / 10.6 yr**,
+  not 1,138 / $357.6M / 7.5 yr. The correction makes public finance look *more* important, not
+  less.
+- **The 7.5 yr payback in the pitch was a ceiling-tier number** attached to a floor-tier
+  argument — precisely what §7.4 forbids. Its real provenance is ceiling + 6 % + 50 % grant.
+- **131 → 129 for the ≥ 100 kW cohort.** `exports/viable_sites.geojson` rounds
+  `rated_power_kw` to integer kW; two sites at 99.5–99.9 kW round up. The same rounding shifted
+  every §2.3 size band (real: 415 / 419 / 175 / 87 / 37 / 5). Both old and new bands sum to
+  1,138, which is why a total check never caught it. Concentration claim survives: 129 sites =
+  $252.1M = **81.3 %** of portfolio NPV.
+- **Multipliers were being reported as capacity factors.** `phase4.cf_calibration` stores
+  tier_CF ÷ 0.872. 0.447 is a multiplier; its CF is 0.390. Every tier now carries both numbers,
+  and a test asserts they differ.
+
+**3. Band-floor decision taken: 89.8–281 GWh/yr (Tom).**
+Previously 118.9–281, resting on the EHA river-hydro p25 — a plant class that is not ours.
+Point Loma (CF 0.1914) is the only metered treated-wastewater conduit plant in the country and
+becomes the floor. The double-sourcing argument survives: river-p25 at 119.1 and metered
+all-conduit at 114.4 still agree to 4.7 GWh/yr, both now above the floor.
+**Advisor sign-off remains outstanding** — it was the recorded precondition on 2026-07-25 and is
+logged as required before Ch3 submission, not merely before drafting.
+
+Deliberately **not** propagated further this session: `thesis_tom.tex` carries 119–281 in ≥ 5
+places (Ch2, Ch4.4, Ch5.1.4, Ch6), and `settings.yaml` / the 58-property geojson contract /
+`test_calib_cols.py` / `test_export_geojson.py` / `frontend/src/lib/data.ts` all hard-code the
+0.291 floor. That is a T1/T5/T6 revisit and needs its own session (next-action 1c).
+
+**4. Verification pass: 7 of 10 `[VERIFY]` items closed.**
+Biggest finding by far — **the 1 MW threshold**. The elective-pay phaseout applies unless a
+facility satisfies domestic content **or** has max net output under 1 MW; sub-1 MW facilities are
+also exempt from prevailing-wage/apprenticeship while still reaching the full 30 % §48E rate.
+**1,133 of our 1,138 viable sites are under 1 MW.** So the 2026 domestic-content problem that
+looked fatal does not touch the portfolio, and the European supply chain is a schedule risk only
+below 1 MW. The 5 sites above 1 MW — including both marquee pitch sites, Stickney and Point
+Loma — carry the full compliance load. Also confirmed §48E was retained in full for hydropower
+under OBBBA (100 % if construction begins by end-2033).
+
+Two corrections against us: the municipal rate is **not** 3.5 % (AAA 30-yr muni 4.25 % in Apr
+2026, AA water/sewer +40–60 bp → ~4.6–4.9 %), so the ladder gained a 4.75 % market-municipal
+rate and 3.5 % was relabelled as subsidised; and the ESCO audit benchmark behind the
+screening-report price is wrong (ASHRAE Level 2 is ~$1.8–10k, not $15–50k) — benchmark withdrawn,
+price now rests on the NPV-share derivation alone. NSF SBIR Phase I corrected $275k → **$305k**.
+Three items remain unsourced: developer origination-fee band, state energy-office procurement
+scale, $3k/qualified-lead. All are now labelled assumptions.
+
+Working notes in `business.md` §10a. These are **not** citations — Ch3 must cite the agency page,
+statute, notice or award record directly with an access date (next-action 3b).
+
+**Files modified:**
+- `scripts/tier_ladder_whatif.py` — new (read-only harness).
+- `tests/test_scripts/test_tier_ladder_whatif.py` — new (12 tests).
+- `TIER_LADDER_REPORT.md` — new (48-scenario grid + baseline reproduction check).
+- `thesis/business.md` — §2 and §7 rebuilt on pipeline output; §5 pricing derivations corrected;
+  §6.1 funding table verified + new §6.1.1 on the 1 MW threshold; §8 pilot table gains
+  floor-tier paybacks; §4.2 funnel restated from 129; new §10a verification log; §10 and §11
+  updated.
+- `WOWERS_PROJECT_JOURNAL.md` — this entry.
+
+**Open / next steps:**
+1. **Advisor sign-off on the 89.8 floor** — required before Ch3 submission.
+2. **Propagate 89.8 into `thesis_tom.tex` + settings/export/tests/frontend** (next-action 1c).
+   Own session; revisits T1/T5/T6.
+3. **Capture formal citations** for the 7 verified items with access dates (3b).
+4. **Verify §48E "material assistance" / prohibited-foreign-entity thresholds** for hydro starting
+   2026+ (3c) — the one IRA question the sub-1 MW exemptions do not answer, and it bears on
+   recommending European OEMs.
+5. **Ten customer-validation calls** — still the only blocker that cannot be closed at a desk, and
+   still the thing that decides whether §3 and §4 describe a market or a hypothesis.
+6. **§8 tension worth an advisor conversation:** the only two pilot sites that survive the band
+   floor unaided (Stickney, Point Loma) are the two that fail the head-confidence criterion, while
+   all five mid-market candidates need a 50 % subsidy to stay defensible at the floor.
+
+---
+
+### Session: 2026-08-06 (PM) — P4-MEASURED-FLOOR: 89.8 GWh/yr floor propagated into pipeline, export contract, frontend and thesis — Tom
+
+**What was done:**
+Carried this morning's band-floor decision all the way through the codebase, on the
+reasoning that the code gets submitted with the thesis and must not disagree with it.
+
+**Decision on how, not whether.** Three routes were considered: prose-only in the thesis;
+add a fourth calibrated column; overwrite `floor_p25` with 0.2195. **Chose additive.**
+Overwriting would have put a non-percentile value in a column literally named
+`floor_p25`, making the name false and inviting the same confusion back later — and it
+would have invalidated every previously published 119.1 GWh figure. Additive costs one
+extra column and keeps every prior number true. Matches the original P4-TIER contract
+("additive — zero changes to existing columns").
+
+**Changes:**
+- `config/settings.yaml` — new `phase4.cf_calibration.measured_point_loma: 0.2195`, with
+  provenance comment (Point Loma 1,500 kW / 2,515 MWh 2017, Form EIA-923 → CF 0.1914).
+  Also annotated `central: 0.688` as the *optimistic* tier, since the key name still says
+  "central" and that mismatch is how the error spread last time.
+- `src/phase4/financials.py` — `add_calibrated_energy_cols` now emits a fourth column,
+  `energy_kwh_calib_measured_point_loma`. Docstring records why it was added rather than
+  overwriting.
+- Phase 4 re-run: **49 → 50 columns, one added, none lost, all 49 pre-existing columns
+  byte-identical** (verified by frame comparison against a pre-run copy). Baseline intact:
+  1,138 viable / 409.1695 GWh / $310.1336M / 9.8262 yr. New fleet floor **89.8127 GWh/yr**.
+- `scripts/export_geojson.py` — contract **58 → 59 properties**; both exports regenerated
+  (1,138 and 3,778 features).
+- `tests/test_phase4/test_calib_cols.py` and `tests/test_scripts/test_export_geojson.py`
+  updated; new assertions that the measured tier is the *lowest* rung (meas < p25 < p50 <
+  central < ceiling) and that the band ends land at 89.8 / 281.5.
+- `frontend/src/lib/data.ts` — field added, comments updated. `tsc --noEmit` clean;
+  `npm run build` succeeds in 2.73 s (maplibre 1,053 kB, index 711 kB, up from 707 kB).
+- `thesis/thesis_tom.tex` — 119–281 → 89.8–281 across Ch2 (framing, prior-work table, EHA
+  discussion, consumption context), Ch4.1 summary, Ch4.4.1 (the deferred-decision paragraph
+  became a decision-taken paragraph that argues the n=1 objection head-on), Ch4.5 (property
+  count, group table), Ch5.1.4 (result + planning-figure guidance), Ch6, and Appendix A
+  (data-dictionary row, caption, intro).
+- `thesis/thesis_moh.tex` — 5 contract-count references 58 → 59.
+- `scripts/tier_ladder_whatif.py` — now reads the floor multiplier from config instead of
+  its own constant, so there is one source of truth.
+
+**Honest notes:**
+1. **Two self-inflicted errors this session, both caught and fixed.** Running
+   `export_geojson.py --all` without `--out` overwrote `viable_sites.geojson` with all
+   3,778 features — the default invocation already writes both files. Restored and
+   verified (1,138 / 3,778, 59 props each). Separately, a first pass at the small-site
+   cash-flow claim in `business.md` said "roughly a fifth, under $1.2k/yr net"; the real
+   figures are $1,413 revenue and **$593** net, because constant O&M eats a far larger
+   share of smaller revenue. Corrected before commit.
+2. **A test caught a rounding subtlety worth keeping.** Config stores the multiplier at 4 dp,
+   so recovering the CF gives 0.191404 rather than 0.1914. The config value is authoritative;
+   the assertion now runs at rounding tolerance with the reason documented.
+3. **The frontend build was already broken before this session** — `src/vite-env.d 2.ts`, one
+   of ~30 Finder-created " 2" duplicate files sitting untracked in the repo, breaks `tsc -b`
+   with TS2666/TS2300. Verified my change builds clean by moving that file aside and putting
+   it back. A stale `frontend/dist/data/plants` directory (4,069 entries from the retired
+   per-plant JSON export) also blocked vite's out-dir cleanup; `dist/` is gitignored and was
+   removed. **The duplicate files should be cleaned up** — they shadow real modules
+   (`scripts/cf_calibration 2.py`, `src/phase5/train 2.py`) and every test run needs
+   `--ignore-glob="* 2.py"` to avoid collecting them.
+
+**Verification:** 737 passed, 1 skipped, 0 failed. Frontend builds. Baseline reproduced.
+
+**Files modified:** `config/settings.yaml`, `src/phase4/financials.py`,
+`scripts/export_geojson.py`, `scripts/tier_ladder_whatif.py`,
+`tests/test_phase4/test_calib_cols.py`, `tests/test_scripts/test_export_geojson.py`,
+`tests/test_scripts/test_tier_ladder_whatif.py`, `frontend/src/lib/data.ts`,
+`thesis/thesis_tom.tex`, `thesis/thesis_moh.tex`, `thesis/business.md`,
+`data/processed/phase4/financial_scorecards.parquet`, `exports/*.geojson`,
+`TIER_LADDER_REPORT.md`, `WOWERS_PROJECT_JOURNAL.md`.
+
+**Open / next steps:**
+1. **Advisor sign-off on the 89.8 floor** — the last unresolved thing about this decision.
+2. **Figure 8 (`figures/fig08_calibration_band.png`) is now stale** — it plots the old band
+   and needs regenerating with the measured floor as the lowest bar.
+3. **`CF_CALIBRATION_REPORT.md` remains stale** (Bull Run name, "measured 0.628", 0.60 as
+   central). Internal artifact, never cited, but it keeps inviting the error back.
+4. **Clean up the ~30 " 2"/" 3" duplicate files.** They break the frontend build and force
+   `--ignore-glob` on every test run.
+5. Remaining J1 blockers unchanged: formal citations for the 7 verified items, the §48E
+   material-assistance question, and the ten customer-validation calls.
+
+---
+
+### Session: 2026-08-06 (PM #2) — Duplicate-file cleanup, Figure 8 regenerated, J1 · Ch3 drafted — Tom
+
+**What was done:**
+Three cleanup items plus the business-model chapter.
+
+**1. Deleted 32 stale duplicate files.** The repo had accumulated Finder-style `" 2"`/`" 3"`
+copies. Every one was proven recoverable before deletion: 24 were byte-identical to their
+current base file, and the other 8 were byte-identical to a *committed historical revision*
+of their base (verified by hashing every `git show <rev>:<path>` blob), so nothing unique was
+lost. Consequences: `pytest` now collects cleanly with **no `--ignore-glob`** (737 passed,
+1 skipped), and `npm run build` succeeds with **no workaround** — the frontend build had been
+broken by `frontend/src/vite-env.d 2.ts` triggering TS2666/TS2300 under `tsc -b`.
+
+**2. Regenerated Figure 8** (`thesis/figures/make_fig08_calibration_band.py`). It plotted the
+old 5-tier band and labelled CF 0.60 "central", both stale. Now 7 bars with the two metered
+conduit tiers drawn in a separate colour (they are the only measured rows), CF 0.60 relabelled
+optimistic, and dotted markers on the reported band at 89.8 and 281.4 GWh/yr. Regenerated from
+real source data — the EHA workbook on SANDISK plus
+`data/raw/ground_truth/ferc_conduit_candidates.parquet` — not from hardcoded values, and Point
+Loma's CF is recomputed from its metered row (2,515 MWh / 1,500 kW / 8,760 h = 0.1914) with a
+guard that raises if that row is not unique. Two render bugs found by looking at the output:
+the legend collided with the ceiling bar, and LaTeX `--` leaked into matplotlib as literal
+double hyphens. Both fixed.
+
+**3. Drafted J1 · Ch3 Business Model** — the last substantive unwritten work package outside
+the stitch. 2,283 words across all 8 sections, each inside the 150–400 band. Detail is in the
+thesis journal entry; the repo-side facts are that 8 new bibliography entries were added for
+the funding claims (reference count 21 → 29), the chapter cites **no internal `.md` file**, and
+`tectonic` compiles to **100 pages with 0 errors and 0 undefined citations**.
+
+The morning's corrections earned their keep here: had Ch3 been drafted a day earlier it would
+have carried 131 sites (a geojson rounding artifact — the real figure is 129) and a 7.5 yr
+payback that was a ceiling-tier number attached to a floor-tier argument.
+
+**Files modified:** 32 duplicate files deleted; `thesis/figures/make_fig08_calibration_band.py`,
+`thesis/figures/fig08_calibration_band.png`, `thesis/thesis_tom.tex` (Ch3 + bibliography),
+`thesis/THESIS_BREAKDOWN.md` (J1 ticked in §3 and §7), `thesis/THESIS_JOURNAL.md` (session entry
++ band-floor line in the Section 0 baseline block), `thesis/business.md` (next-action 6 closed),
+`WOWERS_PROJECT_JOURNAL.md`.
+
+**Open / next steps:**
+1. **Advisor sign-off on the 89.8 floor.** Ch2 through Ch6 are now internally consistent on it,
+   so a reversal would touch all of them plus `settings.yaml`.
+2. **J4 · Ch5 Integration Test** (~500 w) is the suggested next package: unblocked, and
+   independent of the band-floor decision because it quotes only ceiling-tier baseline numbers.
+3. **Three pricing assumptions remain unsourced** (origination-fee band, $3k/qualified-lead,
+   state-agency engagement scale) and are labelled as assumptions in Ch3.5.
+4. **§48E material-assistance thresholds** still unverified against statutory text (Ch3 does not
+   depend on them; a supplier recommendation would).
+5. **Ten customer-validation calls** — unchanged, and still the only blocker that cannot be
+   closed at a desk.
+6. `CF_CALIBRATION_REPORT.md` still stale. Internal artifact, never cited, but it keeps inviting
+   the corrected errors back.
+
+---
+
+### Session: 2026-08-06 (PM #3) — J4 drafted, J5 substantially done, literature gap closed — Tom
+
+**What was done:**
+Cleared everything remaining on the thesis that does not depend on Mohamed. He is doing
+the M1/M2 merge himself, so that half of J5 stays open and J5 is marked **◐ partial**
+rather than ticked.
+
+**1. J4 · Ch5.1.7 System Integration Test drafted** (570 w + a comparison table). Every
+claim in it was measured rather than asserted: all eight headline quantities recomputed
+from the exported GeoJSON agree with the parquet exactly; the exporter was re-run and
+both files reproduced identical SHA-256 digests; and the hashed asset inside
+`frontend/dist/` matches the tracked export digit for digit. The section also states what
+the test does not prove — it verifies transport, not correctness, and a head or
+capacity-factor error would pass every check intact.
+
+**2. J5, everything not blocked on the merge.** Abstract (449 w, inside the 350--450 format
+range, written last as required) and acknowledgements (271 w). Names in the
+acknowledgements are left as visible slots; `{{MONTH_YEAR}}` on the title page is likewise
+left unfilled, because a guessed defense date on a title page is worse than an obvious
+placeholder.
+
+**3. The reference gap closed, and it produced a real correction.** Six peer-reviewed
+sources were added, all verified: Chae *et al.* 2015, Power *et al.* 2017, Mérida García
+*et al.* 2021, McNabola *et al.* 2021, Punys *et al.* 2022, Novara *et al.* 2021. Reading
+them changed the thesis rather than just padding its bibliography:
+
+- **An absolute claim turned out to be false.** The abstract I had just written said no
+  measured wastewater-outfall generation exists in the public record. Chae *et al.* monitored
+  a semi-Kaplan unit on an operating Korean plant's effluent for over a year at 68.1 MWh/yr.
+  The claim is now scoped to what is actually true — nothing metered appears in the **U.S.
+  public generation datasets this calibration uses** — and §2.2 now states the real
+  distinction: instrumented case studies exist; a machine-readable national record pairing
+  head, flow and metered energy across enough sites to calibrate against does not. Same
+  overstatement scoped in §3.5.
+- **We had a closer methodological precedent than the thesis admitted.** Mérida García
+  *et al.* screened Spain's wastewater discharges for micro-hydro potential *using discharge
+  licences as the flow source* — the same move WOWERS makes with ICIS-NPDES. §2.4 now concedes
+  this as the nearest published analogue and states precisely what WOWERS adds: U.S. coverage,
+  a per-plant ranked list, and calibration against metered generation from the same asset class.
+
+Reference count 29 → **35** in Tom's file; with Mohamed's 6 that is **41 merged**, inside the
+40--50 target. 35 cited keys against 35 bibitems, none missing, none unused.
+
+**4. Smaller cleanups.** Nine references gained `[Accessed]` dates and `\url{}` wrapping, so
+no reference now carries a URL without one. "P2-SEED" defined at first use in §2.2. Missing
+signposts added at the end of §4.3.1 and §4.3.2. Honesty pass run across all five
+non-negotiables — all present.
+
+**Verification:** `tectonic` → **108 pages, 0 errors, 0 undefined citations**. The only two
+red TODO markers left are Mohamed's merge stubs. Tables 26 merged, comfortably past the
+20 minimum.
+
+**One format requirement is still unmet and cannot be met by me:** figures stand at 16 (Tom)
++ 1 real (Mohamed) = 17, plus his 2 pending screenshots = 19, against a 20 minimum. It closes
+if Mohamed supplies the per-state-portfolio and analytics screenshots that §4 of the breakdown
+already assigns him.
+
+**Files modified:** `thesis/thesis_tom.tex` (5.1.7, abstract, acknowledgements, §2.2 and §2.4
+literature passages, 6 new bibitems, 9 access dates, P2-SEED gloss, 2 signposts, 2 claim
+scopings), `thesis/THESIS_BREAKDOWN.md` (J4 ticked, J5 marked partial, status legend added),
+`thesis/THESIS_JOURNAL.md` (two entries), `WOWERS_PROJECT_JOURNAL.md`.
+
+**Open / next steps:**
+1. **Mohamed's M1/M2 merge** — then global figure/table renumber, final reference merge, and
+   J5 closes.
+2. **`{{MONTH_YEAR}}` and the acknowledgement names** — authors only.
+3. **1–2 more figures** to clear the 20-figure minimum.
+4. **Advisor sign-off on the 89.8 GWh/yr floor.**
+5. Three Chapter 3 pricing assumptions unsourced; §48E material-assistance thresholds
+   unverified; ten customer-validation calls unstarted.
+6. `CF_CALIBRATION_REPORT.md` still stale.
+
+---
+
+### Session: 2026-08-06 (PM #4) — Ch3 pricing sourced, §48E material assistance verified — Tom
+
+**What was done:**
+Closed the two open verification items. Both produced real findings rather than just citations.
+
+**§48E material assistance — verified against the statute.** 26 U.S.C. §7701(a)(52)(B): a qualified
+facility fails if its material-assistance cost ratio — the share of direct costs *not* traceable to a
+prohibited foreign entity — falls below **40 % for construction beginning 2026**, rising 45 / 50 / 55 %
+through 2029 and **60 % from 2030**. Energy storage is stricter. IRS Notice 2026-15 (12 Feb 2026) adds
+interim computation safe harbours. Two things matter: the 2026 bar is permissive, so a European turbine
+with mixed-origin components is unlikely to fail today; but **this rule carries no sub-1 MW exemption**,
+unlike the domestic-content phaseout, so it binds the whole portfolio and tightens over the asset life.
+Written into Ch3.8 with both citations.
+
+**Pricing — two of three sourced, and one price had to move.**
+- *Origination fee 2–4 %:* sourced and strengthened. Treasury's position is 3–5 % for renewable
+  developer fees, and a claimed 12.3 % fee was cut to 4.8 % in *California Ridge Wind Energy v. United
+  States*. A developer earning that carries project risk; WOWERS originates only, so 2–4 % sits below
+  the band by design. Real derivation now, not an assertion.
+- *Cost per qualified lead:* sourced, and **it contradicted our price.** Industrial B2B cost per lead is
+  $120–350, not the $3k the subscription rested on. Thirty routed sites is $3.6–10.5k/yr of value, not
+  $90k/yr — which does not support $12–24k/yr. **Subscription revised $1–2k/month → $300–900/month**,
+  and the five-year revenue picture moved $0.5–1.2M → $0.4–1.0M. The counter-argument stays in the text:
+  our "lead" is an engineered site sheet, not a marketing contact, and may be worth more — but that needs
+  customer calls, not a benchmark.
+- *State/agency engagement, $25–75k:* searched twice, still nothing. State award values for this kind of
+  study are not publicly indexed. It is now the only wholly unsourced price and is labelled as such.
+
+**The pattern across both verification passes is worth recording.** Every number that came from a statute
+or an agency page survived or improved. Every number we had guessed from "what the market probably
+charges" moved against us — the municipal rate was too low, the audit benchmark did not exist, the
+per-lead figure was 10× high. Meanwhile the statutory reading turned up a favourable finding we had not
+claimed (the sub-1 MW elective-pay exemption) and a deadline we had not seen (material assistance
+tightening to 60 % by 2030). The remaining unsourced price should be treated as probably optimistic on
+that evidence.
+
+**Ripple check:** §3.7 revenue arithmetic was the only downstream number affected in the thesis. Grepped
+every other occurrence — nothing in Ch2, Ch4, Ch5, Ch6 or the abstract depends on the changed figures.
+`business.md` §5, §4.2, §6.1.1, §10 (actions 3 and 3c) and §10a all updated to match.
+
+**Recorded deviation:** Ch3.5 and Ch3.8 now run 474 and 464 words against the 150–400 per-subsection
+guide, after two rounds of trimming. Ch3 totals 2,732, inside the 1,200–3,200 envelope. Cutting further
+would have deleted a priced derivation or the statutory thresholds — the substance the spec asks for — so
+it is flagged rather than mangled.
+
+**Verification:** references 35 → **39** (45 merged with Mohamed's 6, inside the 40–50 target); 39 cited
+keys against 39 bibitems, none missing or unused; compiles to **109 pages, 0 errors, 0 undefined
+citations**; 737 tests still pass (no source touched).
+
+**Files modified:** `thesis/thesis_tom.tex` (§3.5, §3.7, §3.8, 4 new bibitems), `thesis/business.md`,
+`thesis/THESIS_JOURNAL.md`, `WOWERS_PROJECT_JOURNAL.md`.
+
+**Open / next steps:**
+1. State/agency engagement price — the last unsourced number in §5.
+2. Mohamed's M1/M2 merge, then J5 closes.
+3. `{{MONTH_YEAR}}`, acknowledgement names, 1–2 more figures for the 20-figure minimum.
+4. Advisor sign-off on the 89.8 GWh/yr band floor; ten customer-validation calls.

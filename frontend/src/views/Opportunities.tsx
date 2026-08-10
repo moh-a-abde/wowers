@@ -24,7 +24,12 @@ export default function Opportunities() {
   );
 
   const totalNpv = useMemo(() => sites.reduce((a, p) => a + (p.npv ?? 0), 0), [sites]);
-  const totalEnergy = useMemo(() => sites.reduce((a, p) => a + (p.energy_mwh ?? 0), 0), [sites]);
+  // Sum in kWh and round once, matching fetchNational's viable_energy_mwh.
+  // Summing the per-site rounded energy_mwh drifts +32 MWh/yr at full selection.
+  const totalEnergy = useMemo(
+    () => Math.round(sites.reduce((a, p) => a + (p.energy_kwh ?? 0), 0) / 1e3),
+    [sites],
+  );
 
   const toggle = (b: Band) =>
     setBands((cur) => (cur.includes(b) ? cur.filter((x) => x !== b) : [...cur, b]));

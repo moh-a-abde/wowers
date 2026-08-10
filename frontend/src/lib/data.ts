@@ -2,7 +2,7 @@
  * WOWERS data layer — single-file adapter (GEOJSON-UNIFY).
  *
  * Imports ``exports/scored_sites.geojson`` (git-tracked, all 3,778 scored
- * sites — viable and non-viable — 58 properties each) as a ?url import and
+ * sites — viable and non-viable — 59 properties each) as a ?url import and
  * fetches it *once* via a module-level cached promise.  All four legacy
  * shapes — PlantCollection, National, Portfolio, PlantDetail — are derived
  * client-side from that one file.  The map shows every scored site (band
@@ -29,7 +29,11 @@ import type {
 
 import sitesUrl from "../../../exports/scored_sites.geojson?url";
 
-// ── Internal shape for the raw geojson properties (58 fields) ────────────────
+// ── Internal shape for the raw geojson properties (59 fields) ────────────────
+// P4-MEASURED-FLOOR (2026-08-06): energy_kwh_calib_measured_point_loma added.
+// It carries the reported calibration-band floor (89.8 GWh/yr fleet-wide, from
+// the only metered treated-wastewater conduit plant in the U.S.) and is the
+// lowest of the four calibrated energy tiers.
 
 interface SiteProps {
   npdes_id: string;
@@ -42,6 +46,7 @@ interface SiteProps {
   energy_kwh_calib_floor_p25: number | null;
   energy_kwh_calib_floor_p50: number | null;
   energy_kwh_calib_central: number | null;
+  energy_kwh_calib_measured_point_loma: number | null;
   capacity_factor: number | null;
   total_capex_usd: number | null;
   npv_usd: number | null;
@@ -203,6 +208,7 @@ export async function fetchPlants(): Promise<PlantCollection> {
           p.annual_energy_kwh != null
             ? Math.round(p.annual_energy_kwh / 1e3)
             : null,
+        energy_kwh: p.annual_energy_kwh,
         payback: pb,
         npv: p.npv_usd,
         tier: p.site_tier,

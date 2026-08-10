@@ -59,7 +59,10 @@ _DEFAULT_P3        = ROOT / "data/processed/phase3/turbine_sizing.parquet"
 _DEFAULT_OUT       = ROOT / "exports/viable_sites.geojson"
 _DEFAULT_OUT_ALL   = ROOT / "exports/scored_sites.geojson"
 
-# ── Property list: original 24 + 34 new = 58 total ────────────────────────────
+# ── Property list: original 24 + 34 new + 1 measured floor = 59 total ─────────
+# P4-MEASURED-FLOOR (2026-08-06): energy_kwh_calib_measured_point_loma added,
+# taking the contract from 58 to 59. It carries the reported band floor
+# (89.8 GWh/yr fleet-wide); see src/phase4/financials.add_calibrated_energy_cols.
 
 PROPERTIES: list[str] = [
     # ── original 24 ──────────────────────────────────────────────────────────
@@ -73,6 +76,7 @@ PROPERTIES: list[str] = [
     "energy_kwh_calib_floor_p25",
     "energy_kwh_calib_floor_p50",
     "energy_kwh_calib_central",
+    "energy_kwh_calib_measured_point_loma",   # P4-MEASURED-FLOOR: reported band floor
     "capacity_factor",
     "total_capex_usd",
     "npv_usd",
@@ -138,6 +142,7 @@ _INT_COLS: frozenset[str] = frozenset({
     "energy_kwh_calib_floor_p25",
     "energy_kwh_calib_floor_p50",
     "energy_kwh_calib_central",
+    "energy_kwh_calib_measured_point_loma",
     "total_capex_usd",
     "npv_usd",
     "annual_revenue_usd",

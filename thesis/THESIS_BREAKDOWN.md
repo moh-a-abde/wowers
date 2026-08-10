@@ -109,10 +109,10 @@ habits) applies **unchanged**.
 | 4.2 Input Acquisition Subsystem (hardware + SDK) | **Data Acquisition:** EPA ECHO/ICIS ingest, ~279M DMR rows, USGS 3DEP, EIA/EHA                                             | Tom           |
 | 4.3 Data Transport Subsystem (protocols)         | **Processing Pipeline:** Phase 1 filter/features/ranking, Phase 2 MC energy, Phase 3 head/turbine, Phase 4 cost/financials | Tom           |
 | 4.4 Core Compute Design (toolchain stages)       | **Calibration & Validation:** CF-calibration band, Phase 5 ML kill (honest negative result)                                | Tom           |
-| 4.5 Custom Hardware Schematic Design             | **Data Export / Serving Layer:** `export_geojson.py`, the 58-property data contract, determinism                           | Tom           |
+| 4.5 Custom Hardware Schematic Design             | **Data Export / Serving Layer:** `export_geojson.py`, the 59-property data contract, determinism                           | Tom           |
 | 4.6 Custom Hardware Physical Design              | **Frontend Visualization System:** React + MapLibre, 7 views, state/URL, build/deploy                                      | Mohamed       |
 | 5.1.x per-subsystem results                      | Same order as Ch4: energy tables, funnel, calibration, negative result, then frontend perf                                 | Tom + Mohamed |
-| Appendix A: Bill of materials                    | **Data dictionary** (58 geojson props) + exclusion-funnel tables                                                           | Tom           |
+| Appendix A: Bill of materials                    | **Data dictionary** (59 geojson props) + exclusion-funnel tables                                                           | Tom           |
 | Appendix B: Raw measurement captures             | Calibration captures (implied-CF vs EHA-CF), sensitivity bands                                                             | Tom           |
 | Appendix C: Simulation output figures            | Monte-Carlo P10/P50/P90 distributions                                                                                      | Tom           |
 
@@ -222,7 +222,7 @@ understanding only — these are never citable sources; see the RULE on internal
   `exports/viable_sites.geojson` + `scored_sites.geojson`.
   - **Beats:** implied-CF vs EHA-CF calibration → the 119–281 GWh band (**strongest single
   element**); the Phase-5 ML **kill as honest negative result** (only 11 conduit labels
-  found, Point Loma offline since 2018 — must be reported, not hidden); the 58-property
+  found, Point Loma offline since 2018 — must be reported, not hidden); the 59-property
   geojson data contract + byte-determinism.
   - **Fig/Tab:** implied-CF vs EHA-CF overlay, calibration-band bar.
 
@@ -238,13 +238,13 @@ understanding only — these are never citable sources; see the RULE on internal
 
 - [x] **T7 · Appendices A–C** — ~800 w + tables
   - **Feeds:** geojson property list, funnel tables, sensitivity/MC captures.
-  - **Beats:** data dictionary (58 props), funnel tables, MC/calibration raw captures.
+  - **Beats:** data dictionary (59 props), funnel tables, MC/calibration raw captures.
 
 
 
 ### Track M — Mohamed (frontend)
 
-- [ ] **M1 · Ch4.6 Frontend Visualization System** — ~2,000 w
+- [x] **M1 · Ch4.6 Frontend Visualization System** — ~2,000 w
   - **Feeds:** `frontend/src/` (App.tsx routing, `views/` × 7, `components/MapView.tsx`,
   `charts/`, `Gauge.tsx`, `SiteTable.tsx`, `lib/data.ts`, `colors.ts`, `csv.ts`,
   `vite.config.ts`), journal sessions 2026-07-06 PM#4/#5 + 2026-07-07.
@@ -257,7 +257,7 @@ understanding only — these are never citable sources; see the RULE on internal
   - **Fig/Tab:** app flow diagram (**Figure 2**), NationalMap screenshot description,
   PlantDetail screenshot description, view/route table.
 
-- [ ] **M2 · Ch5 Frontend Results** — ~700 w
+- [x] **M2 · Ch5 Frontend Results** — ~700 w
   - **Feeds:** journal 2026-07-06 PM#5 + 2026-07-07 verification notes, `npm run build`
   output.
   - **Beats:** build perf (vite 7.3.5, ~2.6 s, bundle sizes — maplibre 1.05 MB, index
@@ -270,7 +270,7 @@ understanding only — these are never citable sources; see the RULE on internal
 
 ### Track J — Joint (business + framing + stitch)
 
-- [ ] **J1 · Ch3 Business Model** — ~2,300 w *(this is "the business report part" you two discuss together)*
+- [x] **J1 · Ch3 Business Model** — ~2,300 w *(this is "the business report part" you two discuss together)*
   - **Feeds:** `WOWERS_Project_Report.pdf`, `DIRECTOR_BRIEF_2026-06-24.md`,
   `WOWERS_Capital_and_Funding_Research.md`, Fowler feedback summary (journal), turbine
   manufacturer research (journal).
@@ -294,13 +294,21 @@ understanding only — these are never citable sources; see the RULE on internal
   Mohamed-side (code-splitting, clustering, live backend), one joint (customer pilot);
   position as first step to customer value.
 
-- [ ] **J4 · Ch5 Integration Test** — ~500 w
+- [x] **J4 · Ch5 Integration Test** — ~500 w
   - **Beats:** end-to-end: pipeline parquets → `export_geojson.py` → dashboard, with the
   P2-SEED baseline numbers matching across the boundary (1,138 viable / 409.17 GWh /
   $310.1M / 9.8 yr). Realistic stimulus = the real re-baselined parquets; say why that is
   representative.
 
-- [ ] **J5 · Front matter + References merge + final stitch** — ~1,000 w + assembly
+- [ ] **J5 · Front matter + References merge + final stitch** *(PARTIAL 2026-08-06: abstract,
+  acknowledgements, +6 verified references, access dates, honesty pass, P2-SEED gloss and
+  signposts all done. M1/M2 → thesis_tom.tex merge DONE (this session): §4.6 (4 subsections +
+  Figure 12 + 2 \figpending markers) and §5.1.6 (3 bold-lead-in blocks + Table 16) pasted in,
+  headings demoted to match house style, 6 bibitems folded into the single bibliography (no
+  key collisions), figure/table numbers auto-resolved via the existing sequential counters.
+  Compiled clean: 0 errors, 0 undefined refs/citations, pages visually inspected. Remaining:
+  `{{MONTH_YEAR}}`, acknowledgement names, and 1–2 more figures to clear the 20-figure
+  minimum — all three need input from Tom/Mohamed, not further drafting.)* — ~1,000 w + assembly
   - **Beats:** abstract (5 paragraphs, 350–450 w, per format §3.3); acknowledgements
   (advisor, business faculty, industry contacts); TOC / List of Figures / List of Tables;
   merge both tracks' reference lists into one IEEE-numbered list (target 40–50);
@@ -325,7 +333,7 @@ portfolio + analytics screenshots (M) · 16+ appendix figures (T).
 **Tables:** data-source inventory (T) · ranking weights (T) · funnel counts (T) · ideal
 system performance (T) · expected system performance (T) · calibration band (T) · CapEx
 cost breakdown (T) · sensitivity NPV bands (T) · turbine spec matrix (T) · frontend
-view/route map (M) · build/bundle sizes (M) · data dictionary / 58 props (T, appendix) ·
+view/route map (M) · build/bundle sizes (M) · data dictionary / 59 props (T, appendix) ·
 economics-by-tier (T).
 
 > **Format rule:** every figure/table named in prose *before* it appears; tables captioned
@@ -396,6 +404,8 @@ map item #2); label all business numbers as estimates.
 ## 7. Progress at a glance
 
 
+Legend: ☑ first draft exists · ◐ partially complete, blocked on another package · ☐ not started
+
 | Track | WP  | Section                           | Owner   | Words | Status |
 | ----- | --- | --------------------------------- | ------- | ----- | ------ |
 | T     | T1  | Ch2 Background                    | Tom     | 2,400 | ☑      |
@@ -405,13 +415,13 @@ map item #2); label all business numbers as estimates.
 | T     | T5  | Ch4.4–4.5 Calibration + Export    | Tom     | 2,000 | ☑      |
 | T     | T6  | Ch5 Results (energy/funnel/calib) | Tom     | 3,000 | ☑      |
 | T     | T7  | Appendices A–C                    | Tom     | 800   | ☑      |
-| M     | M1  | Ch4.6 Frontend system             | Mohamed | 2,000 | ☐      |
-| M     | M2  | Ch5 Frontend results              | Mohamed | 700   | ☐      |
-| J     | J1  | Ch3 Business Model                | Joint   | 2,300 | ☐      |
+| M     | M1  | Ch4.6 Frontend system             | Mohamed | 2,000 | ☑      |
+| M     | M2  | Ch5 Frontend results              | Mohamed | 700   | ☑      |
+| J     | J1  | Ch3 Business Model                | Joint   | 2,300 | ☑      |
 | J     | J2  | Ch1 Introduction                  | Joint   | 1,100 | ☑      |
 | J     | J3  | Ch6 Conclusion                    | Joint   | 900   | ☑      |
-| J     | J4  | Ch5 Integration test              | Joint   | 500   | ☐      |
-| J     | J5  | Front matter + refs + stitch      | Joint   | 1,000 | ☐      |
+| J     | J4  | Ch5 Integration test              | Joint   | 500   | ☑      |
+| J     | J5  | Front matter + refs + stitch      | Joint   | 1,000 | ◐      |
 
 
 **Total target:** ~21,900 words body (inside the 18,000–24,000 window; technical:business ≈ 3:1). ✅

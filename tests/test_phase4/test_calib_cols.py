@@ -1,9 +1,9 @@
 """Tests for P4-TIER: add_calibrated_energy_cols in src/phase4/financials.py.
 
 Coverage:
-  - Exactly 3 new columns added (no more, no less)
+  - Exactly 4 new columns added (no more, no less)
   - Column names are correct
-  - Multiplier arithmetic: energy * 0.291 / 0.447 / 0.688
+  - Multiplier arithmetic: energy * 0.291 / 0.447 / 0.688 / 0.2195
   - All pre-existing columns are untouched (name + dtype + values)
   - Works on single-row and multi-row frames
   - Zero-energy row produces zero calibrated values
@@ -26,6 +26,7 @@ from src.phase4.financials import (
 _FLOOR_P25 = _CF_CALIB_DEFAULTS["floor_p25"]   # 0.291
 _FLOOR_P50 = _CF_CALIB_DEFAULTS["floor_p50"]   # 0.447
 _CENTRAL   = _CF_CALIB_DEFAULTS["central"]     # 0.688
+_MEAS_FLOOR = _CF_CALIB_DEFAULTS["measured_point_loma"]   # 0.2195
 
 
 def _base_df(energies: list[float]) -> pl.DataFrame:
@@ -46,10 +47,10 @@ def _base_df(energies: list[float]) -> pl.DataFrame:
 
 class TestCalibratedColsCount:
 
-    def test_adds_exactly_three_columns(self):
+    def test_adds_exactly_four_columns(self):
         df = _base_df([1_000_000.0])
         result = add_calibrated_energy_cols(df)
-        assert len(result.columns) == len(df.columns) + 3
+        assert len(result.columns) == len(df.columns) + 4
 
     def test_new_column_names_correct(self):
         result = add_calibrated_energy_cols(_base_df([1_000_000.0]))
@@ -57,6 +58,7 @@ class TestCalibratedColsCount:
             "energy_kwh_calib_floor_p25",
             "energy_kwh_calib_floor_p50",
             "energy_kwh_calib_central",
+            "energy_kwh_calib_measured_point_loma",
         ):
             assert expected in result.columns, f"Missing column: {expected}"
 
@@ -64,7 +66,8 @@ class TestCalibratedColsCount:
         result = add_calibrated_energy_cols(_base_df([1_000_000.0]))
         for col in ("energy_kwh_calib_floor_p25",
                     "energy_kwh_calib_floor_p50",
-                    "energy_kwh_calib_central"):
+                    "energy_kwh_calib_central",
+                    "energy_kwh_calib_measured_point_loma"):
             assert result[col].dtype == pl.Float64, (
                 f"{col} dtype is {result[col].dtype}, expected Float64"
             )
@@ -97,20 +100,34 @@ class TestCalibratedColsArithmetic:
             energy * _CENTRAL, rel=1e-9
         )
 
+    def test_measured_point_loma_single_row(self):
+        energy = 5_000_000.0
+        result = add_calibrated_energy_cols(_base_df([energy]))
+        assert result["energy_kwh_calib_measured_point_loma"][0] == pytest.approx(
+            energy * _MEAS_FLOOR, rel=1e-9
+        )
+
     def test_multiplier_ordering(self):
-        """p25 < p50 < central < annual_energy_kwh for positive energy."""
+        """measured floor < p25 < p50 < central < annual_energy_kwh.
+
+        The measured Point Loma tier is the lowest rung: it must sit below the
+        river-hydro p25, because that ordering is the whole reason the reported
+        band floor moved from 118.9 to 89.8 GWh/yr.
+        """
         energy = 1_000_000.0
         result = add_calibrated_energy_cols(_base_df([energy]))
+        meas = result["energy_kwh_calib_measured_point_loma"][0]
         p25 = result["energy_kwh_calib_floor_p25"][0]
         p50 = result["energy_kwh_calib_floor_p50"][0]
         cen = result["energy_kwh_calib_central"][0]
-        assert p25 < p50 < cen < energy
+        assert meas < p25 < p50 < cen < energy
 
     def test_zero_energy_gives_zero_calib(self):
         result = add_calibrated_energy_cols(_base_df([0.0]))
         assert result["energy_kwh_calib_floor_p25"][0] == pytest.approx(0.0)
         assert result["energy_kwh_calib_floor_p50"][0] == pytest.approx(0.0)
         assert result["energy_kwh_calib_central"][0]   == pytest.approx(0.0)
+        assert result["energy_kwh_calib_measured_point_loma"][0] == pytest.approx(0.0)
 
     def test_multi_row_arithmetic(self):
         energies = [100_000.0, 500_000.0, 2_000_000.0]
@@ -119,6 +136,8 @@ class TestCalibratedColsArithmetic:
             assert result["energy_kwh_calib_floor_p25"][i] == pytest.approx(e * _FLOOR_P25, rel=1e-9)
             assert result["energy_kwh_calib_floor_p50"][i] == pytest.approx(e * _FLOOR_P50, rel=1e-9)
             assert result["energy_kwh_calib_central"][i]   == pytest.approx(e * _CENTRAL,   rel=1e-9)
+            assert result["energy_kwh_calib_measured_point_loma"][i] == pytest.approx(
+                e * _MEAS_FLOOR, rel=1e-9)
 
     def test_report_fleet_sums(self):
         """Fleet sum × multiplier arithmetic correct (multipliers from CF_CALIBRATION_REPORT.md §6)."""
@@ -128,6 +147,10 @@ class TestCalibratedColsArithmetic:
         assert pytest.approx(fleet_gwh * _FLOOR_P25, rel=1e-6) == fleet_gwh * 0.291
         assert pytest.approx(fleet_gwh * _FLOOR_P50, rel=1e-6) == fleet_gwh * 0.447
         assert pytest.approx(fleet_gwh * _CENTRAL,   rel=1e-6) == fleet_gwh * 0.688
+        assert pytest.approx(fleet_gwh * _MEAS_FLOOR, rel=1e-6) == fleet_gwh * 0.2195
+        # The reported calibration band is measured floor -> optimistic.
+        assert fleet_gwh * _MEAS_FLOOR == pytest.approx(89.8, abs=0.1)
+        assert fleet_gwh * _CENTRAL    == pytest.approx(281.5, abs=0.1)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -176,17 +199,18 @@ _SCORECARD_PATH = Path("data/processed/phase4/financial_scorecards.parquet")
 )
 class TestCalibratedColsIntegration:
 
-    def test_real_parquet_has_three_new_cols(self):
-        """After Phase 4 re-run, parquet has all 3 new columns."""
+    def test_real_parquet_has_four_new_cols(self):
+        """After Phase 4 re-run, parquet has all 4 calibrated columns."""
         df = pl.read_parquet(_SCORECARD_PATH)
         for col in ("energy_kwh_calib_floor_p25",
                     "energy_kwh_calib_floor_p50",
-                    "energy_kwh_calib_central"):
+                    "energy_kwh_calib_central",
+                    "energy_kwh_calib_measured_point_loma"):
             assert col in df.columns, f"Missing column in parquet: {col}"
 
     def test_real_parquet_total_cols(self):
         df = pl.read_parquet(_SCORECARD_PATH)
-        assert len(df.columns) == 49, f"Expected 49 columns, got {len(df.columns)}"
+        assert len(df.columns) == 50, f"Expected 50 columns, got {len(df.columns)}"
 
     def test_real_parquet_row_count(self):
         # P2-SEED: 3,780 → 3,778 (site-keyed MC re-baseline shifted 2 marginal sites

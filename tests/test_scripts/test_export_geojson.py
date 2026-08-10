@@ -74,6 +74,7 @@ def _make_row(
         "energy_kwh_calib_floor_p25":  energy * 0.291,
         "energy_kwh_calib_floor_p50":  energy * 0.447,
         "energy_kwh_calib_central":    energy * 0.688,
+        "energy_kwh_calib_measured_point_loma": energy * 0.2195,
         "capacity_factor":             0.8716,
         "total_capex_usd":             412_500.0,
         "npv_usd":                     75_200.0,
@@ -156,7 +157,8 @@ class TestRoundProperty:
     def test_energy_calib_cols_are_int_rounded(self):
         for col in ("energy_kwh_calib_floor_p25",
                     "energy_kwh_calib_floor_p50",
-                    "energy_kwh_calib_central"):
+                    "energy_kwh_calib_central",
+                    "energy_kwh_calib_measured_point_loma"):
             result = round_property(col, 500_000.7)
             assert isinstance(result, int)
             assert result == 500_001
@@ -293,13 +295,13 @@ class TestBuildFeature:
         assert isinstance(cen, int)
         assert cen == round(1_000_000.0 * 0.688)
 
-    def test_property_count_is_58(self):
-        """Total property count must be exactly 58 (original 24 + 34 new)."""
+    def test_property_count_is_59(self):
+        """Total property count must be exactly 59 (24 + 34 + measured floor)."""
         feat = build_feature(_make_row())
-        assert len(feat["properties"]) == 58, (
-            f"Expected 58 properties, got {len(feat['properties'])}"
+        assert len(feat["properties"]) == 59, (
+            f"Expected 59 properties, got {len(feat['properties'])}"
         )
-        assert len(PROPERTIES) == 58
+        assert len(PROPERTIES) == 59
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -456,13 +458,13 @@ class TestExportIntegration:
             f"Expected 1138 features, got {len(fc['features'])}"
         )
 
-    def test_geojson_has_58_properties(self):
-        """Each feature must have exactly 58 properties after GEOJSON-UNIFY."""
+    def test_geojson_has_59_properties(self):
+        """Each feature must have exactly 59 properties (P4-MEASURED-FLOOR)."""
         with open(_EXPORT_PATH) as f:
             fc = json.load(f)
         for feat in fc["features"][:5]:
             n = len(feat["properties"])
-            assert n == 58, f"Expected 58 properties, got {n}"
+            assert n == 59, f"Expected 59 properties, got {n}"
 
     def test_geojson_meta_present_and_correct(self):
         """meta foreign member must have plants_analyzed=17148, scored_sites=3778."""
@@ -474,7 +476,7 @@ class TestExportIntegration:
         assert meta["scored_sites"] == 3778
         assert isinstance(meta["baseline"], str)
 
-    def test_scored_geojson_has_3778_features_58_props_and_meta(self):
+    def test_scored_geojson_has_3778_features_59_props_and_meta(self):
         """exports/scored_sites.geojson (frontend data source) — all scored sites."""
         assert _EXPORT_ALL_PATH.exists(), (
             f"{_EXPORT_ALL_PATH} not found — run: python scripts/export_geojson.py"
@@ -485,7 +487,7 @@ class TestExportIntegration:
             f"Expected 3778 features, got {len(fc['features'])}"
         )
         for feat in fc["features"][:5]:
-            assert len(feat["properties"]) == 58
+            assert len(feat["properties"]) == 59
         meta = fc.get("meta")
         assert meta is not None
         assert meta["plants_analyzed"] == 17148

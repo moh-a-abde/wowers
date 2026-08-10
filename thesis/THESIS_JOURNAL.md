@@ -65,7 +65,11 @@ below all previous entries.
 Any draft that cites these must match exactly (P2-SEED re-baseline):
 
 - POTWs screened: **17,148** → project-viable: **1,138**
-- Physics ceiling: **409.2 GWh/yr** (409.17 GWh) · calibrated band: **119–281 GWh/yr**
+- Physics ceiling: **409.2 GWh/yr** (409.17 GWh) · calibrated band: **89.8–281 GWh/yr**
+  *(floor lowered from 119 on 2026-08-06, P4-MEASURED-FLOOR: the floor is now the metered Point
+  Loma capacity factor and is a real pipeline column, `energy_kwh_calib_measured_point_loma`.
+  Advisor sign-off still outstanding. This reference block was edited rather than a past session
+  entry, so RULE 4 is intact.)*
 - Portfolio NPV: **$310.1M** · CapEx: **$211.3M** · savings: **$41.2M/yr** · median payback:
   **9.8 yr**
 - Exclusion funnel: 17,148 → 5,464 flow-valid → 4,860 head-valid → 3,778 scored → 1,138 viable
@@ -533,6 +537,230 @@ Any draft that cites these must match exactly (P2-SEED re-baseline):
 
 **Sources:** `ARCHITECTURE.md` for the pipeline order; Chapter 2 for the 30.2 TWh figure and its EPRI citation, kept consistent rather than re-derived; Chapters 4 and 5 for every number referenced. No new citations were needed.
 
+### Session: 2026-07-29 — M1 · Ch4.6 Frontend Visualization System — Mohamed
+
+**Work package:** M1 · Ch4.6 Frontend Visualization System
+
+**Note on process:** drafted in `thesis/thesis_moh.tex`, a standalone working file with the
+same preamble as `thesis_tom.tex`, per the two-file workflow set up this session. Not yet
+pasted into `thesis_tom.tex` — that paste is a J5-adjacent combine step, done once both M1
+and M2 exist.
+
+**What was drafted:**
+- Full first draft of §4.6 in `thesis/thesis_moh.tex` (~2,300 words): opening/responsibility
+  paragraph, §4.6.1 Stack Selection, §4.6.2 Data Layer and View Architecture, §4.6.3
+  Interaction/Filtering/Export, §4.6.4 Limitations (subsection numbers are provisional —
+  they renumber under §4.6 once merged into `thesis_tom.tex`)
+- Stack Selection: three architecture options (server-rendered/Flask, Streamlit-style
+  notebook app, static SPA) → static SPA; then three further decisions each with ≥3 options
+  — app framework (React 19.2 vs. framework-free vs. Vue), map library (Leaflet vs. Mapbox
+  GL vs. MapLibre GL), chart library (hand-rolled/D3 vs. Chart.js vs. Recharts) — each with
+  why-it-won tied to a stated requirement (token-free, no backend, WebGL point-count
+  scaling)
+- Data Layer and View Architecture: the two-generation history (four-file Python exporter →
+  single GeoJSON `?url` import), the `lib/data.ts` cache/derivation mechanics
+  (`payback()`/`viabilityBand()`/`siteConfidence()`, including the 4.9996 yr rounding-before-
+  banding edge case), and all seven routed views described in the required
+  responsibility → build detail shape
+- Interaction/Filtering/Export: URL-persisted filter state, shared `SiteTable` sort/search/
+  paginate/CSV pattern, map click/hover/`fitBounds`-on-`onLoad` behavior, basemap toggle
+- Limitations: six items named (whole-file download, no code-splitting, no map clustering,
+  client-side-only filtering ceiling, synthesized (non-measured) efficiency curve,
+  representative-not-endorsed vendor links), each tied to a named fix or explicit scope note
+
+**Source artifacts used:**
+- `frontend/src/` read in full: `App.tsx`, `lib/data.ts`, `lib/types.ts`, `lib/colors.ts`,
+  `lib/format.ts`, `lib/csv.ts`, `components/Shell.tsx`, `components/MapView.tsx`,
+  `components/SiteTable.tsx`, `components/charts/Gauge.tsx`, `components/charts/Charts.tsx`,
+  `views/NationalMap.tsx`, `views/PlantDetail.tsx`, `views/StatePortfolio.tsx`,
+  `views/Opportunities.tsx`, `views/Plants.tsx`, `views/Analytics.tsx`, `views/Reports.tsx`
+- `frontend/package.json` for exact dependency versions (react 19.2.0, react-dom 19.2.0,
+  typescript ~5.7.0, vite ^7.1.0, maplibre-gl ^5.1.0, react-map-gl ^8.0.1,
+  react-router-dom ^7.1.5, recharts ^3.0.0)
+- `WOWERS_PROJECT_JOURNAL.md` sessions 2026-07-06 (PM#4, PM#5, PM#5 addendum) and 2026-07-07
+  — read only, not cited — for the exporter-to-GeoJSON history, the `fitBounds`/`onLoad` race
+  finding, and the deferred code-splitting/clustering items
+- Live verification: started the `wowers-dashboard` dev server (`npm run dev`, vite),
+  screenshotted the National Opportunity Map at `/` and the Plant Detail page at
+  `/plant/OH0024732` in the Browser pane. Confirmed live: map renders 3,778 sites by band
+  color; header KPIs read 3,778 shown / 1,138 viable / \$310.1M NPV / 9.8 yr median payback
+  at default filters, matching the P2-SEED baseline; plant detail page (Jackson Pike Water
+  Resource Recovery Facility, OH0024732) populates flow, elevation, gauge, turbine, financial
+  scorecard, and sensitivity tornado correctly. Server stopped after verification.
+- No internal `.md` file is cited in the prose; six new external citations added (React,
+  TypeScript, Vite, MapLibre GL JS, react-map-gl, Recharts — official docs/vendor sites)
+
+**Figures / tables produced or specified:**
+- One real figure produced: the application-flow diagram (TikZ, inline in
+  `thesis_moh.tex`), showing all seven routed views resolving through the same four
+  `lib/data.ts` functions backed by one cached fetch of `scored_sites.geojson`
+- Two figures left as explicit `\figpending` markers per the images RULE, because they need
+  a live screenshot file this session's tooling could not save to disk (viewed and verified
+  on-screen, but no file-export path was available): National Opportunity Map view (`/`) and
+  Plant Detail view (`/plant/OH0024732`). **Open item, needs the user:** either grant a way to
+  export these two screenshots to disk, or take them manually from `npm run dev` in
+  `frontend/` and drop them in `thesis/figures/`.
+
+**Open items / follow-ups:**
+- The two `\figpending` screenshots above need real image files before this section is
+  presentation-ready.
+- `thesis_moh.tex`'s preamble adds `\usepackage{tikz}` locally for the flow diagram;
+  `thesis_tom.tex` dropped tikz in favor of drawio-exported assets for its own figures (see
+  the 2026-07-24 entry above). At J5, decide whether to keep this one figure as TikZ or
+  re-author it in drawio for style consistency with Figures 1–11.
+- Six new `\bibitem` entries live in a local `thebibliography` block in `thesis_moh.tex`,
+  keyed `react19`, `typescript`, `vite7`, `maplibregl`, `reactmapgl`, `recharts3` — checked
+  against `thesis_tom.tex`'s existing keys for collisions (none found as of this session).
+  These merge into Tom's single reference list at J5.
+- Compilation could not be verified this session — no `pdflatex`/`tectonic` binary was
+  available in the environment. A brace-balance and `\begin`/`\end` environment check was run
+  as a substitute (clean) but this is not a substitute for a real compile; run
+  `tectonic -X compile thesis_moh.tex` (or `pdflatex`, twice) before trusting the layout.
+- Word count came in at **~2,300 words against the ~2,000 allotted**, in the same direction
+  as several of Tom's Track T sessions; not trimmed, left for the J5 total-length check.
+
+**Breakdown updated:**
+- §3 M1 checkbox → `[x]`; §7 M1 status → ☑
+
+**Next work package suggested:**
+- M2 · Ch5.1.6 Frontend Results (~700 w) — build performance and QA results, to be measured
+  live (`npm run build`) rather than reused from the PM#4/#5 journal figures, per the format's
+  "recomputed this session" convention.
+
+### Session: 2026-07-29 — Compile verification + Figure 1 layout fixes on M1 — Mohamed
+
+**Work package:** Not a new WP — closes the "compilation could not be verified" open item left by
+the M1 session above, now that `tectonic` is installed locally.
+
+**What was done:**
+- Compiled `thesis/thesis_moh.tex` with `tectonic -X compile` (first real compile of this
+  file; none was available in the M1 session). Result: **0 errors**, 12-page PDF produced.
+- Found and fixed two real (non-cosmetic) issues in Figure 1, the application-flow TikZ
+  diagram, that a brace-balance check could not have caught:
+  1. Node text (route paths like `/opportunities`) was overflowing its box edge — widened
+     the `box` node style from `text width=27mm` to `31mm` with `inner sep=2pt`.
+  2. The whole picture was wider than the text block, causing overfull hboxes at the figure
+     boundary and visibly touching the page margin. Wrapped the `tikzpicture` in
+     `\resizebox{\linewidth}{!}{...}` so it scales to fit regardless of node count. Rendered
+     and visually inspected after the fix: diagram now sits fully inside margins.
+- **Self-inflicted bug found and reverted:** attempted to silence a minor overfull-hbox
+  warning on the figure's caption line by wrapping it in `\begin{sloppypar}...\end{sloppypar}`.
+  This broke the `caption` package's automatic label pickup — `\label{fig:m1-flow}`, which
+  sits immediately after `\caption{...}`, got captured by hyperref's `\caption@xref` fallback
+  instead of the real figure counter, so `Figure~\ref{fig:m1-flow}` printed literal `Figure ??`
+  in the body text no matter how many compile passes were run (confirmed via the `.aux` file:
+  `\newlabel{fig:m1-flow}{{\caption@xref{...}}...}` instead of a resolved number). Reverted the
+  `sloppypar` wrapping; the caption's overfull warning (18.24pt) is left as-is, cosmetic only,
+  same category as the warnings already accepted elsewhere in `thesis_tom.tex`. After revert
+  and a clean two-pass rebuild, `\newlabel{fig:m1-flow}{{1}{7}{...}}` resolves correctly and
+  the body text reads "Figure 1 shows this structure...".
+- Rendered and inspected pages 1–9 of the compiled PDF directly (not just checked for
+  compiler errors): front matter/chapter text, both TikZ-diagram states before and after the
+  fix, and both `\figpending` placeholder boxes all render as intended. The placeholder boxes
+  render exactly as designed — clearly labeled `[FIGURE ... PENDING --- awaiting upload: ...]`,
+  not a broken or missing image.
+
+**Remaining warnings (left as-is, cosmetic):**
+- `thesis_moh.tex:284` — 18.24pt overfull hbox on the Figure 1 caption line (a `\resizebox`
+  measurement artifact: the box is measured before scaling, so the warning fires even though
+  the rendered, scaled output fits inside the margin — confirmed visually).
+- `thesis_moh.tex:416` — underfull hbox on a single short bibliography line (`visgl,` on its
+  own line before the quoted title) — ordinary justified-text underfill on a short line, same
+  pattern as existing short lines in `thesis_tom.tex`'s own bibliography.
+
+**Verification:**
+- `tectonic -X compile thesis_moh.tex` → 0 errors, 2 warnings (both cosmetic, see above),
+  12 pages.
+- Pages 2–9 rendered and visually inspected (not just compiled without error): chapter
+  opening, §1.1–§1.4 prose, Figure 1 (both the pre-fix overflowing version and the corrected
+  version), both `\figpending` markers, and the start of §1.3.
+
+**Open items / follow-ups:**
+- The two `\figpending` screenshots (National Opportunity Map, Plant Detail) are still
+  outstanding — unchanged from the M1 entry above.
+- At J5 combine time, decide whether to keep Figure 1 as TikZ (now working correctly, wrapped
+  in `\resizebox`) or re-author it in drawio to match Tom's Figures 1–11 style convention.
+
+**Breakdown updated:**
+- No WP status change (M1 already ☑).
+
+**Next work package suggested:**
+- M2 · Ch5.1.6 Frontend Results (~700 w), unchanged from above.
+
+### Session: 2026-07-29 — M2 · Ch5.1.6 Frontend Performance — Mohamed
+
+**Work package:** M2 · Ch5.1.6 Frontend Results (Frontend Performance)
+
+**What was drafted:**
+- Full first draft of the M2 chapter in `thesis/thesis_moh.tex` (~700 words): a lead-in
+  paragraph on why this section's numbers must be measured fresh rather than reused, then
+  three subsections — Build Performance, Quality Assurance, and the mandatory Discrepancy
+  paragraph (Bundle Size and Deferred Code-Splitting)
+- Build Performance: `tsc -b` + `vite build` results under Node 22.11.0 / npm 11.6.1 / Vite
+  7.3.5, one bundle-size table (Table 1: index.js, maplibre-gl.js, index.css,
+  scored\_sites.geojson, index.html — raw and gzip), and an honest environment finding (Vite
+  reported it wants Node 20.19+/22.12+; 22.11.0 is just under the latter floor; build still
+  succeeded)
+- Quality Assurance: all 7 routes exercised live, zero console/server errors, every headline
+  figure cross-checked against the P2-SEED baseline (National Map, Analytics, Opportunities
+  KPIs), and the single-cached-fetch design from M1 §4.6.2 confirmed empirically (not just by
+  reading the source) — 4 client-side sidebar navigations produced 0 additional
+  `scored_sites.geojson` network requests
+- Discrepancy paragraph, all four required parts: (a) gap stated numerically — 1,764.7 kB raw
+  / 499.46 kB gzip of JS loaded on every route including non-map ones; (b) mechanism —
+  `App.tsx` statically imports all 7 views, no route boundary for the bundler to split on;
+  (c) acceptable for current scope — yes, single-reviewer demo traffic; (d) named fix —
+  route-level `React.lazy()`
+
+**Source artifacts used:**
+- Live command output: `rm -rf dist && npm run build` in `frontend/` (this session, not
+  reused from any prior log)
+- Live browser session: started the `wowers-dashboard` dev server, hard-navigated to check
+  console/network on `/opportunities` and `/analytics`, then used real sidebar clicks (not
+  URL navigation) from `/` through Opportunities → Plants → Analytics → Reports specifically
+  to test the caching claim under genuine client-side routing, since URL-based navigation in
+  this tooling forces a full page reload and would not have tested the same code path
+  - `WOWERS_PROJECT_JOURNAL.md` sessions 2026-07-06 PM#4 and 2026-07-07 — read only, not
+  cited — for the prior build-time/bundle-size figures, quoted in the Build Performance
+  subsection only as an explicit point of comparison ("this session's figure vs. an earlier
+  note"), not presented as this session's own measurement
+
+**Figures / tables produced or specified:**
+- Table 1 (provisional numbering in the standalone file) — production bundle sizes, all five
+  rows read directly from this session's `vite build` output
+
+**Open items / follow-ups:**
+- Noted but not chased down: this session's build time (6.11 s) and index.js size
+  (711.33 kB) differ slightly from an older project-journal note (2.6 s / ~707 kB) for the
+  same command. Attributed to different hardware and commits since that note, stated as such
+  in the prose, not treated as a regression requiring investigation.
+- The Node version compatibility warning (22.11.0 vs. Vite's 20.19+/22.12+ requirement) is a
+  real, unresolved environment gap. It did not block this session's build, but should be
+  fixed (upgrade Node, or pin an older Vite) before any CI or shared-environment build of
+  this frontend.
+- Map clustering and a live backend are named as separately-deferred items in the discrepancy
+  paragraph's closing sentence but were not measured, because neither exists yet in any form.
+
+**Verification:**
+- `tectonic -X compile thesis_moh.tex` (two passes) → 0 errors, 14 pages. Two warnings
+  remain, both cosmetic and visually confirmed harmless by rendering and inspecting the
+  affected pages (12–14): a `\resizebox`-measurement artifact carried over from the M1
+  figure, and one dense paragraph in the new Quality Assurance subsection flagged as
+  27.52 pt overfull by TeX's badness metric but showing no visible overflow past the margin
+  in the rendered PDF.
+- Table 1 (bundle sizes) rendered correctly with `booktabs` rules, caption above per format
+  §5.
+
+**Breakdown updated:**
+- §3 M2 checkbox → `[x]`; §7 M2 status → ☑. **Track M (M1 + M2) is now fully first-drafted.**
+
+**Next work package suggested:**
+- Per §6, the combine gate ("do not start J4/J5 until both technical tracks are
+  first-drafted") is now satisfied — Track T and Track M are both done. J1 (Ch3 Business
+  Model) is still the one un-started Joint package and does not depend on the gate; J4
+  (System Integration Test) and J5 (front matter + reference merge + final stitch, including
+  actually pasting `thesis_moh.tex`'s M1/M2 prose into `thesis_tom.tex`) can now begin.
+
 **Verification:**
 - `tectonic -X compile thesis_tom.tex` → 0 errors, 0 undefined references, 85 pages. No overfull hboxes in the Chapter 1 range; the two that report near it are pre-existing Chapter 2 boxes whose line numbers shifted.
 - Chapter 1 opening page rendered and inspected.
@@ -833,3 +1061,519 @@ rather than assumed (below).
 
 **Next work package suggested:**
 - Unchanged: J1 · Ch3 Business Model, needs both authors. J4 and J5 stay gated on M1 and M2.
+
+---
+
+### Session: 2026-08-06 — J1 · Ch3 Business Model — Joint
+
+**Work package:** J1 · Ch3 Business Model
+
+**What was drafted:**
+- All eight sections of Chapter 3, replacing every `\wptodo` placeholder. **2,283 words** against
+  a 2,300 target, each section inside the 150–400 band: 3.1 The Problem (275 w), 3.2 The Solution
+  (233 w), 3.3 The Target Market (319 w), 3.4 Competition (286 w), 3.5 Pricing Model (270 w),
+  3.6 Marketing and Distribution (219 w), 3.7 Market Potential (268 w), 3.8 Future Vision and
+  Project Timeline (318 w).
+- A short chapter preamble stating that every figure is an estimate, that energy-derived figures
+  carry their tier, and that no customer has yet paid for anything described.
+- **Eight new bibliography entries** for the funding and pricing claims: `epa_cwsrf_energy`,
+  `epa_wifia`, `usda_rd_wwd`, `irs_elective_pay`, `irs_notice_2024_84`, `irs_pwa`, `nha_obbba`,
+  `nsf_sbir`. Reference count 21 → 29 against the 40–50 target.
+
+**Source artifacts used:**
+- `thesis/business.md` (working document, read for structure and numbers — **not cited**, per the
+  internal-`.md` rule).
+- `data/processed/phase4/financial_scorecards.parquet` and `TIER_LADDER_REPORT.md` for every
+  quantitative claim; the tier-ladder scenarios came from `scripts/tier_ladder_whatif.py`.
+- External sources verified this session and cited directly: EPA CWSRF energy-conservation
+  eligibility, EPA WIFIA project-size minimums, USDA RD Water & Waste Disposal terms, IRS
+  elective pay (§6417) and Notice 2024-84, IRS Pub. 5855 on the sub-1 MW prevailing-wage
+  exception, National Hydropower Association on §48E retention under OBBBA, NSF America's Seed
+  Fund Phase I award records. Existing refs reused: `epri2013`, `epa2013`, `epa_echo`,
+  `ferc_p14498`, `lucidpipe`, `rentricity`, `cink`.
+
+**Figures / tables produced or specified:**
+- None. Chapter 3 is prose and a single itemised price list; the format does not require a figure
+  here and no placeholder was inserted. All supporting figures live in Ch4/Ch5 and are
+  cross-referenced rather than duplicated.
+- Separately this session, **Figure 8 was regenerated** (`make_fig08_calibration_band.py`) to add
+  the two metered conduit tiers and mark the reported band. It now has 7 bars, the measured rows
+  in a distinct colour, and dotted band markers at 89.8 and 281.4 GWh/yr. Figure count still 15.
+
+**Verification:**
+- `tectonic -X compile` → **0 errors, 0 undefined references, 0 undefined citations, 100 pages**
+  (was 91; +9 from Ch3 and the new bibliography entries).
+- Citation audit: 29 cited keys, 29 `\bibitem` definitions, **no missing, no unused**, and no
+  internal `.md` file cited anywhere.
+- Every number in Ch3 traced to the parquet or the tier-ladder report: 17,148 · 1,138 · **129**
+  sites ≥ 100 kW · 81.3 % of NPV · 0.75 % hit rate · 290 not high-confidence · 73.3 % under
+  25 kW · Fall River 169.0 kW / $538k / $179k/yr / 3.1 yr ceiling / 16.8 yr floor / 8.3 yr
+  floor-with-subsidy · median ≥ 100 kW CapEx $552.1k · $211.3M and $98.9M cohort CapEx ·
+  1,133 of 1,138 below 1 MW.
+- **Two corrections carried in from the morning session**, both of which would have put wrong
+  numbers in this chapter had it been drafted a day earlier: the ≥ 100 kW cohort is 129, not the
+  131 that the rounded geojson implied, and the "7.5 yr payback under municipal financing" figure
+  was a ceiling-tier number attached to a floor-tier argument. Neither appears in Ch3.
+
+**Open items / follow-ups:**
+- **Three pricing assumptions remain unsourced** and are labelled as assumptions in the prose:
+  the 2–4 % origination band, the $3k-per-qualified-lead value, and state-agency engagement
+  scale. The ASHRAE audit benchmark that previously justified the screening-report price was
+  withdrawn after verification ($1.8–10k, not $15–50k), so that price now rests on the NPV-share
+  derivation alone.
+- **§48E "material assistance" / prohibited-foreign-entity thresholds** for hydro construction
+  starting 2026 are not yet verified against statutory text. Ch3.8 does not rely on them, but any
+  supplier-specific recommendation would.
+- **Ten customer-validation conversations are still unstarted.** Section 3.6 says so explicitly
+  and labels itself an intention rather than a tested channel. Until they happen, §3.7's
+  conversion assumptions are unvalidated.
+- **Advisor sign-off on the 89.8 GWh/yr band floor** is outstanding. Ch2/Ch3/Ch4/Ch5/Ch6 are now
+  internally consistent on it, so a reversal would touch all of them plus `settings.yaml`.
+- Deferred items still standing from prior entries: bibliography reordering, `[Accessed]` dates
+  on the older web references, reference count 29 against 40–50, "P2-SEED" undefined at first use
+  in 4.1, missing signposts in 4.3.1/4.3.2, 2.1 limitation citations, `{{MONTH_YEAR}}`, and the
+  figure count depending on Mohamed's contributions.
+
+**Breakdown updated:**
+- §3 Track J checkbox for **J1 ticked**; §7 status row for J1 changed ☐ → ☑.
+
+**Next work package suggested:**
+- **J4 · Ch5 Integration Test** (~500 w). It is unblocked, independent of the band-floor
+  decision because it quotes only ceiling-tier baseline numbers, and both technical tracks are
+  first-drafted so the §6 combine gate is open. J5 stays last by design — the abstract summarises
+  finished content.
+
+---
+
+### Session: 2026-08-06 — J4 · Ch5.1.7 System Integration Test — Joint
+
+**Work package:** J4 · Ch5 Integration Test
+
+**What was drafted:**
+- Section 5.1.7, System Integration Test, **570 words** against a ~500 target, plus
+  Table~\ref{tab:integration} (a nine-row parquet-versus-GeoJSON comparison).
+
+**Source artifacts used:**
+- `data/processed/phase4/financial_scorecards.parquet`, `exports/viable_sites.geojson`,
+  `exports/scored_sites.geojson`, `scripts/export_geojson.py`, and the built
+  `frontend/dist/assets/scored_sites-*.geojson`. No external sources; this section reports
+  only this project's own integration behaviour.
+
+**Verification actually performed (not asserted):**
+- Recomputed all eight headline quantities from the exported GeoJSON rather than the
+  parquet. Exact agreement: 3,778 / 1,138 / 409.1695 GWh/yr / $310.1336M / $211.3252M /
+  9.8262 yr / 58.5891 MW / $41.2345M/yr. 59 properties per feature in both files.
+- **Byte-determinism tested, not assumed:** re-ran the exporter over an unchanged
+  scorecard and compared SHA-256 digests. Both files reproduced identically
+  (`ddfc810e…` viable, `b3608816…` scored).
+- **Build fidelity tested:** the hashed GeoJSON asset in `frontend/dist/assets/` carries
+  the same SHA-256 as the tracked export, confirming the Vite `?url` import introduces no
+  copy step where the two could diverge.
+- `meta` block confirmed derived rather than typed: 17,148 analysed / 3,778 scored /
+  P2-SEED label, all from parquet row counts.
+
+**Figures / tables produced or specified:**
+- Table: integration comparison (new). No figure; the section is a numeric equality check
+  and a figure would add nothing.
+
+**Open items / follow-ups:**
+- The section states plainly what the test does *not* prove: it verifies transport
+  fidelity, not correctness. A head-estimation or capacity-factor error would pass every
+  check in the table intact. This is written into the prose rather than left implicit.
+- The dashboard half was exercised by hand, not by an automated browser suite, so it
+  verifies the current build and would not catch a future regression.
+
+**Breakdown updated:**
+- §3 Track J checkbox for **J4 ticked**; §7 status row J4 changed ☐ → ☑.
+
+**Next work package suggested:**
+- J5, in progress in the same session (see next entry).
+
+---
+
+### Session: 2026-08-06 — J5 · Front matter, references, honesty pass (PARTIAL) — Joint
+
+**Work package:** J5 · Front matter + References merge + final stitch
+
+**Status: partially complete — deliberately not ticked.** Every part of J5 that does not
+depend on Mohamed's M1/M2 merge is done. Mohamed is doing that merge himself, and the two
+remaining J5 items (final global figure/table renumbering across merged content, and the
+final reference-list merge) can only be closed after it lands.
+
+**What was drafted:**
+- **Abstract**, five paragraphs, **449 words** (format range 350--450). Written last, as the
+  format requires. Paragraph 4 separates simulated from measured explicitly.
+- **Acknowledgements**, four paragraphs, 271 words. Names are left as visible
+  `\ackname{...}` slots rather than guessed — the advisor, business faculty and industry
+  contacts must be filled by the authors before submission.
+
+**Also completed under J5:**
+- **Six peer-reviewed references added, all verified.** Chae *et al.* 2015 (*Energy
+  Conversion and Management* 101, 681--688), Power *et al.* 2017 (*J. Energy Engineering*
+  143(1)), Mérida García *et al.* 2021 (*Water* 13(5) 691), McNabola *et al.* 2021 (*Water*
+  13(7) 899), Punys *et al.* 2022 (*Energies* 15(14) 5173), Novara *et al.* 2021 (*Water*
+  13(22) 3259). Two new passages were written to use them: one at the end of §2.2 on
+  instrumented WWTP micro-hydro measurement, one opening §2.4 on prior *national* wastewater
+  screens.
+- **A substantive honesty correction came out of that reading.** The abstract as first
+  drafted claimed no measured wastewater-outfall generation exists in the public record.
+  Chae *et al.* falsifies that: a semi-Kaplan unit on an operating Korean plant's effluent
+  was monitored over a year at 68.1 MWh/yr. The claim is now scoped to what is actually
+  true — no metered wastewater-outfall generation appears in the **U.S. public generation
+  datasets this calibration draws on** — and §2.2 states the distinction directly: individual
+  instrumented case studies exist; a machine-readable national record pairing head, flow and
+  metered energy across enough sites to calibrate or train against does not. The same
+  overstatement was scoped in §3.5. Mérida García *et al.* also turns out to be the nearest
+  published analogue to this work's method (national wastewater screen from discharge
+  licences), which §2.4 now concedes explicitly while stating what WOWERS adds.
+- **Nine references gained `[Accessed]` dates** and `\url{}` wrapping (epa_echo, usgs_3dep,
+  hydrosource_eha, rentricity, cink, eia_household, usgs_ned_accuracy, eia_rates, eia923).
+  Zero references now carry a URL without an access date.
+- **"P2-SEED" defined at first use** in §2.2, pointing to §4.3.3.
+- **Two missing signposts added**, closing §4.3.1 and §4.3.2.
+- **Honesty pass run** across the five non-negotiables: screening-not-prediction framing,
+  measured/simulated separation, Phase-5 kill reported, head flagged as the largest
+  methodological assumption, business numbers labelled estimates. All present.
+
+**Counts after this session:**
+- References: **35** in `thesis_tom.tex`, 6 in `thesis_moh.tex` → **41 merged**, inside the
+  40--50 target. 35 cited keys against 35 bibitems; none missing, none unused.
+- Tables: 25 (Tom) + 1 (Mohamed) = **26**, comfortably past the 20 minimum.
+- Figures: **16 (Tom) + 1 real (Mohamed) = 17**, plus his 2 pending screenshots = 19.
+  **This is one short of the 20 minimum** and is the one format requirement not yet met.
+  It closes if Mohamed supplies the per-state-portfolio and analytics screenshots that
+  §4 of the breakdown assigned him.
+- `tectonic` compiles to **108 pages, 0 errors, 0 undefined citations**. The only two red
+  TODO markers left are Mohamed's M1/M2 merge stubs.
+
+**Open items / follow-ups:**
+- **`{{MONTH_YEAR}}` on the title page is still unfilled.** It is the target defense month
+  and only the authors know it; guessing a date on a title page would be worse than leaving
+  the placeholder visible.
+- **Acknowledgement names** unfilled, as above.
+- **Figure count 19 against a 20 minimum** — needs 1--2 more from Mohamed.
+- Advisor sign-off on the 89.8 GWh/yr band floor still outstanding.
+- Three Chapter 3 pricing assumptions remain unsourced and are labelled as such.
+- §48E material-assistance thresholds still unverified against statutory text.
+- Ten customer-validation calls still unstarted.
+- Bibliography is grouped by topic with comment headers rather than reordered; if a strict
+  first-citation ordering is wanted, that is a J5 finishing task after the merge.
+
+**Breakdown updated:**
+- **J5 left unticked** (☐) with a status note, because the merge-dependent half is not done.
+  J4 ticked.
+
+**Next work package suggested:**
+- Mohamed's M1/M2 merge into `thesis_tom.tex`. After it lands: global figure/table
+  renumbering check, final reference merge, and then J5 can be closed.
+
+---
+
+### Session: 2026-08-06 — J1 revision · Ch3 pricing derivations + §48E material assistance — Joint
+
+**Work package:** J1 · Ch3 Business Model (revision, not a new package)
+
+**What was revised:**
+- **§3.5 Pricing Model** — two of the three unsourced derivations are now sourced, and one of them
+  forced a price change. **§3.8** gains a verified passage on the §48E material-assistance rule.
+- **Four new references**, all verified this session: `usc7701` (26 U.S.C. §7701(a)(51)–(52)),
+  `irs_notice_2026_15` (IRS Notice 2026-15, 12 Feb 2026), `nrf_devfees` (Norton Rose Fulbright,
+  *Project Finance NewsWire*, Aug 2019), `cpl_benchmark` (Martal Group cost-per-lead survey, 2026).
+
+**Findings, including one that moved a price:**
+1. **Origination fee 2–4 % — sourced and strengthened.** Treasury's position is that renewable
+   developer fees normally fall in the **3–5 %** range of project cost; in *California Ridge Wind
+   Energy v. United States* a claimed 12.3 % fee was reduced to **4.8 %**. A developer earning that
+   carries capital and development risk across the project; WOWERS originates only. Pricing at 2–4 %
+   therefore sits at or below the low end of a full developer's fee, which is now written as the
+   intended relationship rather than asserted as a "standard band".
+2. **Cost per qualified lead — sourced, and it contradicted our price.** Manufacturing and industrial
+   B2B cost per lead runs **$120–350**, blended cross-industry near $198 — an order of magnitude below
+   the $3k the subscription price rested on. Thirty routed sites is $3.6–10.5k/yr of lead-replacement
+   value, not $90k/yr, which does not support $12–24k/yr of subscription revenue. **The tier was
+   revised from $1–2k/month to $300–900/month**, and §3.7's five-year revenue moved $0.5–1.2M →
+   $0.4–1.0M with it. The counter-argument is kept in the prose: a WOWERS lead is an engineered site
+   sheet, not a marketing contact, and may command more — but that needs the §3.6 customer calls, not
+   a benchmark.
+3. **State/agency engagement scale — still unsourced after a second search.** State procurement award
+   values for studies of this type are not publicly indexed and NASEO's RFP listings carry no dollar
+   figures. It is labelled in the prose as the one wholly unsourced price and names what would settle it.
+4. **§48E material assistance — verified against statute.** A qualified facility fails if its
+   material-assistance cost ratio (the share of direct costs *not* attributable to a prohibited foreign
+   entity) falls below **40 % for construction beginning 2026**, rising to 45, 50 and 55 % through 2029
+   and **60 % thereafter**; energy storage carries a stricter schedule. Interim computation safe
+   harbours were issued February 2026. Two consequences are now in §3.8: the 2026 bar is permissive, so
+   a European turbine with mixed-origin components is unlikely to fail it today; but it tightens to
+   60 % clean content by 2030, and **unlike the domestic-content phaseout it carries no sub-1 MW
+   exemption**, so it binds the small sites as much as the large. This is stated as the one tax
+   question in the chapter that scale does not resolve.
+
+**Ripple effects checked and handled:**
+- §3.7 revenue arithmetic updated for the new subscription price (the only downstream number affected).
+- `thesis/business.md` §5 pricing table, §4.2 revenue band, §6.1.1 material-assistance note, §10
+  next-actions 3 and 3c, and the §10a verification log all updated to match. Action 3c closed; action 3
+  now reads 9 of 10 verified.
+- Grepped for every other occurrence of the affected figures; nothing in Ch2, Ch4, Ch5, Ch6 or the
+  abstract depends on them.
+
+**Format deviation, recorded deliberately:**
+- §3.5 and §3.8 now run **474 and 464 words** against the breakdown's 150–400 per-subsection guide.
+  Ch3 totals **2,732 words**, inside the 8 × (150–400) = 1,200–3,200 envelope. Two rounds of trimming
+  were applied; cutting further would have meant deleting a priced tier's derivation or the statutory
+  thresholds, which are the substance the same spec asks for. Flagged rather than resolved by mangling.
+
+**Counts:** references **39** in `thesis_tom.tex` (+6 Mohamed = **45 merged**, inside 40–50); 39 cited
+keys against 39 bibitems, none missing, none unused. Compiles to **109 pages, 0 errors, 0 undefined
+citations**.
+
+**Open items / follow-ups:**
+- State/agency engagement price still unsourced — the last one.
+- Everything else from the prior J5 entry stands: `{{MONTH_YEAR}}`, acknowledgement names, 1–2 more
+  figures for the 20-figure minimum, advisor sign-off on the band floor, ten customer calls, and
+  Mohamed's M1/M2 merge.
+
+**Breakdown updated:**
+- No checkbox changed; J1 was already ticked and this is a revision to it.
+
+**Next work package suggested:**
+- Unchanged: Mohamed's M1/M2 merge, then J5 closes.
+
+### Session: 2026-08-06 — M1/M2 → thesis_tom.tex merge (J5 combine step) — Mohamed
+
+**Work package:** Not a numbered WP — the M1/M2 merge that J1's and the prior J5 entry both named
+as the next blocking step. `thesis_moh.tex` content is now folded into `thesis_tom.tex`; that file
+is the sole live copy going forward.
+
+**What was done:**
+- **M1 → `\section{Frontend Visualization System}` (end of Chapter 4).** Replaced the `\wptodo{M1
+  · 4.6 ...}` stub with the full drafted section: intro paragraph, then four `\subsection`s (Stack
+  Selection; Data Layer and View Architecture; Interaction, Filtering, and Export; Limitations),
+  the TikZ application-flow figure, and both `\figpending` markers (National Opportunity Map,
+  Plant Detail). Mohamed's file used top-level `\section{}` for these four parts since the
+  standalone file had no enclosing section; demoted to `\subsection` on paste since "Frontend
+  Visualization System" is already the enclosing `\section` in `thesis_tom.tex` — they land as
+  §4.6.1–4.6.4 automatically via the existing counters.
+- **M2 → `\subsection{Frontend Performance}` (§5.1.6).** Replaced the `\wptodo{M2 · 5.1.6 ...}`
+  stub with the drafted content: intro paragraph, then three blocks (build performance, quality
+  assurance, the discrepancy paragraph) plus the bundle-size table. Mohamed's file used
+  `\subsection*{}` (starred, unnumbered) for these three; checked `thesis_tom.tex` first and found
+  Tom never uses `\subsection`/`\paragraph` anywhere to subdivide a single Ch5 subsection, only
+  bold run-in lead-ins inside continuous prose (e.g. "5.1.5 Machine-Learning Feasibility"'s
+  internal structure) — converted the three starred subsections to `\textbf{Build performance.}`,
+  `\textbf{Quality assurance.}`, `\textbf{Discrepancy: bundle size and deferred code-splitting.}`
+  to match, rather than introducing a heading level Tom's document doesn't otherwise use.
+- **Bibliography.** Appended Mohamed's six `\bibitem`s (`react19`, `typescript`, `vite7`,
+  `maplibregl`, `reactmapgl`, `recharts3`) into `thesis_tom.tex`'s single `\begin{thebibliography}`
+  block, replacing the `% Additional Track M / Joint citations merge here at WP J5.` placeholder
+  comment that was already sitting at the right spot. Checked both key lists first (`grep
+  -oP '(?<=\\bibitem\{)[^}]+'` on each file) — zero collisions against Tom's 39 keys. Matched his
+  citation formatting exactly (`\url{}}`-wrapped links, "Accessed DD Month YYYY" date form),
+  since Mohamed's original entries used bare URLs without `\url{}`.
+- **No preamble changes needed.** Checked first: `thesis_tom.tex` already loads `tikz` (with
+  `usetikzlibrary{arrows.meta,positioning,fit,calc}`, a superset of what the M1 figure needs) and
+  `graphicx` (for `\resizebox`), even though Tom's own figures moved to drawio assets and no
+  longer invoke `tikz` directly. The `\figpending` macro definitions are byte-identical between
+  the two files, so the two placeholder figures needed no adjustment.
+- **Figure/table numbering:** fully automatic. `thesis_tom.tex` already has
+  `\counterwithout{figure}{chapter}` / `{table}{chapter}` active, so no manual renumbering was
+  needed — the pasted figure resolved to **Figure 12**, the two `\figpending` boxes to **Figures
+  13–14**, and the bundle-size table to **Table 16**, all correct on the first compile once the
+  content was in the right physical location.
+
+**Source artifacts used:**
+- `thesis_moh.tex` (both chapters + bibliography, read in full before pasting)
+- `thesis_tom.tex` (read the exact stub context at both insertion points, the bibliography
+  boundary, the full list of `\subsection` headings in Chapter 5 to confirm "Frontend
+  Performance" really is 5.1.6, and Tom's citation-formatting convention, before editing)
+
+**Verification:**
+- `tectonic -X compile thesis_tom.tex` (two passes, `--keep-intermediates` so the `.aux` persisted
+  between runs) → **0 errors**. Checked explicitly for `undefined`/`error`/`multiply` in the
+  second pass's output — zero matches, i.e. 0 undefined references, 0 undefined citations, 0
+  duplicate labels.
+- 121 pages total (was 109 before the merge).
+- Pages rendered and visually inspected, not just compiled without error: the full §4.6 run
+  (Figure 12's diagram fits inside the margins correctly, both `\figpending` boxes render as
+  clearly-labeled placeholders — not broken, not silently blank — and §4.6.3/§4.6.4 auto-number
+  correctly), and the full §5.1.6 run (bold lead-ins read naturally against §5.1.5's prose style,
+  Table 16 renders with proper `booktabs` rules, and §5.1.7 System Integration Test picks up
+  immediately after with no gap). M1's closing forward-reference ("reported next, in Section
+  5.1.6") and M2's backward-references ("described in Section~4.6.2", "the limitation named in
+  Section~4.6.4") were checked against the actual resulting section numbers and are all correct.
+- Cleaned up LaTeX build intermediates (`.aux`/`.toc`/`.out`/`.lof`/`.lot`/`.pdf`/`.log`) after
+  verification, matching the existing convention that only source `.tex` is committed.
+
+**Open items / follow-ups:**
+- `thesis_moh.tex` is now historical (drafting record only) — marked as such in its own header
+  comment. `thesis_tom.tex` is the sole live copy of the M1/M2 content going forward.
+- Everything else from the prior J5 entries stands, and this was the last blocking item for them:
+  `{{MONTH_YEAR}}`, acknowledgement names, 1–2 more figures for the 20-figure minimum (the merge
+  brings the fleet to 14: Tom's 11 + M1's diagram + M1's 2 pending screenshots, still short of
+  20), and the two `\figpending` screenshots themselves still need real image files.
+- Reference count is now **45** (39 Tom + 6 Mohamed), inside the format's 40–50 target — no
+  further reference work needed for J5's word-count goal.
+
+**Breakdown updated:**
+- J5's status note in §3 updated to record the merge as done; checkbox remains unticked (still
+  `◐`) pending the three small fill-in items above.
+
+**Next work package suggested:**
+- J5's three remaining items need input from Tom/Mohamed directly (month/year, names, 1–2 more
+  figures) rather than further drafting — once those land, J5 closes and the thesis is complete.
+
+### Session: 2026-08-06 — Fix Figure 12 crossing lines; capture real screenshots for 13–14 — Mohamed
+
+**Work package:** Not a numbered WP — a real bug fix and a real-data follow-up on the M1/M2 merge,
+flagged directly by the user reviewing the merged PDF.
+
+**What was found and fixed:**
+- **Figure 12 (application-flow diagram) had a genuine routing bug**, not a rendering fluke.
+  The diagram staggered the seven view boxes across two rows (NationalMap/StatePortfolio/
+  PlantDetail/Opportunities on row 1, Plants/Analytics/Reports on row 2), and the row-2 boxes'
+  connecting lines were drawn as an L-shaped path bending directly beneath the `lib/data.ts`
+  node. Computed the actual node x-coordinates from the TikZ `xshift`/`node distance` values
+  used: row-2 box centers at −17.5, 23.5, 64.5~mm landed **inside** the horizontal spans of
+  row-1 boxes StatePortfolio, PlantDetail, and Opportunities respectively (e.g. StatePortfolio
+  spans [−44.5, −13.5], and −17.5 falls inside it), so each connecting line was drawn straight
+  through the row-1 box body on its way to row 2 — visible in the merged PDF as arrows cutting
+  through box text.
+  - **Fix:** redesigned as a single row of all seven boxes (was two staggered rows). With every
+    target `.north` at the same height and nothing between the bend point and any of them, no
+    line can cross a box regardless of x-position. Reduced box width 31→27~mm and horizontal
+    node distance 10→6~mm to keep the total width reasonable before `\resizebox` scaling;
+    increased the source-node `inner sep` 2→3~pt as a small margin safety fix.
+  - Applied identically to both `thesis_tom.tex` and `thesis_moh.tex` (the historical record).
+- **Figures 13–14 were never real images** — they were still the honest `\figpending` markers
+  from the original M1 draft, correctly rendering as labeled placeholder boxes per the images
+  rule, but with no actual screenshot content. Replaced both with real captured images:
+  - Installed Playwright + Chromium in the repo's `.venv` (`pip install playwright && playwright
+    install chromium`), started the Vite dev server (`npm run dev` in `frontend/`), and wrote
+    `thesis/figures/make_fig_m1_screenshots.py` — a regenerator script matching the house
+    `make_figNN_*.py` convention, headless-captures both views at 1600×950 @2x device scale
+    (3200×1900 actual pixels) after waiting for `networkidle` plus a fixed delay for MapLibre's
+    raster tiles to finish painting (mirrors the earlier finding this session that the map
+    canvas needs a beat after network-idle to actually render).
+  - Output: `thesis/figures/fig_m1_nationalmap.png` (National Opportunity Map, default filters,
+    all 3,778 sites plotted) and `thesis/figures/fig_m1_plantdetail.png` (Plant Detail for
+    Jackson Pike WRRF, OH0024732 — same plant used for QA earlier in the session). Both
+    inspected directly before embedding: map tiles fully loaded, KPIs read 3,778 / 1,138 /
+    \$310.1M / 9.8~yr matching the P2-SEED baseline, plant detail page fully populated
+    (gauge, satellite mini-map, financial scorecard, sensitivity tornado, efficiency curve).
+  - Replaced both `\figpending` blocks with real `\includegraphics[width=\linewidth]{...}`
+    figures, matching the exact figure-embedding pattern used elsewhere in `thesis_tom.tex`
+    (e.g. Figure 1's `\includegraphics[width=\linewidth]{figures/fig01_system_block.pdf}`).
+
+**Correction to the prior session's figure count.** That entry said the merge "brings the fleet
+to 14... still short of 20." That was wrong — a proper count from the compiled `.lof` this
+session shows **18 figures already** (the true count includes appendix figures the prior count
+missed) and **26 tables** (already well past the 20-table minimum). The real remaining gap for
+J5's figure-count item is **2 more figures**, not 6, which matches the "1–2 more figures" language
+already in `THESIS_BREAKDOWN.md`'s J5 note — that note was right; the prior journal entry's own
+arithmetic was the thing that was off.
+
+**Source artifacts used:**
+- Live command output: `pip install playwright`, `playwright install chromium`, `npm run dev`
+  (this session's fresh capture, not reused from any prior screenshot)
+- Computed TikZ node geometry by hand from the `node distance`/`xshift` values in the diagram
+  source, to confirm the crossing-line root cause before changing anything
+
+**Verification:**
+- `tectonic -X compile thesis_tom.tex` (two passes) → **0 errors**, explicitly checked for
+  `undefined`/`error`/`multiply` — zero matches. 121 pages (unchanged from before this session's
+  fixes, since fixing existing figures doesn't add pages).
+- Figure 12 rendered and visually inspected: all seven boxes in one clean row, no line crosses
+  any box, all labels legible.
+- Figures 13–14 rendered and visually inspected: both are now the real captured screenshots at
+  full resolution, correctly captioned and numbered, immediately following Figure 12 on the same
+  and next page as before.
+- Cleaned up LaTeX build intermediates and the one-off screenshot-orchestration script from the
+  scratchpad after verification; the reusable regenerator
+  (`thesis/figures/make_fig_m1_screenshots.py`) was kept, matching house convention.
+
+**Open items / follow-ups:**
+- Figure count is 18 of the 20 minimum — 2 more figures still needed, not yet identified.
+- Everything else from the prior J5 entries stands unchanged: `{{MONTH_YEAR}}`, acknowledgement
+  names, advisor sign-off on the band floor, ten customer-validation calls.
+
+**Breakdown updated:**
+- No checkbox change (J5 was already `◐`); this closes out the "screenshots still needed" note
+  left in the prior M1 and merge sessions.
+
+**Next work package suggested:**
+- Identify 2 more figures to clear the format's 20-figure minimum, then J5's remaining items are
+  all fill-ins (month/year, names) rather than content work.
+
+### Session: 2026-08-10 — Post-merge consistency pass (moh → tom) — Joint
+
+**Work package:** Not a numbered WP — the consistency pass run immediately after fast-forwarding
+Mohamed's two thesis commits (`09359a3` M1/M2 merge, `0c726ef` Figure 12 fix + real screenshots)
+into Tom's branch. No new prose drafted; three cross-artifact inconsistencies closed.
+
+**What was done:**
+- **Merge.** `git merge --ff-only origin/moh`. The merge base was already Tom's HEAD (`46f7f29`),
+  so the branches had not diverged and the merge was a fast-forward with no conflicts and no
+  content of either track's dropped. Only `thesis/` files were touched; no `src/`, `frontend/`,
+  `config/`, or `exports/` changes came across. Pre-merge lint of the merged `thesis_tom.tex`
+  found 0 duplicate labels, 0 duplicate `\bibitem` keys, 0 undefined `\ref`, 0 undefined
+  `\cite`, and all 17 `\includegraphics` targets present on disk.
+- **The 409,202 vs 409,170 MWh/yr split, traced and fixed.** §5.1.6's QA paragraph reported the
+  Opportunities view's combined energy as 409,202 MWh/yr in the same sentence that called it the
+  "same" total as Analytics' 409,170 MWh/yr, for the identical 1,138-site cohort. The cause is
+  aggregation order, not a pipeline disagreement: `fetchNational` summed the unrounded
+  `annual_energy_kwh` and rounded once (`data.ts:270`), while `Opportunities.tsx:27` summed the
+  per-site `energy_mwh` values that `fetchPlants` had already rounded to whole MWh for table
+  display, letting 1,138 rounding residuals accumulate to +32 MWh/yr (0.008 %). Reproduced
+  directly from `exports/scored_sites.geojson`: the viable cohort totals 409.1695 GWh/yr exactly,
+  which is 409,170 MWh/yr sum-then-round and 409,202 MWh/yr round-then-sum under JavaScript's
+  half-up `Math.round`, matching both reported readings to the unit. Fixed rather than annotated,
+  because §6 of the breakdown requires the P2-SEED baseline to read identically everywhere:
+  `energy_kwh` (unrounded) now rides alongside `energy_mwh` on the plant properties, and
+  Opportunities sums in kWh and rounds once. §5.1.6 was rewritten to report the original
+  mismatch, the mechanism, the arithmetic, and the correction, rather than silently swapping the
+  number.
+- **58 → 59 GeoJSON properties in `THESIS_BREAKDOWN.md`.** Five occurrences (§0 skeleton remap
+  rows for 4.5 and Appendix A, the T5 and T7 beats, and the §4 table inventory) still said 58.
+  The live contract is 59, confirmed by counting distinct property keys in both
+  `exports/scored_sites.geojson` and `exports/viable_sites.geojson`, and `thesis_tom.tex` already
+  said 59 in all eleven places it appears. This was a stale figure on Tom's side, not something
+  the merge introduced, but it contradicted the merged text and is now corrected.
+- **Figure-count bookkeeping.** The 2026-08-06 merge entry above put the fleet at "14: Tom's 11 +
+  M1's diagram + M1's 2 pending screenshots". Tom's own count is 15, not 11, so the post-merge
+  total is 18. Per RULE 4 that entry is left as written; the correction is recorded here. The
+  following session entry and the breakdown's "1–2 more figures" note were already right.
+
+**Source artifacts used:**
+- `thesis/thesis_tom.tex` (§5.1.6 QA paragraph), `thesis/THESIS_BREAKDOWN.md`
+- `frontend/src/lib/data.ts`, `frontend/src/lib/types.ts`, `frontend/src/views/Opportunities.tsx`,
+  `frontend/src/views/Analytics.tsx`
+- `exports/scored_sites.geojson`, `exports/viable_sites.geojson` (recomputation of both totals)
+
+**Figures / tables produced or specified:**
+- None. Figure and table counts are unchanged at 18 and 26.
+
+**Verification:**
+- `npm run build` in `frontend/`: `tsc -b` clean (0 type errors), vite 7.3.5 built in 2.80 s.
+  Bundle unchanged within noise — index 711.37 kB, maplibre-gl 1,053.37 kB, css 75.06 kB. Note
+  this machine runs Node 26.4.0 / npm 11.17.0, not the Node 22.11.0 / npm 11.6.1 of the M2
+  measurement session, so Table 16 was deliberately left as Mohamed measured it rather than
+  overwritten with numbers from a different toolchain.
+- Both views re-read live against the dev server after the fix: Opportunities shows 1,138
+  opportunities, $310.1M combined NPV, 409,170 MWh/yr combined energy; Analytics shows $310.1M
+  portfolio NPV, $211.3M CapEx, $41.2M/yr savings, 409,170 MWh/yr recoverable energy, 9.8 yr
+  median payback, 848 high-confidence sites. Zero browser console errors on both.
+- LaTeX was not recompiled this session — no TeX distribution is installed on this machine. The
+  §5.1.6 edit is prose only: no new macro, environment, label, reference, citation, or figure was
+  introduced, so the compile state should be unchanged from `0c726ef`. This must still be
+  confirmed on a machine with `tectonic` before the draft is circulated.
+
+**Open items / follow-ups:**
+- Recompile `thesis_tom.tex` to confirm the §5.1.6 rewrite is clean and to re-check pagination.
+- Unchanged from prior entries: 2 more figures for the 20-figure minimum, `{{MONTH_YEAR}}`,
+  acknowledgement names, advisor sign-off on the band floor.
+
+**Breakdown updated:**
+- No checkbox change. J5 stays `◐` — this pass closed consistency defects, not J5's remaining
+  fill-ins.
+
+**Next work package suggested:**
+- Unchanged: identify the 2 remaining figures, then J5's fill-ins close the thesis.
