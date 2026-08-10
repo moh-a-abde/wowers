@@ -306,9 +306,11 @@ understanding only — these are never citable sources; see the RULE on internal
   Figure 12 + 2 \figpending markers) and §5.1.6 (3 bold-lead-in blocks + Table 16) pasted in,
   headings demoted to match house style, 6 bibitems folded into the single bibliography (no
   key collisions), figure/table numbers auto-resolved via the existing sequential counters.
-  Compiled clean: 0 errors, 0 undefined refs/citations, pages visually inspected. Remaining:
-  `{{MONTH_YEAR}}`, acknowledgement names, and 1–2 more figures to clear the 20-figure
-  minimum — all three need input from Tom/Mohamed, not further drafting.)* — ~1,000 w + assembly
+  Compiled clean: 0 errors, 0 undefined refs/citations, pages visually inspected. 2026-08-10:
+  figure minimum CLEARED — Figures 15 (StatePortfolio) and 16 (Analytics) added to §4.6.2, taking
+  the document to 20 figures and 26 tables; advisor sign-off on the 89.8 GWh/yr band floor GIVEN,
+  so Ch3 is unblocked for submission. Remaining: `{{MONTH_YEAR}}` and the acknowledgement names,
+  both of which are fill-ins needing Tom/Mohamed, not drafting.)* — ~1,000 w + assembly
   - **Beats:** abstract (5 paragraphs, 350–450 w, per format §3.3); acknowledgements
   (advisor, business faculty, industry contacts); TOC / List of Figures / List of Tables;
   merge both tracks' reference lists into one IEEE-numbered list (target 40–50);
@@ -320,15 +322,20 @@ understanding only — these are never citable sources; see the RULE on internal
 
 ## 4. Figure & table master inventory (WOWERS-mapped)
 
-Format demands ≥20 figures and ≥20 tables. Nearly all are derivable from current parquets
-(journal readiness map: "~1 session with a figure script"). Assign as you draft:
+Format demands ≥20 figures and ≥20 tables. **Both minimums are met as of 2026-08-10: 20 figures,
+26 tables.** The planned list has been replaced with the as-built numbering read from the compiled
+`.lof` — use these numbers, not the earlier plan, since LaTeX assigns them by position and any
+insertion renumbers everything downstream.
 
-**Figures (T = Tom, M = Mohamed):** 1 system block diagram (Joint) · 2 frontend app flow (M)
-· 3–4 NationalMap + PlantDetail screenshots (M) · 5 pipeline dataflow (T) · 6 MC energy
-distribution (T) · 7 national site map (T) · 8 exclusion-funnel diagram (T) · 9 implied-CF
-vs EHA-CF overlay (T) · 10 CapEx-vs-capacity scatter w/ vendor bands (T) · 11 sensitivity
-tornado (T) · 12 calibration-band bar (T) · 13 turbine selection chart (T) · 14–15 per-state
-portfolio + analytics screenshots (M) · 16+ appendix figures (T).
+**Figures, as built (T = Tom, M = Mohamed, J = Joint):** 1 system block diagram (J) · 2 pipeline
+build-process flowchart (T) · 3 screening state machine (T) · 4 Monte-Carlo energy distribution
+(T) · 5 net head by source (T) · 6 elevation-derived vs archetype head (T) · 7 head-flow
+operating points / turbine selection (T) · 8 CapEx per kW vs vendor envelope (T) · 9 NPV
+sensitivity tornado (T) · 10 measured vs modeled capacity factor (T) · 11 portfolio energy by
+calibration tier (T) · 12 frontend application flow (M) · 13 NationalMap screenshot (M) · 14
+PlantDetail screenshot (M) · 15 StatePortfolio screenshot (M) · 16 Analytics screenshot (M) · 17
+exclusion funnel (T) · 18 national site distribution (T) · 19 MC energy band, all retained plants
+(T, appendix) · 20 MC energy band by tier (T, appendix).
 
 **Tables:** data-source inventory (T) · ranking weights (T) · funnel counts (T) · ideal
 system performance (T) · expected system performance (T) · calibration band (T) · CapEx

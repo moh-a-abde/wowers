@@ -2439,7 +2439,8 @@ opportunities by NPV plus a bar chart of viable sites by state.
 \texttt{/state/:code} (\texttt{StatePortfolio}) shows every scored site in
 one state as a sortable, paginated, CSV-exportable table alongside an
 energy bar chart of the top ten sites and a payback-versus-NPV risk/return
-scatter. \texttt{/plant/:id} (\texttt{PlantDetail}) is the single-site
+scatter; Figure~\ref{fig:m1-stateportfolio} shows the California portfolio.
+\texttt{/plant/:id} (\texttt{PlantDetail}) is the single-site
 view: a three-column layout presenting flow data, elevation data, and a
 satellite mini-map on the left; the energy-recovery gauge and a recommended
 turbine card with a synthesized efficiency curve in the center; and a
@@ -2451,9 +2452,10 @@ the same state and turbine type) on the right. \texttt{/opportunities} and
 pre-filtered to \texttt{project\_viable} sites in the first case and
 unfiltered across all 3{,}778 scored sites in the second, each with its own
 URL-parameter filters so either can serve as a deep-link target from
-another view. \texttt{/analytics} aggregates the whole portfolio into a
-payback-distribution histogram, a per-state bar, a turbine-mix bar, and a
-combined viability-band and confidence-tier breakdown. \texttt{/reports}
+another view. \texttt{/analytics}, in Figure~\ref{fig:m1-analytics}, aggregates the whole
+portfolio into a payback-distribution histogram, a per-state bar, a
+turbine-mix bar, and a combined viability-band and confidence-tier
+breakdown. \texttt{/reports}
 presents the national summary as a plain key-value grid alongside one-click
 CSV downloads (all sites, viable sites only, and a state summary) and a
 short data-sources note. A wildcard route redirects any unmatched path back
@@ -2515,6 +2517,28 @@ fetch of the single tracked GeoJSON file}
   capacity-factor gauge, recommended turbine, financial scorecard, and
   sensitivity tornado all populated from the exported GeoJSON}
   \label{fig:m1-plantdetail}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig_m1_stateportfolio.png}
+  \caption{State Portfolio view for California, the largest state portfolio
+  at 147 viable of 156 scored sites, showing the ranked table sorted by net
+  present value and the portfolio summary panel; the top-ten annual-energy
+  bar and the payback-versus-NPV scatter sit below the fold. Point Loma,
+  the single metered conduit plant that sets the calibrated band floor in
+  Section~4.4.1, ranks first in the state}
+  \label{fig:m1-stateportfolio}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/fig_m1_analytics.png}
+  \caption{Analytics view: the six portfolio KPI tiles above the
+  payback-distribution histogram, the viable-sites-by-state bar, the
+  turbine-mix bar, and the combined viability-band and confidence-tier
+  breakdown, all derived in the browser from the same cached GeoJSON}
+  \label{fig:m1-analytics}
 \end{figure}
 
 \subsection{Interaction, Filtering, and Export}

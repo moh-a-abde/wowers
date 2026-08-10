@@ -68,7 +68,8 @@ Any draft that cites these must match exactly (P2-SEED re-baseline):
 - Physics ceiling: **409.2 GWh/yr** (409.17 GWh) · calibrated band: **89.8–281 GWh/yr**
   *(floor lowered from 119 on 2026-08-06, P4-MEASURED-FLOOR: the floor is now the metered Point
   Loma capacity factor and is a real pipeline column, `energy_kwh_calib_measured_point_loma`.
-  Advisor sign-off still outstanding. This reference block was edited rather than a past session
+  **Advisor sign-off given 2026-08-10 (Tom) — the band floor is settled at 89.8 GWh/yr and is no
+  longer a blocking item.** This reference block was edited rather than a past session
   entry, so RULE 4 is intact.)*
 - Portfolio NPV: **$310.1M** · CapEx: **$211.3M** · savings: **$41.2M/yr** · median payback:
   **9.8 yr**
@@ -1590,3 +1591,75 @@ into Tom's branch. No new prose drafted; three cross-artifact inconsistencies cl
 
 **Next work package suggested:**
 - Unchanged: identify the 2 remaining figures, then J5's fill-ins close the thesis.
+
+### Session: 2026-08-10 — Figures 15–16 (StatePortfolio, Analytics); band-floor sign-off — Joint
+
+**Work package:** J5 fill-ins. Clears the two items that were blocking J5: the 20-figure minimum
+and the advisor sign-off on the calibrated band floor.
+
+**What was done:**
+- **Advisor sign-off on the 89.8 GWh/yr band floor: given (Tom, 2026-08-10).** This was the
+  recorded precondition for submitting Chapter 3. The band stands at 89.8–281 GWh/yr, unchanged
+  in value — only its status moves from provisional to settled. Recorded in the Section 0 baseline
+  block at the top of this file and in `business.md` (§3 narrative, action 1b, and the §10a
+  cohort-discipline note). The five past session entries that describe it as outstanding are left
+  as written, per RULE 4; this entry supersedes them.
+- **Figures 15 and 16 added, taking the document to 20 figures and 26 tables.** Both minimums are
+  now met. The two chosen were not invented to pad the count: §4 of `THESIS_BREAKDOWN.md` had
+  planned "per-state portfolio + analytics screenshots (M)" from the start and they were the only
+  planned figures never captured. Both were placed at the end of §4.6.2 alongside the existing
+  NationalMap and PlantDetail screenshots, and each is named in the prose that describes its view
+  before it appears, per the format rule.
+- **Figure 15 — State Portfolio, California.** CA is the largest state portfolio, 147 viable of
+  156 scored, and Point Loma, the single metered conduit plant that sets the band floor, ranks
+  first in it, so the figure ties the frontend chapter back to the calibration in §4.4.1.
+- **Figure 16 — Analytics.** Shows the six KPI tiles over all four charts. Its recoverable-energy
+  tile reads 409,170 MWh/yr, the value reconciled earlier today, so the figure also stands as
+  visual evidence of that fix.
+- **`make_fig_m1_screenshots.py` extended** from two captures to four, keeping the house
+  `make_figNN_*.py` convention that every figure has a regenerator. The two pre-existing captures
+  are byte-restored rather than overwritten: re-running reproduced them to within ~100 bytes of
+  PNG encoding noise, and Mohamed's committed versions were already verified, so churning them
+  for no visual difference was not worth the diff.
+
+**Source artifacts used:**
+- `frontend/src/views/StatePortfolio.tsx`, `Analytics.tsx`, `components/SiteTable.tsx` (PAGE_SIZE)
+- `exports/scored_sites.geojson` (per-state viable counts, to choose CA)
+- `thesis/THESIS_BREAKDOWN.md` §4 planned figure inventory
+
+**Figures / tables produced or specified:**
+- Figure 15, `figures/fig_m1_stateportfolio.png` (4200×2300).
+- Figure 16, `figures/fig_m1_analytics.png` (3200×1900).
+- §4 of the breakdown now carries the as-built figure numbering read from the compiled `.lof`,
+  replacing the planned list, which no longer matched: inserting two figures inside Chapter 4
+  renumbered the old 15–18 to 17–20.
+
+**Verification:**
+- Two capture strategies were tried for Figure 15 before settling. A full-page capture was
+  rejected: the two charts sit below a 50-row table, making the image 2718 CSS px tall, which
+  scales the table text to roughly 3 pt on a thesis page. A 1600 px viewport was also rejected:
+  the table overflows its horizontal scroll container by 339 px and the last four columns are cut
+  off mid-figure. Measured the overflow at four widths; 2100 px is where all ten columns fit with
+  zero clipping, and that is what the script now uses. The caption states plainly that the two
+  charts sit below the fold rather than implying they are shown.
+- `tectonic -X compile`, two passes: 0 errors, 0 undefined references, 0 undefined citations, 0
+  multiply-defined labels. 124 pages, up from 122. List of Figures counts 20 entries, List of
+  Tables 26.
+- Confirmed no hardcoded "Figure NN" strings exist anywhere in `thesis_tom.tex` — every reference
+  goes through `\ref`, so the downstream renumber propagated automatically with nothing to patch.
+- Pages 76–77 rendered and read: both figures sit at `\linewidth` with captions below, matching
+  Figures 13–14's treatment exactly.
+
+**Open items / follow-ups:**
+- `{{MONTH_YEAR}}` and the acknowledgement names. Both are fill-ins, not drafting. With those two
+  entered, J5 closes and the thesis is complete.
+- Table 16's geojson row still reads 6,129.14 kB against a current build's 6,296.90 kB. Left as
+  Mohamed measured it, on his Node 22.11.0 toolchain; worth a re-measure on his machine rather
+  than an overwrite from a different one.
+
+**Breakdown updated:**
+- §3 J5 note records the figure minimum cleared and the sign-off given. §4 inventory replaced with
+  the as-built numbering. J5 stays `◐` in §7 pending the two fill-ins above.
+
+**Next work package suggested:**
+- Enter `{{MONTH_YEAR}}` and the acknowledgement names, then J5 is done.
