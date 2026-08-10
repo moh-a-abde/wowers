@@ -1663,3 +1663,63 @@ and the advisor sign-off on the calibrated band floor.
 
 **Next work package suggested:**
 - Enter `{{MONTH_YEAR}}` and the acknowledgement names, then J5 is done.
+
+### Session: 2026-08-10 — Em-dash removal pass across the full document — Joint
+
+**Work package:** Not a numbered WP. A style pass over `thesis_tom.tex` prompted by an audit against
+the `humanizer_academic` pattern set (34 AI-writing patterns).
+
+**What the audit found:** the document was already clean on 30 of the 34 patterns. Zero hits for
+superficial `-ing` tails, negative parallelism, paraphrastic repetition, content-free evaluation
+sentences, copula avoidance, false ranges, promotional language, vague attributions, curly quotes,
+AI vocabulary (delve/holistic/intricate/tapestry/showcase/interplay), and ornamental intensifiers
+(markedly/remarkably/dramatically/critically). Sentence rhythm, which that skill treats as the
+single highest-impact signal, already measured inside the human band: mean sentence-length standard
+deviation 14.3 words across 180 paragraphs against a 10--15 benchmark, with only 5 % of paragraphs
+below the AI-uniform threshold of 5. Two apparent hits were judged not to be defects and left
+alone: title-case headings, which `thesis_format_prompt.md` inherits deliberately from the
+reference document, and the plant/site vocabulary split, which names two genuinely different
+cohorts (17,148 screened plants against 3,778 scored sites) rather than cycling synonyms.
+
+**What was changed:**
+- **All 79 em dashes in running prose and captions replaced**, the one pattern the document failed
+  at scale. Each was rewritten individually rather than swapped mechanically, because the skill's
+  own guidance warns that bare substitution produces choppy, disconnected prose. Replacements were
+  chosen by the function the dash was serving: parentheses where the interrupting clause already
+  contained commas (for example the capital-cost breakdown in Section 4.3.6 and the hyper-parameter
+  list in Section 4.4.2), a colon where the dash introduced a list or an explanation, a semicolon
+  where it joined two independent clauses, and a plain comma for short appositives.
+- **Four figure and table captions** used a dash as a title separator; those became colons.
+- **Three instances of the filler "in order to"** reduced to "to".
+
+**Deliberately left untouched:** 124 further `---` tokens exist in the file. 76 are inside `%`
+comment rules and never render; 41 are table cells where the dash is the not-applicable marker, so
+changing them would alter what the tables assert; 7 are inside bibliography entries, where the dash
+belongs to a cited source's own title and rewriting it would misquote the source.
+
+**Source artifacts used:**
+- `thesis/thesis_tom.tex`, `thesis/thesis_format_prompt.md` (heading and caption case rules)
+
+**Figures / tables produced or specified:**
+- None. Counts unchanged at 20 figures and 26 tables.
+
+**Verification:**
+- Prose em-dash count is 0, confirmed by a scan that excludes comments, table environments, and the
+  bibliography. "in order to" count is 0. Brace and parenthesis counts balance (354 open, 354
+  close), which matters because most replacements introduced paired delimiters.
+- `tectonic -X compile`, two passes: 0 errors, 0 undefined references, 0 undefined citations, 0
+  multiply-defined labels. 123 pages, one fewer than before, since the replacements are marginally
+  shorter than the dashes and surrounding spaces.
+- Typesetting regression checked rather than assumed: the engine's overfull-box multiset is
+  byte-identical to the pre-edit build, so no new layout defect was introduced.
+- Ten of the more difficult rewrites were read back in context to confirm they read naturally and
+  that no clause lost its logical connection to the sentence before it.
+
+**Open items / follow-ups:**
+- Unchanged: `{{MONTH_YEAR}}` and the acknowledgement names.
+
+**Breakdown updated:**
+- No checkbox change; this was a style revision, not a work package.
+
+**Next work package suggested:**
+- Unchanged: the two J5 fill-ins close the thesis.
