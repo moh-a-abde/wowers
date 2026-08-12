@@ -300,7 +300,12 @@ understanding only — these are never citable sources; see the RULE on internal
   $310.1M / 9.8 yr). Realistic stimulus = the real re-baselined parquets; say why that is
   representative.
 
-- [ ] **J5 · Front matter + References merge + final stitch** *(PARTIAL 2026-08-06: abstract,
+- [x] **J5 · Front matter + References merge + final stitch** *(COMPLETE 2026-08-12: the
+  acknowledgements were finalized — advisor named (Dr. Kundan Nepal), the business-faculty and
+  industry-contact thank-yous removed as claims of reviews that never happened, and the
+  classmates/family closing dropped at Tom's decision, leaving three paragraphs (advisor, Fowler
+  judges, public-data agencies). That was the last placeholder; J5 is closed and the thesis is
+  content-complete. History below.)* *(PARTIAL 2026-08-06: abstract,
   acknowledgements, +6 verified references, access dates, honesty pass, P2-SEED gloss and
   signposts all done. M1/M2 → thesis_tom.tex merge DONE (this session): §4.6 (4 subsections +
   Figure 12 + 2 \figpending markers) and §5.1.6 (3 bold-lead-in blocks + Table 16) pasted in,
@@ -428,7 +433,7 @@ Legend: ☑ first draft exists · ◐ partially complete, blocked on another pac
 | J     | J2  | Ch1 Introduction                  | Joint   | 1,100 | ☑      |
 | J     | J3  | Ch6 Conclusion                    | Joint   | 900   | ☑      |
 | J     | J4  | Ch5 Integration test              | Joint   | 500   | ☑      |
-| J     | J5  | Front matter + refs + stitch      | Joint   | 1,000 | ◐      |
+| J     | J5  | Front matter + refs + stitch      | Joint   | 1,000 | ☑      |
 
 
 **Total target:** ~21,900 words body (inside the 18,000–24,000 window; technical:business ≈ 3:1). ✅
