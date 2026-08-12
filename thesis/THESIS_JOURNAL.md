@@ -1857,3 +1857,26 @@ added ~25 lines of new prose.
 
 **Breakdown updated:**
 - No checkbox change.
+
+### Session: 2026-08-11 (PM #2) — Title-page fill-ins: author name style, AUGUST 2026 — Tom
+
+**Work package:** J5 fill-ins.
+
+**What was done:**
+- Author name simplified from "XINSHENG (TOM) TANG" to "XINSHENG TANG" in all three
+  places it appears: the `\author` macro, the title page, and the certification page
+  (mixed-case "Xinsheng Tang" there).
+- `{{MONTH_YEAR}}` on the title page replaced with **AUGUST 2026**. The stale preamble
+  comment pointing at the placeholder was updated with it.
+
+**Verification:**
+- `tectonic -X compile`: 0 errors, 0 undefined references/citations, 122 pages.
+- Title page and certification page read back from the compiled PDF: "XINSHENG TANG",
+  "AUGUST 2026", "Xinsheng Tang" all render as intended.
+
+**Open items / follow-ups:**
+- The acknowledgement names (`\ackname` slots) are now the **only** placeholders left
+  in the document. With those entered, J5 closes.
+
+**Breakdown updated:**
+- No checkbox change; J5 stays ◐ on the acknowledgement names alone.

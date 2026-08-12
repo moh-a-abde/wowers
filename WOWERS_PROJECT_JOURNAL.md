@@ -6420,3 +6420,21 @@ citations**; 737 tests still pass (no source touched).
 **Next steps after this session:**
 1. Enter `{{MONTH_YEAR}}` and the acknowledgement names; J5 then closes and the
    thesis is complete.
+
+### Session: 2026-08-11 (PM #2) — Title-page fill-ins entered; pushed to four branches — Tom
+
+**What was done:**
+- Author name style simplified to "XINSHENG TANG" (title page, `\author`,
+  certification page); `{{MONTH_YEAR}}` entered as AUGUST 2026.
+- Recompiled: 0 errors, 122 pages; title page read back from the PDF.
+- Committed and pushed to `tom`, then fast-forwarded `main`, `front-end`, and `moh`
+  to the same commit (ancestry verified before each push; no force pushes).
+
+**Files modified / created:**
+- `thesis/thesis_tom.tex`, `thesis/THESIS_JOURNAL.md`, `WOWERS_PROJECT_JOURNAL.md`
+
+**Resources used:**
+- tectonic 0.16.9, poppler
+
+**Next steps after this session:**
+1. Acknowledgement names — the last placeholder in the thesis; J5 then closes.
