@@ -1880,3 +1880,60 @@ added ~25 lines of new prose.
 
 **Breakdown updated:**
 - No checkbox change; J5 stays ◐ on the acknowledgement names alone.
+
+### Session: 2026-08-12 — Layout pass: Table 2 collision, overfull-line cleanup, file renamed to WOWERS_Thesis.tex — Tom
+
+**Work package:** Not a numbered WP. A layout-only pass over the compiled PDF —
+no sentence, number, or caption changed anywhere in the document.
+
+**What was done:**
+- **Table 2 (data-source inventory) collision fixed.** The table had no size
+  command and columns of 2.4/3.4/2.6/3.4 cm; the unbreakable
+  \texttt{npdes\_downloads.zip} and \texttt{src/phase1/ingest.py} tokens
+  overflowed their cells and collided with the neighbouring column (up to 67 pt
+  overfull). Now set at \footnotesize with columns 2.2/3.8/3.4/4.4 cm and
+  \allowbreak break points after path separators. Page 30 re-rendered and
+  inspected: all four columns clear.
+- **\emergencystretch=3em added to the preamble.** Lets TeX stretch inter-word
+  space as a last resort instead of pushing a word into the margin; this cleared
+  the §2.2 heading overfull, the 40 pt List-of-Figures entry, and several
+  paragraph-level overfulls without touching any text.
+- **\allowbreak inserted inside the long \texttt tokens** that a line cannot
+  hold: the §4.1 configuration paragraph (settings.yaml, dmr_chunk_size,
+  data/processed path, viable_sites.geojson), the §4.2.3 EPQS URL and
+  NPDES_PERM_FEATURE_COORDS.csv, the EHA workbook filenames, the 126 pt
+  \texttt{concurrent.futures.ProcessPoolExecutor} offender in §4.3.3, and the
+  §5.1.6 npm build command. Rendered characters are unchanged; the tokens can
+  now wrap at path/word boundaries.
+- **Data-dictionary longtable font inconsistency fixed.** The old body-only
+  \footnotesize left the repeated header rows at full size; the whole table now
+  sits in one \footnotesize group with \tabcolsep 3 pt, which also removed its
+  26 pt overfull. Rendered and inspected.
+- **Font audit across the document:** the only bold inside body prose is the
+  three deliberate run-in lead-ins in §5.1.6 (Build performance / Quality
+  assurance / Discrepancy), matching §5.1.5's internal structure; all size
+  switches are confined to tables and captions; no stray font-family switches.
+  Nothing needed changing.
+- **File renamed** \texttt{thesis\_tom.tex} → \texttt{WOWERS\_Thesis.tex} via
+  git mv, now that all tracks are merged and the single file is the whole
+  thesis. Header comment updated (provenance note, tectonic compile command);
+  \texttt{thesis\_moh.tex} stays as the historical drafting record.
+
+**Verification:**
+- tectonic -X compile WOWERS_Thesis.tex: 0 errors, 0 undefined references,
+  0 undefined citations, **122 pages** (unchanged). pdftotext scan shows zero
+  "??" in the output.
+- Overfull boxes: worst was 126 pt before the pass; the remaining unique
+  overfulls are 18.2 pt (the Figure 12 TikZ \resizebox measurement artifact —
+  the box is measured before scaling and the rendered figure fits, verified
+  previously), 5.1 pt on one List-of-Tables dot-leader line, and 3.0 pt
+  (~1 mm) residual inside Table 2. None is a visible collision.
+- Pages rendered and read back: title page, page 30 (Table 2), page 39
+  (ProcessPoolExecutor paragraph), page 89 (§5.1.6 build command), page 103
+  (data dictionary). All inside margins.
+
+**Open items / follow-ups:**
+- Unchanged: the acknowledgement names are still the only placeholders left.
+
+**Breakdown updated:**
+- No checkbox change; layout pass only.
