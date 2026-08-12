@@ -6471,3 +6471,40 @@ citations**; 737 tests still pass (no source touched).
 **Next steps after this session:**
 1. Acknowledgement names — still the only placeholder left; J5 then closes.
 2. Commit the rename + layout edits (not committed this session).
+
+### Session: 2026-08-12 (PM) — Acknowledgements finalized; J5 and the thesis breakdown close — Tom
+
+**What was done:**
+- Filled the last placeholder in `thesis/WOWERS_Thesis.tex`: the acknowledgements.
+  Advisor named (Dr. Kundan Nepal). The business-faculty and industry-contact
+  thank-yous were deleted rather than filled — per Tom, no business faculty reviewed
+  the Ch3 business model and no industry contacts discussed turbine selection, so
+  keeping those sentences would have acknowledged reviews that never happened. The
+  Fowler-judges and public-data-agency paragraphs stand. The closing
+  classmates/family/friends paragraph was dropped at Tom's choice. The unused
+  `\ackname` macro and its fill-before-submission comment went with the slots.
+- Recorded the resulting three-paragraph structure as a deliberate deviation from
+  the format's four-paragraph acknowledgements template (honesty over skeleton).
+- Ticked J5 in `thesis/THESIS_BREAKDOWN.md` §3 and §7. All 14 work packages are now
+  ☑ — the thesis is content-complete with zero placeholders.
+- Verified: `tectonic -X compile`, two passes — 0 errors, 0 undefined
+  references/citations, 122 pages unchanged; page iv read back from the PDF
+  ("Dr. Kundan Nepal" typeset correctly); source scan shows zero `\ackname` /
+  `NAMES TO FILL` / `{{` hits. Certification page's blank advisor signature line
+  left blank on purpose (signed by hand, not a placeholder).
+
+**Files modified / created:**
+- `thesis/WOWERS_Thesis.tex` — acknowledgements rewritten (3 paragraphs)
+- `thesis/THESIS_BREAKDOWN.md` — J5 ticked in §3 and §7
+- `thesis/THESIS_JOURNAL.md`, `WOWERS_PROJECT_JOURNAL.md` — session entries
+- `thesis/WOWERS_Thesis.pdf` — recompiled (untracked)
+
+**Resources used:**
+- tectonic 0.16.9, poppler (pdftotext/pdfinfo)
+
+**Next steps after this session:**
+1. Commit this change set (the morning's layout/rename edits are already in as
+   `cd49283`, contrary to that entry's next-step note — they were committed after
+   the entry was written).
+2. Submission mechanics: advisor read-through, defense scheduling, hand-signed
+   certification page.

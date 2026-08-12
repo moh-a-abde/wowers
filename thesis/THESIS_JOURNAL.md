@@ -1937,3 +1937,58 @@ no sentence, number, or caption changed anywhere in the document.
 
 **Breakdown updated:**
 - No checkbox change; layout pass only.
+
+### Session: 2026-08-12 — J5 close-out: acknowledgements finalized — Tom
+
+**Work package:** J5 · Front matter + References merge + final stitch (final item). This
+closes J5 and, with it, every work package in the breakdown.
+
+**What was done:**
+- **Advisor named.** The `\ackname{advisor name}` slot became "Dr.\ Kundan Nepal" in the
+  first acknowledgements paragraph; the rest of that paragraph is unchanged.
+- **Two thank-yous removed as factually wrong, per Tom.** No business faculty reviewed the
+  Chapter 3 business model and no industry contacts discussed turbine selection or installed
+  cost with the team, so both `\ackname` sentences claiming those reviews were deleted rather
+  than filled. The true parts of those paragraphs survive: the Fowler Business Concept
+  Challenge judges keep their paragraph (their four questions shaped §§3.1, 3.3, 3.8), and the
+  public-data agencies (EPA, USGS, EIA, ORNL) keep theirs.
+- **Closing classmates/family/friends paragraph dropped entirely** — Tom's explicit choice
+  from three offered options (keep as written / keep plainer / drop).
+- The now-unused `\ackname` macro and the "NAMES TO FILL BEFORE SUBMISSION" comment block
+  were removed with the slots they existed for.
+
+**Format deviation, recorded deliberately:** format §3.4 prescribes four acknowledgement
+paragraphs (advisor, business faculty, industry practitioners, catch-all). The section now
+has three (advisor, Fowler judges, data agencies), because the format's second and third
+paragraphs would assert reviews that never happened and intellectual honesty outranks the
+skeleton. The Fowler-judges paragraph stands in the business-feedback slot as the honest
+equivalent.
+
+**Verification:**
+- `tectonic -X compile WOWERS_Thesis.tex`, two passes: 0 errors, 0 undefined references,
+  0 undefined citations, 0 multiply-defined labels. **122 pages** (unchanged).
+- Page iv (Acknowledgements) rendered and read back from the compiled PDF: "Dr. Kundan
+  Nepal" typeset correctly, three paragraphs as intended, no placeholder brackets anywhere.
+- Placeholder scan of the source: zero hits for `\ackname`, `NAMES TO FILL`, or `{{`.
+  **The document now contains no placeholders at all.**
+- The certification page's blank "Name of Faculty Advisor(s)" signature line was left
+  blank on purpose — it is the format's signature block, completed by hand at signing,
+  not a placeholder.
+
+**Figures / tables produced or specified:**
+- None. Counts unchanged at 20 figures and 26 tables.
+
+**Open items / follow-ups:**
+- Commit this change set (acknowledgements + breakdown tick + journals) — not committed
+  this session.
+- Non-thesis items that remain open live outside J5: ten customer-validation calls
+  (Ch3 labels itself accordingly), and the stale internal `CF_CALIBRATION_REPORT.md` /
+  `EXCLUSION_FUNNEL_REPORT.md` (never cited, but still inviting old numbers back).
+
+**Breakdown updated:**
+- §3 J5 checkbox → `[x]` with a COMPLETE note; §7 J5 status ◐ → ☑. **All 14 work packages
+  are now ☑ — the thesis is content-complete.**
+
+**Next work package suggested:**
+- None. Remaining work is submission mechanics: commit, advisor read-through, defense
+  scheduling, and the hand-signed certification page.
