@@ -6345,3 +6345,78 @@ citations**; 737 tests still pass (no source touched).
 2. Mohamed's M1/M2 merge, then J5 closes.
 3. `{{MONTH_YEAR}}`, acknowledgement names, 1–2 more figures for the 20-figure minimum.
 4. Advisor sign-off on the 89.8 GWh/yr band floor; ten customer-validation calls.
+
+### Session: 2026-08-11 — Thesis review pass: ten consistency corrections, all verified against live artifacts — Tom
+
+**What was done:**
+- Full read-through review of `thesis/thesis_tom.tex` (3,928 lines), then ten
+  corrections. Every changed number was verified against a live artifact before the
+  edit; detail is in the thesis journal entry. The headline items:
+- **§4.5 carried stale 58-property-era digests and sizes** (`f359b413`/`420ad5f4`,
+  1.85/6.13 MB). Updated to the tracked artifacts (`ddfc810e…` 1.90 MB /
+  `b3608816…` 6.30 MB) after re-running `scripts/export_geojson.py` and confirming
+  byte-identical reproduction (git stayed clean). 6.13 → 6.30 MB fixed in three more
+  places (§4.5 limitations, §4.6.4, Ch6).
+- **Table 16's GeoJSON row mystery solved.** The 2026-08-10 open item blamed the
+  6,129.14 vs 6,296.90 kB gap on Mohamed's Node toolchain. Wrong: the pre-59-property
+  export at `015fd2b~1` is 6,129,140 bytes exactly, so his build embedded a stale
+  data asset. Row corrected, correction paragraph added in §5.1.6, no re-measure
+  needed.
+- **New disclosure in §5.1.3:** the 290 viable sites without a measured FDC carry
+  $193.6M (62.4 %) of the $310.1M portfolio NPV (22 of them above 250 kW hold
+  $139.2M). Computed from `viable_sites.geojson`; complements the existing 27 %
+  archetype-head energy disclosure.
+- Smaller fixes: abstract trimmed 460 → 449 words (back inside the 350–450 band);
+  GPD unit-slip factor 10^5 → 10^6; Ch3.1 head-confidence sentence now uses the 360
+  archetype-head count instead of the 290 flow-quality count; §3.7 subscription
+  arithmetic rederived ($11–32k/yr and $36–72k/yr); Ch2 median offset 0.8 % → 1.1 %
+  (verified 1.104 % scored / 2.015 % viable); §4.4.1 rounding note on the 0.2195
+  multiplier's 0.872 denominator; "this session" register removed from §5.1.6; six
+  British spellings Americanized; "roughly 2,106" made exact (verified:
+  `design_flow_mgd` null at exactly 2,106 of 17,148 in `ranked_candidates.parquet` —
+  the match with the funnel's data-gap total is a real coincidence, not a copy-slip).
+- Reviewed and left alone as verified-intentional: "3,783 on first run"
+  (pre-COORD-GUARD count), 8,766 vs 8,760 h (each stated against its own
+  denominator), frontend 1e5 sentinel guard vs 1e6 export sentinel.
+
+**Files modified / created:**
+- `thesis/thesis_tom.tex` — the ten corrections above (~25 lines changed/added)
+- `thesis/THESIS_JOURNAL.md` — session entry
+- `WOWERS_PROJECT_JOURNAL.md` — this entry
+- `exports/*.geojson` touched by the determinism re-run but byte-identical (no diff)
+
+**Resources used:**
+- `exports/viable_sites.geojson` / `scored_sites.geojson`,
+  `data/processed/phase1/ranked_candidates.parquet`, `config/settings.yaml`,
+  `git show 015fd2b~1:exports/*`, `scripts/export_geojson.py`, tectonic 0.16.9,
+  poppler (`pdftotext`/`pdfinfo`)
+
+**Next steps after this session:**
+1. Enter `{{MONTH_YEAR}}` and the acknowledgement names — the last two fill-ins;
+   J5 then closes and the thesis is complete.
+2. Compile state: 122 pages (was 123; abstract trim + float repacking), 0 errors,
+   0 undefined references/citations, Overfull/Underfull counts identical to the
+   pre-edit build (92/207, same counting method), 20 figures / 26 tables.
+
+### Session: 2026-08-11 (PM) — Humanizer re-audit, three word swaps, commit and push — Tom
+
+**What was done:**
+- Re-ran the 34-pattern humanizer_academic audit over the full thesis after the
+  morning's review-pass corrections. Clean everywhere except three one-word tells,
+  now fixed: "Beyond the pilot" → "After the pilot" (Ch3.8), and two "via" →
+  "through" (§4.2.3, §4.6.3). Seven "yield" usages reviewed and kept as standard
+  mathematical/domain usage.
+- Recompiled: 0 errors, 0 undefined references or citations, 122 pages.
+- Committed the morning's ten corrections plus the three swaps and pushed to
+  origin/tom.
+
+**Files modified / created:**
+- `thesis/thesis_tom.tex` (three words), `thesis/THESIS_JOURNAL.md`,
+  `WOWERS_PROJECT_JOURNAL.md` (session entries)
+
+**Resources used:**
+- humanizer_academic pattern set, tectonic 0.16.9
+
+**Next steps after this session:**
+1. Enter `{{MONTH_YEAR}}` and the acknowledgement names; J5 then closes and the
+   thesis is complete.

@@ -114,21 +114,21 @@ and that any and all revisions required by the final examining committee have be
 \addcontentsline{toc}{chapter}{Abstract}
 Municipal wastewater treatment in the United States consumes roughly 30.2~TWh of
 electricity each year, and every publicly owned treatment works discharges treated
-effluent through an outfall that runs continuously, at a flow its operator already
-meters for permit compliance, and often over a usable elevation drop. That hydraulic
+effluent through an outfall that runs continuously, at a flow already metered
+for permit compliance, and often over a usable elevation drop. That hydraulic
 energy is discarded. No prior assessment has quantified how much of it is recoverable
 plant by plant, because the cost of searching seventeen thousand plants has exceeded
 the value of the answer: only a small fraction are economic, and which fraction cannot
 be known without examining all of them.
 
 We propose the creation of a company, WOWERS, and present a proof-of-concept
-infrastructure-intelligence platform that can be built on later in the development of a
-minimum viable product (MVP). It screens the national fleet from public regulatory data
+infrastructure-intelligence platform on which a later minimum viable product
+(MVP) can build. It screens the national fleet from public regulatory data
 alone, ranks every plant on recoverable energy and project economics, and reports the
 result as a calibrated band rather than a point estimate. It is a screening instrument,
 not a validated predictor.
 
-Four sequential phases do the work. Phase~1 ingests approximately 279 million discharge
+Four phases do the work. Phase~1 ingests approximately 279 million discharge
 monitoring records from the Environmental Protection Agency's ICIS-NPDES system and
 derives a flow duration curve per plant. Phase~2 converts each curve into an
 annual-energy distribution by Monte-Carlo sampling. Phase~3 estimates net head from the
@@ -143,15 +143,15 @@ ceiling, against \$211.33M of capital cost, \$310.13M of net present value, and 
 9.83~yr median payback. Measured: capacity factors from 629 river-hydropower plants over
 9{,}798 plant-years and 115 metered conduit plants bound that ceiling to a band of
 89.8--281~GWh/yr, floored on the only metered treated-wastewater conduit plant in the
-country at a capacity factor of 0.1914. Individual instrumented installations are
-reported in the international literature, but no metered wastewater-outfall generation
+country at a capacity factor of 0.1914. Instrumented installations are reported in the
+international literature, but no metered wastewater-outfall generation
 appears in the U.S.\ public generation datasets this calibration draws on, so every
 energy figure here is modeled; an attempt to learn a correction ended when a national
-label search returned 11 usable sites against a requirement of 50 fixed beforehand.
+label search returned 11 usable sites against a pre-set requirement of 50.
 
 The platform makes a site visit targetable: 129 sites above 100~kW carry 81.3~\% of
 portfolio value, collapsing a national search into a regional campaign. Three
-improvements would close the gaps left open: surveyed head in place of the
+improvements would close the remaining gaps: surveyed head in place of the
 elevation-model proxy, an instrumented pilot with revenue-grade metering, and
 delivery-layer work to carry the interface beyond demonstration scale.
 
@@ -394,8 +394,9 @@ best physics.
 The sixth limitation is economic opacity at plant scale. EPRI reports national wastewater
 electricity use of 30.2~TWh/yr and observed energy intensities from about 3,300~kWh/MG for
 plants under 2~MGD down to about 1,600~kWh/MG for plants above 100~MGD~\cite{epri2013}.
-Against that bill, a micro-turbine that offsets a median of roughly 0.8\% of plant
-consumption (Phase~4 screening sanity check) looks trivial in isolation even when the
+Against that bill, a micro-turbine that offsets a median of roughly 1.1\% of plant
+consumption across the scored fleet (Phase~4 screening sanity check) looks trivial in
+isolation even when the
 portfolio NPV is large. Operators therefore under-invest unless screening shows named
 payback, CapEx, and turbine match rather than a generic ``green energy'' claim.
 These common limitations will now be set against what current practice already achieves.
@@ -457,7 +458,7 @@ measurement. Chae \emph{et al.} installed a flow-variable semi-Kaplan micro-hydr
 unit on the effluent of an operating municipal treatment plant in South Korea and monitored
 it for more than a year, reporting 68.1~MWh of annual generation under severe flow
 fluctuation~\cite{chae2015}. Power \emph{et al.} examined turbine selection and design
-optimisation across four Irish treatment plants, and found that flow variability from storm
+optimization across four Irish treatment plants, and found that flow variability from storm
 events and demand change materially shifts the optimum machine~\cite{power2017}. Two
 consequences follow for this work. First, the claim this thesis makes about missing ground
 truth must be stated precisely: measured wastewater-outfall generation does exist in the
@@ -515,11 +516,11 @@ methods remain limited for POTW outfall recovery will now be discussed.
 National hydropower assessment literature is rich for rivers and canals and thin for
 WWTP outfalls; thin, but not empty, and the closest prior work is European rather than
 American. M\'erida Garc\'ia \emph{et al.} screened Spain's municipal and industrial
-wastewater discharges for micro-hydropower potential using discharge licences as the flow
+wastewater discharges for micro-hydropower potential using discharge licenses as the flow
 source~\cite{merida2021}, which is the same methodological move this work makes with
 ICIS-NPDES discharge monitoring reports and is the nearest published analogue to the WOWERS
 approach. The same group extended the method across several European Union member states,
-covering drinking, pressurised irrigation, and wastewater networks~\cite{mcnabola2021}, and
+covering drinking, pressurized irrigation, and wastewater networks~\cite{mcnabola2021}, and
 a comparable national assessment has been reported for Lithuania~\cite{punys2022}. A related
 review draws operational lessons from installed wastewater-system
 hydropower~\cite{novara2021}. None of these covers the United States, none reports a
@@ -634,8 +635,9 @@ bulk regulatory data and cheap computation existed, the cost of searching exceed
 the value of what was found, because screening one plant by consultant costs
 thousands of dollars and screening all of them now costs almost nothing. Second,
 head is not measured anywhere at national scale. This work estimates it
-from a digital elevation model with a plausibility gate, and 290 of the 1,138
-viable sites do not reach the high-confidence tier, so the single most important
+from a digital elevation model with a plausibility gate, and 360 of the 1,138
+viable sites still carry a literature-archetype head rather than an
+elevation-derived one, so the single most important
 physical input to the energy estimate is also its weakest. Third, no metered
 wastewater generation record exists to calibrate against. A nationwide search of
 Federal Energy Regulatory Commission and Department of Energy records returned
@@ -722,7 +724,7 @@ performing an in-house audit: firms of this type already sell efficiency work in
 these plants, already hold the customer relationship, and could add outfall
 recovery to their existing scope. They are the most credible threat to this
 business, and the defense is narrow -- publishing the methodology early and signing
-channel agreements before the capability is internalised. The second competitor, and
+channel agreements before the capability is internalized. The second competitor, and
 by a wide margin the larger, is inaction. A plant that has never been screened has no
 reason to act, and 73.3~\% of the paper-viable population falls below 25~kW, where
 the economics genuinely do not work. Anyone who examined the aggregate would have
@@ -746,7 +748,7 @@ chosen number.
     industrial sector run roughly \$120--350 per lead, against a blended
     cross-industry figure near \$198~\cite{cpl_benchmark}. Thirty routed sites per
     year therefore carry \$3.6--10.5k/yr of lead-replacement value, and the
-    subscription is priced beneath the middle of that range. This tier was
+    subscription is priced across that same range. This tier was
     \emph{revised downward} during the citation pass described below.
   \item \emph{Origination fee, 2--4~\% of project capital cost, on financial
     close.} Derivation: the U.S.\ Treasury's position on renewable-energy developer
@@ -811,7 +813,7 @@ references that stages one and two produce. The sequence also has an unstarted
 precondition: ten customer-validation conversations, with utility operations
 directors, energy service company development leads, turbine manufacturers and state
 energy offices. Until those occur, this section describes an intention rather than a
-tested channel, and it is labelled as such.
+tested channel, and it is labeled as such.
 
 \section{Market Potential}
 
@@ -829,9 +831,10 @@ serviceable addressable market is the cohort where a fee is actually collectable
 namely the 129 sites above 100~kW carrying \$98.9M of capital cost, which at the same
 3~\% gives \$3.0M. A realistic obtainable share of roughly 10~\% of that
 serviceable market is \$0.3M of origination fees. Adding screening engagements and
-channel subscriptions at the revised prices of Section~3.5 (three subscribers at
-the midpoint of \$300--900 per month contribute \$22--32k/yr, not the \$43--86k/yr the
-original price implied) puts five-year revenue near \$0.4--1.0M.
+channel subscriptions at the revised prices of Section~3.5 (three subscribers
+across the \$300--900 per month band contribute \$11--32k/yr, not the
+\$36--72k/yr the original \$1--2k price implied) puts five-year revenue near
+\$0.4--1.0M.
 
 Three qualifications matter more than the point estimate. The figures above rest on
 the physics ceiling; at the measured floor with municipal financing and a 50~\%
@@ -883,7 +886,7 @@ tightens to 60~\% clean content by 2030, which turns supplier nationality from a
 footnote into a procurement criterion, and it binds the small sites as much as the
 large. This is the one tax question here that scale does not resolve.
 
-Beyond the pilot, the same pipeline extends to other continuously flowing
+After the pilot, the same pipeline extends to other continuously flowing
 infrastructure -- pressure-reducing valves, industrial cooling discharge, irrigation
 canal drops, mine dewatering -- each needing only a new ingest module. None of it is
 built or sized here, and it is named only to keep the boundary of what has been
@@ -1056,7 +1059,7 @@ aliases that drift across fiscal years. The critical value rule is to prefer
 \texttt{DMR\_VALUE\_STANDARD\_UNITS} (EPA-converted MGD) and fall back to
 \texttt{DMR\_VALUE\_NMBR} only when the standard-units column is absent; using the
 raw number as MGD when facilities report gal/d inflates flow by roughly
-$10^{5}$ and was observed to push national means into the thousands of MGD before
+$10^{6}$ and was observed to push national means into the thousands of MGD before
 the fix. NODI codes map selected ``no data'' indicators to zero or estimated
 flags; other NODI values become null. Per-record caps at
 $\max(2~\mathrm{MGD},\,10\times\mathrm{design\_flow})$ null corrupt rows before
@@ -1090,7 +1093,7 @@ Calibration and ground-truth acquisition compared (A)~no empirical CF check,
 (B)~vendor case sheets only, and (C)~DOE HydroSource EHA annual capacity-factor
 tables plus EIA-860/923 conventional-hydro generation. Option~(C) won for the
 calibration band reported in Chapter~2: EHA supplies 629 plants /
-9{,}798 plant-years in the 0.1--5~MW class, ingested via
+9{,}798 plant-years in the 0.1--5~MW class, ingested through
 \texttt{ground\_truth.py} / \texttt{cf\_calibration.py} from
 \texttt{ORNL\_EHAHydroPlant\_PublicFY2024.xlsx} and
 \texttt{EHA\_Annual\_CapacityFactor.xlsx}~\cite{hydrosource_eha}. EIA Forms 860
@@ -1257,7 +1260,7 @@ signal ranks last on that axis instead of scoring as average. Plants whose
 design flow is explicitly zero (misclassified industrial dischargers that
 carry high DMR flow, of which KYP000044 is the documented example) have their
 score forced to zero, while plants whose design flow is merely null keep a normal
-score, because nulling those would zero roughly 2{,}106 sites that are probably
+score, because nulling those would zero 2{,}106 sites that are probably
 genuine treatment works with incomplete permit records. The final ordinal rank is
 assigned by descending score.
 
@@ -2066,7 +2069,10 @@ Four of those tiers are carried into the pipeline rather than left in a report.
 \texttt{energy\_kwh\_calib\_central}, and
 \texttt{energy\_kwh\_calib\_measured\_point\_loma} to every Phase~4 scorecard row,
 reading the multipliers 0.291, 0.447, 0.688, and 0.2195 from
-\texttt{config/settings.yaml}. They
+\texttt{config/settings.yaml}. One rounding note belongs here: the stored 0.2195
+was derived against a 0.872 denominator, and dividing by the 0.8725 median that
+Table~\ref{tab:cfband} uses gives 0.2194; the difference is worth 0.04~GWh/yr on
+the floor and sits inside the rounding of every figure reported. They
 are global fleet multipliers rather than per-site capacity-factor ratios, which
 is defensible only because the per-site spread is narrow, 0.8556--0.8833 between
 the tenth and ninetieth percentiles. Summed over the viable cohort the four
@@ -2267,9 +2273,9 @@ Appendix~A.}
 
 Two files are written into \texttt{exports/} on every default run so that they
 cannot drift apart. The first, \texttt{viable\_sites.geojson}, holds the
-1{,}138 project-viable sites at 1.85~MB and is the file this document's portfolio
+1{,}138 project-viable sites at 1.90~MB and is the file this document's portfolio
 figures are drawn from. The second, \texttt{scored\_sites.geojson}, holds all
-3{,}778 scored plants at 6.13~MB
+3{,}778 scored plants at 6.30~MB
 and is what the dashboard loads, so plants that failed the viability gate stay on
 the map as evidence rather than disappearing from it. Both carry the same 59
 properties on every feature. The write path validates before it returns: the
@@ -2281,14 +2287,16 @@ both files, which it was not before the coordinate guard of Section~4.2.
 Determinism was a requirement rather than a happy accident, because a file that
 changes when nothing changed cannot be reviewed. The output carries no timestamp
 and no run identifier, is written with compact separators, and takes its feature
-order from the parquet. Re-running the exporter twice while writing this section
-produced files byte-identical to the tracked ones, at SHA-256 digests beginning
-\texttt{f359b413} for the viable file and \texttt{420ad5f4} for the scored file.
+order from the parquet. Re-running the exporter over the unchanged parquets
+reproduces both files byte-identically, at SHA-256 digests beginning
+\texttt{ddfc810e} for the viable file and \texttt{b3608816} for the scored file;
+the check was last repeated after the fifty-ninth property was added, since any
+change to the contract moves both digests.
 The practical consequence is that the export is testable in the strongest sense
 available: any change to any site's economics changes the digest, and any run that
 changed nothing leaves it alone.
 
-Five limitations are named. The dashboard downloads the whole 6.13~MB file before
+Five limitations are named. The dashboard downloads the whole 6.30~MB file before
 it draws anything, which is acceptable at 3{,}778 sites and is the wrong shape at
 ten times that; vector tiles or a query service is the named fix, and neither was
 built. The contract has no version field beyond its baseline label, so renaming a
@@ -2544,7 +2552,7 @@ fetch of the single tracked GeoJSON file}
 \subsection{Interaction, Filtering, and Export}
 
 Two shared conventions run across every filterable view. First, filter
-state lives in the URL query string via React Router's
+state lives in the URL query string through React Router's
 \texttt{useSearchParams}, not in component state: \texttt{NationalMap}
 encodes state, turbine-type list, maximum payback, and the high-confidence
 toggle as \texttt{?state=\&turb=\&pb=\&hc=}, and \texttt{Plants} does the
@@ -2578,7 +2586,7 @@ the small locator map on the plant detail page.
 \subsection{Limitations}
 
 Five limitations are named. First, the initial page load fetches the
-entire 6.13~MB scored-sites file regardless of which view is opened, the
+entire 6.30~MB scored-sites file regardless of which view is opened, the
 same whole-file cost noted from the export side in Section~4.5; this is
 acceptable at 3{,}778 sites but would need a change, most likely a
 tiled or paginated data endpoint, if the screened fleet grew by an order of
@@ -2833,7 +2841,12 @@ hide that.
 Two properties of the viable cohort qualify all of the above. First, 848 of the
 1{,}138 sites, 74.5~\%, carry a measured discharge-monitoring flow duration curve;
 the remaining 290 rest on a design-flow or annual-average figure and are flagged
-in the export as lower confidence. Second, 778 sites carry an elevation-derived
+in the export as lower confidence. That exposure is not proportional to the
+count: the 290 carry \$193.6M of the \$310.1M portfolio net present value,
+62.4~\%, because the design-flow and annual-average fallbacks include many of
+the largest plants, and the 22 such sites above 250~kW hold \$139.2M on their
+own. The 848 measured-curve sites carry the remaining \$116.5M, which is the
+base figure of every sensitivity sweep in Section~4.3.6. Second, 778 sites carry an elevation-derived
 head and 360 still carry the Phase 2 archetype, and those 360 hold 110.29~GWh/yr,
 27.0~\% of the portfolio energy. A quarter of the headline therefore rests on the
 assumption Section~4.3.4 exists to remove, which is the honest reading of the
@@ -2970,8 +2983,8 @@ model of this asset class cannot be trained, evaluated, or falsified.
 
 \subsection{Frontend Performance}                        % WP M2 — Mohamed
 
-Every number in this section was measured this session, from a clean
-build and a live browsing session against the dev server, rather than
+Every number in this section was measured afresh for this chapter, from a
+clean build and a live browsing run against the dev server, rather than
 carried over from an earlier note. This distinction matters here more than
 in most results sections: the frontend is the one part of the platform
 whose behavior can drift with the local toolchain (Node, npm, browser)
@@ -3000,11 +3013,11 @@ Asset & Raw size & Gzip size \\
 \texttt{index-*.js} (application code) & 711.33 kB & 214.71 kB \\
 \texttt{maplibre-gl-*.js} (map runtime) & 1{,}053.37 kB & 284.75 kB \\
 \texttt{index-*.css} & 75.06 kB & 11.61 kB \\
-\texttt{scored\_sites-*.geojson} (data asset) & 6{,}129.14 kB & --- \\
+\texttt{scored\_sites-*.geojson} (data asset) & 6{,}296.90 kB & --- \\
 \texttt{index.html} & 0.50 kB & 0.33 kB \\
 \bottomrule
 \end{tabular}
-\caption{Production bundle sizes, measured this session from a clean \texttt{npm run build}}
+\caption{Production bundle sizes from a clean \texttt{npm run build}}
 \label{tab:m2-bundle}
 \end{table}
 
@@ -3012,15 +3025,21 @@ Vite's own build output flags the two largest JavaScript chunks as
 individually over its 500~kB warning threshold; that flag is the subject
 of the discrepancy paragraph below. As a point of comparison, an earlier
 project-journal note recorded a 2.6~s build and a 707~kB application
-chunk from the same command; this session's 6.11~s and 711.33~kB are
+chunk from the same command; the 6.11~s and 711.33~kB measured here are
 close but not identical, which is expected of a build time and bundle
 size measured on different hardware after further commits, and is not
-treated as a regression.
+treated as a regression. One row of Table~\ref{tab:m2-bundle} was corrected
+after the original measurement: the GeoJSON data asset had been recorded at
+6{,}129.14~kB, which is byte-for-byte the size of the 58-property export that
+preceded the measured-floor tier of Section~4.4.1, so that build had embedded
+a stale copy of the data file rather than a differently sized artifact. The
+row now reports the tracked 59-property export, 6{,}296.90~kB, which the
+bundler copies through without recompression.
 
 \textbf{Quality assurance.} All seven routes (\texttt{/},
 \texttt{/opportunities}, \texttt{/plants}, \texttt{/analytics},
 \texttt{/reports}, one \texttt{/state/:code}, and one \texttt{/plant/:id})
-were exercised against the dev server this session. Zero browser console
+were exercised against the dev server for this chapter. Zero browser console
 errors and zero dev-server errors were observed across all seven. Every
 headline figure checked against the P2-SEED baseline matched exactly: the
 National Opportunity Map read 3{,}778 sites shown, 1{,}138 viable,
@@ -3157,7 +3176,7 @@ catalogue, builds a thirty-year financial scorecard, calibrates the energy resul
 against measured capacity factors from real operating plants, and publishes the
 outcome as a single deterministic data contract that a static web application
 renders as an interactive national map. Measured against the minimum viable
-product WOWERS would need, that fulfils the screening requirement, the ranking
+product WOWERS would need, that fulfills the screening requirement, the ranking
 requirement, the bounded-estimate requirement, and the delivery requirement. It
 does not fulfill the validation requirement, and Chapter~5 is explicit about why.
 
@@ -3198,7 +3217,7 @@ argument this work gives, would let each site carry an honest interval instead o
 a point. And surveying a sample of outfall inverts would establish whether the
 elevation proxy is biased or merely noisy, which is currently unknown.
 
-The second theme is the delivery layer. The dashboard reads a single 6.13~MB
+The second theme is the delivery layer. The dashboard reads a single 6.30~MB
 GeoJSON file and derives every view from it in the browser, which is the right
 architecture at 3{,}778 sites and the wrong one an order of magnitude above that.
 The specific work is to split the client bundle so the mapping library loads
