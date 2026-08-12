@@ -1723,3 +1723,160 @@ belongs to a cited source's own title and rewriting it would misquote the source
 
 **Next work package suggested:**
 - Unchanged: the two J5 fill-ins close the thesis.
+
+### Session: 2026-08-11 — Full-document review pass; ten consistency corrections — Tom
+
+**Work package:** Not a numbered WP. A full read-through review of `thesis_tom.tex`
+(all 3,928 lines) followed by ten corrections, every one verified against a live
+artifact before the text was changed.
+
+**What was done:**
+- **§4.5 digests and file sizes were stale from the 58-property era — the one hard
+  factual break found.** The section claimed SHA-256 prefixes `f359b413` (viable) /
+  `420ad5f4` (scored) and sizes 1.85 / 6.13 MB. The tracked exports (unchanged since
+  `015fd2b`, the measured-floor regeneration) are `ddfc810e…` at 1,897,491 B (1.90 MB)
+  and `b3608816…` at 6,296,895 B (6.30 MB). Before editing, the exporter was re-run
+  live over the unchanged parquets: both files reproduced byte-identically (digests
+  unchanged, `git status` clean), so the determinism claim itself still holds and the
+  paragraph now says when the check was last repeated. 6.13 → 6.30 MB also corrected
+  in the §4.5 limitations list, §4.6.4, and Chapter 6.
+- **Table 16 GeoJSON row corrected 6,129.14 → 6,296.90 kB, and the earlier open item
+  is closed with a proven mechanism.** `git show 015fd2b~1:exports/scored_sites.geojson | wc -c`
+  returns **6,129,140 bytes exactly** — byte-for-byte the recorded 6,129.14 kB. M2's
+  build had embedded a stale pre-59-property copy of the data asset; the Node-toolchain
+  explanation recorded on 2026-08-10 was wrong, and no re-measure on Mohamed's machine
+  is needed for this row. A correction paragraph in §5.1.6 records the original figure,
+  the mechanism, and the fix, per house discrepancy style. The JS/CSS rows are left
+  exactly as Mohamed measured them.
+- **Abstract brought back inside the 350–450 word band.** The em-dash rewrites had
+  pushed it to ~460; five small trims (none touching a number or a claim) bring it to
+  449.
+- **GPD unit-slip factor corrected** in §4.2.2: reading gal/d as MGD inflates by
+  10^6, not 10^5.
+- **Ch3.1 head-confidence sentence carried the wrong cohort.** "290 of the 1,138 do
+  not reach the high-confidence tier" is the flow-quality count (no measured FDC); the
+  head exposure is 360 archetype-head sites (§5.1.3). Sentence now says 360 and names
+  what it counts.
+- **§3.7 subscription arithmetic rederived.** Three subscribers across $300–900/mo =
+  $11–32k/yr (was "$22–32k at the midpoint", which mixed midpoint and maximum); the
+  original $1–2k/mo price implies $36–72k/yr (was $43–86k, which matches no stated
+  price). §3.5's "priced beneath the middle of that range" ($300–900/mo = $3.6–10.8k/yr
+  against a $3.6–10.5k/yr value band) became "priced across that same range".
+- **Ch2 §2.1 median offset corrected 0.8 % → 1.1 %.** Recomputed from the export:
+  median `energy_offset_pct` is 1.104 % across the 3,778 scored sites and 2.015 %
+  across the viable cohort; 0.8 % matched neither and was presumably pre-rebaseline.
+- **§5.1.3 gains the NPV-concentration disclosure.** The 290 lower-confidence
+  (no-measured-FDC) viable sites carry **$193.6M of the $310.1M portfolio NPV, 62.4 %**
+  (computed from `viable_sites.geojson`; the 22 such sites above 250 kW hold $139.2M —
+  Point Loma WWTP, AK Warren, Stickney, San Jose Creek lead the list). The 848
+  measured-curve sites carry the $116.5M that every §4.3.6 sensitivity sweep uses as
+  its base. The document previously stated the energy exposure (27 % on archetype
+  head) but a committee member doing the subtraction would have found this number
+  unstated.
+- **§4.4.1 rounding note added.** The stored measured-tier multiplier 0.2195 derives
+  from a 0.872 denominator; against the 0.8725 the band table uses it would be 0.2194,
+  worth 0.04 GWh/yr on the floor. One sentence so a recomputing reader is not stopped.
+- **Register and spelling.** "measured this session" (×3 plus the Table 16 caption)
+  replaced with thesis-appropriate phrasing; six British spellings Americanized
+  (optimisation, licences, pressurised, internalised, labelled, fulfils — bibliography
+  titles left as their sources print them).
+- **"roughly 2,106" tightened to the exact 2,106**, and the suspicious coincidence
+  cleared: `design_flow_mgd` is null at exactly 2,106 of 17,148 rows in
+  `ranked_candidates.parquet`, so the match with the funnel's 2,106-site data-gap
+  class is real, not a copy-slip.
+
+**Reviewed and deliberately left unchanged:** "3,783 on first run" in §4.3.6
+(pre-COORD-GUARD scored count, historically correct); 8,766 vs 8,760 h/yr (each is
+stated against its own denominator); the frontend treating ≥10^5 as the payback
+sentinel against the exporter's 10^6 (deliberate guard margin, `data.ts:137`).
+Everything else cross-checked clean: funnel arithmetic, band multipliers and tier
+energies, machine-mix and vendor-count sums, tier-table row sums, bibliography (45
+bibitems, all cited, none unused), 59-property dictionary count, map-exclusion sums.
+
+**Source artifacts used:**
+- `exports/viable_sites.geojson`, `exports/scored_sites.geojson` (NPV split, offset
+  medians, cohort characterization — all computed live)
+- `data/processed/phase1/ranked_candidates.parquet` (design-flow null count)
+- `git show 015fd2b~1:exports/*` (pre-59-property byte sizes: 6,129,140 / 1,846,247 B)
+- `scripts/export_geojson.py` re-run (determinism confirmation)
+- `config/settings.yaml` (stored multiplier 0.2195 and its 0.872-denominator comment)
+
+**Figures / tables produced or specified:**
+- None new. Counts unchanged at 20 figures and 26 tables (both confirmed in the
+  compiled PDF).
+
+**Verification:**
+- `tectonic -X compile thesis_tom.tex`: 0 errors, 0 undefined references, 0 undefined
+  citations, 0 multiply-defined labels. **122 pages**, one fewer than the pre-edit
+  123 — the abstract trim plus float repacking absorbed a page; verified by compiling
+  the pre-edit HEAD file side by side.
+- Typesetting regression checked rather than assumed: HEAD and post-edit compiles
+  give identical Overfull/Underfull counts (92/207 under the same counting method),
+  so no new layout defect.
+- Abstract word count 449 (350–450 band).
+- Compiled PDF grepped both ways: new values present (`ddfc810e`, `b3608816`,
+  6,296.90, 62.4 %, 6.30 MB), stale strings absent (`f359b413`, "6.13 MB",
+  "this session"); the §4.5 and §5.1.3 passages read back from `pdftotext` output.
+
+**Open items / follow-ups:**
+- Unchanged: `{{MONTH_YEAR}}` and the acknowledgement names — still the only two
+  fill-ins between here and a complete thesis.
+
+**Breakdown updated:**
+- No checkbox change; this was a review-and-correction pass, not a work package.
+
+**Next work package suggested:**
+- Unchanged: enter `{{MONTH_YEAR}}` and the acknowledgement names, then J5 closes.
+
+### Session: 2026-08-11 (PM) — humanizer_academic re-audit; three word swaps — Tom
+
+**Work package:** Not a numbered WP. Full-document re-run of the 34-pattern
+`humanizer_academic` audit after the morning's ten corrections, since those edits
+added ~25 lines of new prose.
+
+**What was done:**
+- Audit result: clean on every pattern that matters — 0 prose em dashes, 0
+  AI-vocabulary hits (the single grep hit is ORNL's own report title), 0 significance
+  inflation or ornamental intensifiers, 0 filler/paraphrase/negative-parallelism hits,
+  0 curly quotes, no "linked to". The morning's inserted passages pass rhythm and
+  cohesion checks (mixed 20–45-word sentences, connectives intact).
+- Three one-word tells found and fixed: "Beyond the pilot" → "After the pilot"
+  (Ch3.8 transition, pattern 20); "ingested via" → "ingested through" (§4.2.3) and
+  "via React Router's" → "through React Router's" (§4.6.3), pattern 21.
+- Reviewed and kept: seven "yield" instances (standard mathematical-derivation or
+  domain-noun usage — energy-yield risk, "restricting to the class yields 629
+  plants"); title-case headings and the plant/site vocabulary split remain the two
+  documented deliberate exceptions from the 2026-08-10 audit.
+
+**Verification:**
+- `tectonic -X compile`: 0 errors, 0 undefined references/citations, 122 pages,
+  unchanged from the morning build.
+
+**Open items / follow-ups:**
+- Unchanged: `{{MONTH_YEAR}}` and the acknowledgement names.
+
+**Breakdown updated:**
+- No checkbox change.
+
+### Session: 2026-08-11 (PM #2) — Title-page fill-ins: author name style, AUGUST 2026 — Tom
+
+**Work package:** J5 fill-ins.
+
+**What was done:**
+- Author name simplified from "XINSHENG (TOM) TANG" to "XINSHENG TANG" in all three
+  places it appears: the `\author` macro, the title page, and the certification page
+  (mixed-case "Xinsheng Tang" there).
+- `{{MONTH_YEAR}}` on the title page replaced with **AUGUST 2026**. The stale preamble
+  comment pointing at the placeholder was updated with it.
+
+**Verification:**
+- `tectonic -X compile`: 0 errors, 0 undefined references/citations, 122 pages.
+- Title page and certification page read back from the compiled PDF: "XINSHENG TANG",
+  "AUGUST 2026", "Xinsheng Tang" all render as intended.
+
+**Open items / follow-ups:**
+- The acknowledgement names (`\ackname` slots) are now the **only** placeholders left
+  in the document. With those entered, J5 closes.
+
+**Breakdown updated:**
+- No checkbox change; J5 stays ◐ on the acknowledgement names alone.
