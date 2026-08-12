@@ -1,16 +1,17 @@
 % =====================================================================
-% WOWERS Master's Thesis — Tom's assembly file (Track T + Joint drafts)
+% WOWERS Master's Thesis — master LaTeX document (all tracks merged)
 % ---------------------------------------------------------------------
-% This is the master LaTeX document. Tom drafts the data/backend chapters
-% (Track T) and the Joint framing chapters here; Mohamed's frontend prose
-% (M1, M2) drops into the marked [MERGE] stubs at combine time.
+% Formerly thesis_tom.tex; renamed 2026-08-12 after every work package was
+% merged. Track T + Joint chapters were drafted here; Mohamed's M1/M2
+% frontend prose was merged in from thesis_moh.tex (now a historical
+% drafting record only).
 %
 % WORKFLOW (see thesis/THESIS_BREAKDOWN.md):
-%   - Write ONE work package at a time. Replace its \wptodo stub with prose.
 %   - Obey thesis/thesis_format_prompt.md (voice, numbers, honesty, fig/tab rules).
-%   - After a WP: tick it in THESIS_BREAKDOWN.md and log to thesis/THESIS_JOURNAL.md.
+%   - After any revision: log to thesis/THESIS_JOURNAL.md.
 %
-% COMPILE:  pdflatex thesis_tom.tex   (run twice for TOC/refs)
+% COMPILE:  tectonic -X compile WOWERS_Thesis.tex
+%           (pdflatex is not installed on this machine; use tectonic)
 % =====================================================================
 \documentclass[12pt,letterpaper]{report}
 
@@ -27,6 +28,10 @@
 
 % Double spacing applies to body prose only. Captions, tabular bodies, and the
 % reference list stay single-spaced, which is the usual thesis exemption.
+% \emergencystretch lets TeX add inter-word stretch as a last resort instead of
+% pushing a word into the margin (long \texttt tokens and List-of-Figures
+% entries were producing overfull lines). Layout-only; no content change.
+\emergencystretch=3em
 \captionsetup{font=singlespacing}
 \AtBeginEnvironment{tabular}{\singlespacing}
 \AtBeginEnvironment{thebibliography}{\singlespacing\setlength{\itemsep}{0.6em}}
@@ -954,12 +959,12 @@ their counts cannot drift from the run they describe.
   \label{fig:statemachine}
 \end{figure}
 
-Configuration is centralized in \texttt{config/settings.yaml} (URLs, fiscal-year
+Configuration is centralized in \texttt{config/\allowbreak settings.yaml} (URLs, fiscal-year
 list, sanity caps, ranking weights, physics constants, cost-model coefficients).
 Ingest and transforms are implemented in \texttt{polars} with chunked DMR reads
-(\texttt{processing.dmr\_chunk\_size} $= 500{,}000$) and parquet checkpoints under
-\texttt{data/processed/phase\{1--4\}/}. The serving boundary is deliberate: the
-dashboard consumes only \texttt{exports/viable\_sites.geojson} (and the companion
+(\texttt{processing.\allowbreak dmr\_chunk\_size} $= 500{,}000$) and parquet checkpoints under
+\texttt{data/\allowbreak processed/\allowbreak phase\{1--4\}/}. The serving boundary is deliberate: the
+dashboard consumes only \texttt{exports/\allowbreak viable\_sites.geojson} (and the companion
 scored-sites file), so pipeline and UI can evolve on opposite sides of a frozen
 property contract.
 
@@ -991,14 +996,15 @@ satisfying those requirements can be seen in Table~\ref{tab:data_sources}.
   \centering
   \caption{Data-source inventory for the WOWERS screening pipeline}
   \label{tab:data_sources}
-  \begin{tabular}{@{}p{2.4cm}p{3.4cm}p{2.6cm}p{3.4cm}@{}}
+  \footnotesize
+  \begin{tabular}{@{}p{2.2cm}p{3.8cm}p{3.4cm}p{4.4cm}@{}}
     \toprule
     Source & What it supplies & Approx.\ volume & Ingest module \\
     \midrule
     EPA ECHO ICIS facilities + permits
       & POTW identity, design/avg flow, permit status, facility lat/lon
       & \texttt{npdes\_downloads.zip} $\sim$322~MB
-      & \texttt{src/phase1/ingest.py}, \texttt{filter\_potw.py} \\
+      & \texttt{src/phase1/\allowbreak ingest.py}, \texttt{filter\_potw.py} \\
     EPA ECHO DMR FY2009--24
       & Monthly flow (param 50050) by outfall
       & $\sim$279M rows; $\sim$9.6~GB ZIPs
@@ -1006,11 +1012,11 @@ satisfying those requirements can be seen in Table~\ref{tab:data_sources}.
     USGS 3DEP EPQS
       & Point elevation (m ASL) at plant/outfall coords
       & On-demand JSON; disk-cached
-      & \texttt{src/phase3/elevation.py} \\
+      & \texttt{src/phase3/\allowbreak elevation.py} \\
     DOE HydroSource EHA + EIA-860/923
       & Existing-hydro CF, net generation, nameplate
       & Plant + CF workbooks on disk
-      & \texttt{src/phase5/ground\_truth.py}; \texttt{scripts/cf\_calibration.py} \\
+      & \texttt{src/phase5/\allowbreak ground\_truth.py}; \texttt{scripts/\allowbreak cf\_calibration.py} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -1077,13 +1083,13 @@ tiles processed offline, and (C)~USGS Elevation Point Query Service (EPQS) v1
 against plant and outfall coordinates. Archetypes alone are the Phase~2 bootstrap
 but were already identified in Chapter~2 as a ranking risk. Offline tiles add
 licensing and batch GIS overhead without improving the first national pass.
-EPQS won for rebuildability: \texttt{src/phase3/elevation.py} queries
-\texttt{https://epqs.nationalmap.gov/v1/json} with \texttt{httpx}/\texttt{asyncio},
-honors \texttt{phase3.max\_concurrent\_requests} and \texttt{request\_delay\_s},
-caches JSON under \texttt{data/elevation\_cache/} keyed by rounded lat/lon, and
+EPQS won for rebuildability: \texttt{src/phase3/\allowbreak elevation.py} queries
+\texttt{https://\allowbreak epqs.\allowbreak nationalmap.\allowbreak gov/\allowbreak v1/\allowbreak json} with \texttt{httpx}/\texttt{asyncio},
+honors \texttt{phase3.\allowbreak max\_concurrent\_requests} and \texttt{request\_delay\_s},
+caches JSON under \texttt{data/\allowbreak elevation\_cache/} keyed by rounded lat/lon, and
 treats the EPQS ocean sentinel $-1{,}000{,}000$ as a failed query~\cite{usgs_3dep}.
 Outfall coordinates, when present in
-\texttt{NPDES\_PERM\_FEATURE\_COORDS.csv}, enable a plant-minus-outfall DEM proxy;
+\texttt{NPDES\_PERM\_\allowbreak FEATURE\_\allowbreak COORDS.csv}, enable a plant-minus-outfall DEM proxy;
 otherwise the pipeline falls back through literature head then a design default.
 The largest methodological assumption in the entire acquisition chain, that DEM
 differencing approximates net hydraulic head, is deferred in detail to
@@ -1095,8 +1101,8 @@ tables plus EIA-860/923 conventional-hydro generation. Option~(C) won for the
 calibration band reported in Chapter~2: EHA supplies 629 plants /
 9{,}798 plant-years in the 0.1--5~MW class, ingested through
 \texttt{ground\_truth.py} / \texttt{cf\_calibration.py} from
-\texttt{ORNL\_EHAHydroPlant\_PublicFY2024.xlsx} and
-\texttt{EHA\_Annual\_CapacityFactor.xlsx}~\cite{hydrosource_eha}. EIA Forms 860
+\texttt{ORNL\_\allowbreak EHAHydroPlant\_\allowbreak PublicFY2024.xlsx} and
+\texttt{EHA\_\allowbreak Annual\_\allowbreak CapacityFactor.xlsx}~\cite{hydrosource_eha}. EIA Forms 860
 and 923 contribute operable hydro nameplate and annual net generation under a
 canonical schema, with the documented bias that both sets skew to plants
 $\geq$1~MW and are not representative of WWTP micro-scale units. FERC conduit
@@ -1308,7 +1314,7 @@ exceedance axis by the trapezoidal rule, and multiplied by 8{,}766~h/yr and the
 availability sample to give net annual energy. The integration is performed as a
 single $10{,}000 \times 20$ matrix operation in \texttt{energy\_physics.py}
 rather than a Python loop, and \texttt{monte\_carlo.py} distributes plants across
-worker processes with \texttt{concurrent.futures.ProcessPoolExecutor} when more
+worker processes with \texttt{concurrent.\allowbreak futures.\allowbreak ProcessPoolExecutor} when more
 than one worker is requested.
 
 \begin{table}[htbp]
@@ -2992,7 +2998,7 @@ independently of any change to the WOWERS source itself, so a reused
 figure would not actually be verifying anything.
 
 \textbf{Build performance.} A clean build was run with
-\texttt{rm~-rf~dist~\&\&~npm~run~build} under Node~22.11.0 and npm~11.6.1.
+\texttt{rm~-rf~dist~\&\&~}\allowbreak\texttt{npm~run~build} under Node~22.11.0 and npm~11.6.1.
 The command runs \texttt{tsc~-b} before \texttt{vite~build}, so a
 successful build is also a clean full-project type-check: it passed with
 zero type errors before bundling began. Vite 7.3.5 then produced the
@@ -3581,6 +3587,12 @@ annual-average scalar rather than a duration curve, and \texttt{elev\_outfall\_m
 is null at 225 plants whose outfall coordinate could not be resolved; those
 plants carry an archetype head, as Section~4.3.4 describes.
 
+% Whole table (headers included) at \footnotesize with reduced column padding —
+% the body-only \footnotesize left header rows at full size and the widest row
+% (energy_kwh_calib_measured_point_loma) 26pt into the margin.
+\begingroup
+\footnotesize
+\setlength{\tabcolsep}{3pt}
 \begin{longtable}{@{}lllllr@{}}
 \caption{Data dictionary --- the 59 properties of the exported GeoJSON contract}
 \label{tab:datadict} \\
@@ -3588,14 +3600,13 @@ plants carry an archetype head, as Section~4.3.4 describes.
 Property & Type & Units & Rounding & Source & Nulls \\
 \midrule
 \endfirsthead
-\multicolumn{6}{@{}l}{\footnotesize Table~\ref{tab:datadict}, continued} \\
+\multicolumn{6}{@{}l}{Table~\ref{tab:datadict}, continued} \\
 \toprule
 Property & Type & Units & Rounding & Source & Nulls \\
 \midrule
 \endhead
 \bottomrule
 \endfoot
-\footnotesize
 \texttt{npdes\_id} & text & --- & raw & P4 & 0 \\
 \texttt{facility\_name} & text & --- & raw & P1 & 0 \\
 \texttt{city} & text & --- & raw & P1 & 1 \\
@@ -3656,6 +3667,7 @@ Property & Type & Units & Rounding & Source & Nulls \\
 \texttt{data\_quality} & text & --- & raw & P4 & 0 \\
 \texttt{project\_viable\_high\_confidence} & bool & --- & raw & P4 & 0 \\
 \end{longtable}
+\endgroup
 
 \begin{table}[htbp]
 \centering

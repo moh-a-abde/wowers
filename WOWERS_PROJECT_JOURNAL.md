@@ -6438,3 +6438,36 @@ citations**; 737 tests still pass (no source touched).
 
 **Next steps after this session:**
 1. Acknowledgement names — the last placeholder in the thesis; J5 then closes.
+
+### Session: 2026-08-12 — Thesis layout pass + rename to WOWERS_Thesis.tex — Tom
+
+**What was done:**
+- Layout-only pass over the compiled thesis PDF; no prose, number, or caption
+  changed. Fixed the Table 2 (data-source inventory) column collision on page 30
+  (\footnotesize + rebalanced widths + \allowbreak in module paths), added
+  \emergencystretch=3em to the preamble, inserted \allowbreak inside the long
+  \texttt tokens that were overflowing the margin (worst: 126 pt on
+  concurrent.futures.ProcessPoolExecutor), and made the data-dictionary
+  longtable uniformly \footnotesize (headers had been full-size) with tighter
+  column padding.
+- Font audit: only bold in body prose is the three deliberate §5.1.6 run-in
+  lead-ins; all size switches confined to tables/captions; nothing stray.
+- Renamed `thesis/thesis_tom.tex` → `thesis/WOWERS_Thesis.tex` (git mv) now
+  that all tracks are merged; header comment updated with provenance and the
+  tectonic compile command. `thesis_moh.tex` remains the historical record.
+- Verified: 0 errors, 0 undefined references/citations, 122 pages unchanged;
+  title page, Table 2, §4.3.3, §5.1.6, and data-dictionary pages rendered and
+  inspected. Remaining overfulls are the known Figure 12 \resizebox
+  measurement artifact (renders inside margins) and two sub-2 mm residuals.
+
+**Files modified / created:**
+- `thesis/thesis_tom.tex` → `thesis/WOWERS_Thesis.tex` (renamed; layout edits)
+- `thesis/THESIS_JOURNAL.md`, `WOWERS_PROJECT_JOURNAL.md` (session entries)
+- `thesis/WOWERS_Thesis.pdf` (compiled output, untracked)
+
+**Resources used:**
+- tectonic 0.16.9, poppler (pdftotext/pdftoppm/pdfinfo)
+
+**Next steps after this session:**
+1. Acknowledgement names — still the only placeholder left; J5 then closes.
+2. Commit the rename + layout edits (not committed this session).
